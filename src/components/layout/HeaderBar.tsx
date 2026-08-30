@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Sidebar as SidebarIcon,
   Columns2,
@@ -27,15 +27,14 @@ export const HeaderBar: React.FC = () => {
   const { getThemeColors } = useThemeStore();
   const currentTheme = getThemeColors();
 
-  const [isMac, setIsMac] = useState(false);
-
-  useEffect(() => {
+  const [isMac] = useState(() => {
     if (typeof navigator !== 'undefined') {
       const platform = navigator.platform || '';
       const ua = navigator.userAgent || '';
-      setIsMac(/Mac|iPhone|iPod|iPad/i.test(platform) || /Mac/i.test(ua));
+      return /Mac|iPhone|iPod|iPad/i.test(platform) || /Mac/i.test(ua);
     }
-  }, []);
+    return false;
+  });
 
   const handleToggleMaximize = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -82,7 +81,7 @@ export const HeaderBar: React.FC = () => {
       <div className="flex items-center gap-2" data-tauri-drag-region>
         {/* On macOS: Provide dedicated spacing for the native macOS traffic lights */}
         {isMac && (
-          <div className="w-16 shrink-0 pointer-events-none" data-tauri-drag-region />
+          <div className="w-[72px] shrink-0 pointer-events-none" data-tauri-drag-region />
         )}
 
         {/* View toggles */}
