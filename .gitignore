@@ -28,3 +28,4 @@ dist-release
 src-tauri/target
 target
 **/*.rs.bk
+src-tauri/gen/
