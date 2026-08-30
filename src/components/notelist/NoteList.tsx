@@ -82,7 +82,7 @@ export const NoteList: React.FC = () => {
       }}
     >
       {/* Search Header */}
-      <div className="p-3 pb-2 border-b space-y-2" style={{ borderColor: 'var(--color-divider)' }}>
+      <div className="p-3 pb-2 border-b space-y-2" style={{ borderColor: 'var(--color-divider)' }} data-tauri-drag-region>
         <div
           className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition-all focus-within:ring-2 focus-within:ring-accent/40"
           style={{

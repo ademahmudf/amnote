@@ -62,7 +62,7 @@ export const Sidebar: React.FC = () => {
       }}
     >
       {/* Top Header & Brand */}
-      <div className="p-3 pb-2 flex items-center justify-between border-b" style={{ borderColor: 'var(--color-divider)' }}>
+      <div className="p-3 pb-2 flex items-center justify-between border-b" style={{ borderColor: 'var(--color-divider)' }} data-tauri-drag-region>
         <div className="flex items-center gap-2">
           <div
             className="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm"
