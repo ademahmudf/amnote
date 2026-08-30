@@ -14,6 +14,7 @@ interface SettingsState {
   previewLines: number; // Snippet lines: 1, 2, 3, 4
   typewriterMode: boolean; // Keep cursor vertically centered
   wordGoal: number; // Daily / session word count goal (0 = disabled)
+  defaultHighlightColor: string; // Custom default text highlight color
   revealMarkdownOnFocus: boolean;
   spellCheck: boolean;
   showWordCount: boolean;
@@ -31,6 +32,7 @@ interface SettingsState {
   setPreviewLines: (lines: number) => void;
   setTypewriterMode: (enabled: boolean) => void;
   setWordGoal: (goal: number) => void;
+  setDefaultHighlightColor: (color: string) => void;
   setRevealMarkdownOnFocus: (reveal: boolean) => void;
   setSpellCheck: (enabled: boolean) => void;
   setShowWordCount: (show: boolean) => void;
@@ -49,6 +51,7 @@ export const useSettingsStore = create<SettingsState>()(
       previewLines: 2,
       typewriterMode: false,
       wordGoal: 0,
+      defaultHighlightColor: '#fef08a',
       revealMarkdownOnFocus: true,
       spellCheck: true,
       showWordCount: true,
@@ -64,6 +67,7 @@ export const useSettingsStore = create<SettingsState>()(
       setPreviewLines: (previewLines) => set({ previewLines }),
       setTypewriterMode: (typewriterMode) => set({ typewriterMode }),
       setWordGoal: (wordGoal) => set({ wordGoal }),
+      setDefaultHighlightColor: (defaultHighlightColor) => set({ defaultHighlightColor }),
       setRevealMarkdownOnFocus: (revealMarkdownOnFocus) => set({ revealMarkdownOnFocus }),
       setSpellCheck: (spellCheck) => set({ spellCheck }),
       setShowWordCount: (showWordCount) => set({ showWordCount }),

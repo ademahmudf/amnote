@@ -13,6 +13,7 @@ import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import Typography from '@tiptap/extension-typography';
+import { ResizableImageExtension } from './extensions/ResizableImageExtension';
 
 import { TagMark } from './extensions/TagExtension';
 import { WikiLinkMark } from './extensions/WikiLinkExtension';
@@ -41,6 +42,12 @@ import {
   KeyRound,
   ShieldCheck,
   AlertCircle,
+  X,
+  ZoomIn,
+  ZoomOut,
+  Download,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 // Enhanced TaskItem with extra markdown input rules (- [ ] and * [ ])
@@ -98,6 +105,18 @@ export const AmEditor: React.FC = () => {
   const [showBubbleMenu, setShowBubbleMenu] = useState(false);
   const [bubblePosition, setBubblePosition] = useState({ top: 0, left: 0 });
 
+  const isSlashOpenRef = useRef(isSlashOpen);
+  isSlashOpenRef.current = isSlashOpen;
+
+  const isWikiMenuOpenRef = useRef(isWikiMenuOpen);
+  isWikiMenuOpenRef.current = isWikiMenuOpen;
+
+  // Image Upload & Lightbox state
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [copiedImage, setCopiedImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Unlock screen state
   const [unlockPassword, setUnlockPassword] = useState('');
   const [unlockError, setUnlockError] = useState(false);
@@ -153,6 +172,7 @@ export const AmEditor: React.FC = () => {
           class: 'underline text-accent hover:opacity-80 transition-opacity',
         },
       }),
+      ResizableImageExtension,
       Typography,
       TagMark,
       WikiLinkMark,
@@ -165,9 +185,68 @@ export const AmEditor: React.FC = () => {
       attributes: {
         class: 'focus:outline-none min-h-[500px] leading-relaxed max-w-none text-editor',
       },
+      handleKeyDown: (_view, event) => {
+        if (isSlashOpenRef.current || isWikiMenuOpenRef.current) {
+          if (['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(event.key)) {
+            // Tells ProseMirror this key is handled by the open dropdown menu
+            return true;
+          }
+        }
+        return false;
+      },
+      handlePaste: (view, event) => {
+        const files = event.clipboardData?.files;
+        if (files && files.length > 0) {
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.type.startsWith('image/')) {
+              event.preventDefault();
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const src = e.target?.result as string;
+                if (src) {
+                  const { schema } = view.state;
+                  const node = schema.nodes.image.create({ src, alt: file.name || 'Pasted image' });
+                  const tr = view.state.tr.replaceSelectionWith(node);
+                  view.dispatch(tr);
+                }
+              };
+              reader.readAsDataURL(file);
+              return true;
+            }
+          }
+        }
+        return false;
+      },
+      handleDrop: (view, event) => {
+        const files = event.dataTransfer?.files;
+        if (files && files.length > 0) {
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.type.startsWith('image/')) {
+              event.preventDefault();
+              const coords = view.posAtCoords({ left: event.clientX, top: event.clientY });
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const src = e.target?.result as string;
+                if (src) {
+                  const { schema } = view.state;
+                  const node = schema.nodes.image.create({ src, alt: file.name || 'Dropped image' });
+                  const pos = coords ? coords.pos : view.state.selection.from;
+                  const tr = view.state.tr.insert(pos, node);
+                  view.dispatch(tr);
+                }
+              };
+              reader.readAsDataURL(file);
+              return true;
+            }
+          }
+        }
+        return false;
+      },
       handleClick: (_view, _pos, event) => {
         const target = event.target as HTMLElement;
-        
+
         // Handle Tag Pill clicks
         const tagPill = target.closest('[data-tag]') as HTMLElement | null;
         if (tagPill) {
@@ -232,10 +311,17 @@ export const AmEditor: React.FC = () => {
       const { $from } = selection;
       const textBefore = $from.parent.textBetween(0, $from.parentOffset, undefined, '\ufffc');
 
-      if (textBefore.startsWith('/')) {
+      // Check slash commands: /query
+      const lastSlashIdx = textBefore.lastIndexOf('/');
+      if (
+        lastSlashIdx !== -1 &&
+        (lastSlashIdx === 0 || /\s/.test(textBefore[lastSlashIdx - 1])) &&
+        !textBefore.slice(lastSlashIdx).includes(' ')
+      ) {
+        const queryText = textBefore.slice(lastSlashIdx + 1);
         const coords = currentEditor.view.coordsAtPos(selection.from);
         setMenuPosition({ top: coords.bottom + 8, left: coords.left });
-        setSlashQuery(textBefore.slice(1));
+        setSlashQuery(queryText);
         setIsSlashOpen(true);
       } else {
         setIsSlashOpen(false);
@@ -304,6 +390,52 @@ export const AmEditor: React.FC = () => {
       setTimeout(() => passwordInputRef.current?.focus(), 50);
     }
   }, [activeNote?.id, isUnlocked, activeNote?.isLocked]);
+
+  // Insert image file into editor
+  const insertImageFromFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const src = e.target?.result as string;
+      if (src && editor) {
+        editor.chain().focus().setImage({ src, alt: file.name || 'Image' }).run();
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        insertImageFromFile(files[i]);
+      }
+    }
+    e.target.value = '';
+  };
+
+  // Listen for global trigger image upload event from slash menu or toolbar
+  useEffect(() => {
+    const handleTrigger = () => {
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+    };
+
+    const handleOpenLightbox = (e: Event) => {
+      const customEvent = e as CustomEvent<{ src: string; alt: string }>;
+      if (customEvent.detail) {
+        setLightboxImage(customEvent.detail);
+        setLightboxZoom(1);
+      }
+    };
+
+    window.addEventListener('amnote:trigger-image-upload', handleTrigger);
+    window.addEventListener('amnote:open-lightbox', handleOpenLightbox);
+    return () => {
+      window.removeEventListener('amnote:trigger-image-upload', handleTrigger);
+      window.removeEventListener('amnote:open-lightbox', handleOpenLightbox);
+    };
+  }, []);
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -709,6 +841,106 @@ export const AmEditor: React.FC = () => {
           <span>Saved</span>
         </div>
       </div>
+
+      {/* Hidden File Input for Native Image Uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleImageFileSelect}
+      />
+
+      {/* Fullscreen Image Lightbox Preview Modal */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div
+            className="relative max-w-5xl max-h-[90vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Lightbox Controls */}
+            <div className="absolute -top-12 right-0 flex items-center gap-2">
+              {/* Zoom Out */}
+              <button
+                type="button"
+                onClick={() => setLightboxZoom((prev) => Math.max(0.5, prev - 0.25))}
+                title="Zoom Out"
+                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95"
+              >
+                <ZoomOut size={16} />
+              </button>
+
+              {/* Reset Zoom / Current Scale */}
+              <button
+                type="button"
+                onClick={() => setLightboxZoom(1)}
+                title="Reset Zoom"
+                className="px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md text-xs font-mono transition-all"
+              >
+                {Math.round(lightboxZoom * 100)}%
+              </button>
+
+              {/* Zoom In */}
+              <button
+                type="button"
+                onClick={() => setLightboxZoom((prev) => Math.min(3, prev + 0.25))}
+                title="Zoom In"
+                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95"
+              >
+                <ZoomIn size={16} />
+              </button>
+
+              {/* Copy Image / Link */}
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(lightboxImage.src);
+                  setCopiedImage(true);
+                  setTimeout(() => setCopiedImage(false), 1500);
+                }}
+                title="Copy Image Data / URL"
+                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95"
+              >
+                {copiedImage ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+              </button>
+
+              {/* Download Image */}
+              <a
+                href={lightboxImage.src}
+                download={lightboxImage.alt || 'amnote-image'}
+                title="Download Image"
+                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center"
+              >
+                <Download size={16} />
+              </a>
+
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setLightboxImage(null)}
+                title="Close (Esc)"
+                className="p-2 rounded-xl bg-black/60 hover:bg-rose-600 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Lightbox Image Element */}
+            <div className="overflow-auto max-h-[85vh] max-w-[90vw] flex items-center justify-center p-2">
+              <img
+                src={lightboxImage.src}
+                alt={lightboxImage.alt}
+                style={{ transform: `scale(${lightboxZoom})`, transformOrigin: 'center' }}
+                className="rounded-2xl max-h-[80vh] max-w-full object-contain shadow-2xl transition-transform duration-150 border border-white/10"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

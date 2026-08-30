@@ -45,8 +45,37 @@ export function markdownToHtml(md: string): string {
     // Strikethrough: ~~text~~
     out = out.replace(/~~([^~]+)~~/g, '<s>$1</s>');
 
-    // Highlight: ==text==
+    // Highlight: =={color:...}text== or ==text==
+    out = out.replace(
+      /==\{color:([^}]+)\}([^=]+)==/g,
+      '<mark data-color="$1" style="background-color: $1">$2</mark>'
+    );
     out = out.replace(/==([^=]+)==/g, '<mark>$1</mark>');
+
+    // Images: ![alt|align|width](url) or ![alt|width](url) or ![alt](url)
+    out = out.replace(
+      /!\[([^\]|]*)(\|([a-zA-Z0-9%_\-\s|]+))?\]\(([^)]+)\)/g,
+      (_match, alt, _pipeGroup, sizeInfo, url) => {
+        const cleanAlt = (alt || '').trim();
+        let width = '';
+        let align = 'center';
+
+        if (sizeInfo) {
+          const parts = sizeInfo.split('|').map((p: string) => p.trim());
+          parts.forEach((p: string) => {
+            if (['left', 'center', 'right'].includes(p.toLowerCase())) {
+              align = p.toLowerCase();
+            } else if (/^[0-9]+(%|px)?$/.test(p)) {
+              width = p.endsWith('%') || p.endsWith('px') ? p : `${p}px`;
+            }
+          });
+        }
+
+        const widthAttr = width ? ` width="${width}" style="width: ${width};"` : '';
+        const alignAttr = ` data-align="${align}"`;
+        return `<img src="${url}" alt="${cleanAlt}" class="am-editor-image"${widthAttr}${alignAttr} />`;
+      }
+    );
 
     // Links: [text](url)
     out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
@@ -240,7 +269,14 @@ export function markdownToHtml(md: string): string {
       }
     }
 
-    // 11. Regular paragraph
+    // 11. Standalone Image
+    if (trimmed.startsWith('![') && trimmed.endsWith(')')) {
+      flushList();
+      result.push(formatInline(trimmed));
+      continue;
+    }
+
+    // 12. Regular paragraph
     flushList();
     result.push(`<p>${formatInline(trimmed)}</p>`);
   }
@@ -282,7 +318,31 @@ export function htmlToMarkdown(html: string): string {
     md = md.replace(/<strong>(.*?)<\/strong>/gi, '**$1**');
     md = md.replace(/<em>(.*?)<\/em>/gi, '*$1*');
     md = md.replace(/<s>(.*?)<\/s>/gi, '~~$1~~');
+    md = md.replace(/<mark[^>]*data-color="([^"]+)"[^>]*>(.*?)<\/mark>/gi, '=={color:$1}$2==');
+    md = md.replace(/<mark[^>]*style="[^"]*background-color:\s*([^;"]+)[^"]*"[^>]*>(.*?)<\/mark>/gi, '=={color:$1}$2==');
     md = md.replace(/<mark>(.*?)<\/mark>/gi, '==$1==');
+    // Images
+    md = md.replace(/<img([^>]*)>/gi, (_match, attrs) => {
+      const srcMatch = attrs.match(/src="([^"]+)"/i);
+      if (!srcMatch) return '';
+      const src = srcMatch[1];
+
+      const altMatch = attrs.match(/alt="([^"]*)"/i);
+      const widthMatch = attrs.match(/width="([^"]*)"/i) || attrs.match(/style="[^"]*width:\s*([^;"]+)[^"]*"/i);
+      const alignMatch = attrs.match(/data-align="([^"]*)"/i);
+
+      const alt = altMatch ? altMatch[1] : '';
+      const width = widthMatch ? widthMatch[1].replace(/px$/, '') : '';
+      const align = alignMatch ? alignMatch[1] : '';
+
+      const parts: string[] = [];
+      if (alt) parts.push(alt);
+      if (align && align !== 'center') parts.push(align);
+      if (width && width !== '100%') parts.push(width);
+
+      const meta = parts.length > 0 ? parts.join('|') : '';
+      return `![${meta}](${src})`;
+    });
     md = md.replace(/<code>(.*?)<\/code>/gi, '`$1`');
     md = md.replace(/<span data-tag="(.*?)">.*?<\/span>/gi, '#$1');
     md = md.replace(/<span data-wiki-target="(.*?)">.*?<\/span>/gi, '[[$1]]');
@@ -353,8 +413,13 @@ export function htmlToMarkdown(html: string): string {
       case 'del':
       case 'strike':
         return `~~${getChildren()}~~`;
-      case 'mark':
+      case 'mark': {
+        const color = el.getAttribute('data-color') || el.style.backgroundColor;
+        if (color) {
+          return `=={color:${color}}${getChildren()}==`;
+        }
         return `==${getChildren()}==`;
+      }
       case 'code': {
         if (el.parentElement?.tagName.toLowerCase() === 'pre') {
           return el.textContent || '';
@@ -452,6 +517,20 @@ export function htmlToMarkdown(html: string): string {
         return '\n';
       case 'hr':
         return '\n\n---\n\n';
+      case 'img': {
+        const src = el.getAttribute('src') || '';
+        const alt = el.getAttribute('alt') || '';
+        const width = el.getAttribute('width') || el.style.width || '';
+        const align = el.getAttribute('data-align') || '';
+
+        const metaParts: string[] = [];
+        if (alt) metaParts.push(alt);
+        if (align && align !== 'center') metaParts.push(align);
+        if (width && width !== '100%') metaParts.push(width.replace(/px$/, ''));
+
+        const altWithMeta = metaParts.length > 0 ? metaParts.join('|') : alt;
+        return `\n\n![${altWithMeta}](${src})\n\n`;
+      }
       case 'a':
         return `[${getChildren()}](${el.getAttribute('href') || ''})`;
       case 'span': {

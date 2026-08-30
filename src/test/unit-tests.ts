@@ -69,7 +69,37 @@ const backToMd = htmlToMarkdown(htmlSample);
 assert(backToMd.includes('- [x] Ship AmNote'), 'Round-trip checked task item');
 assert(backToMd.includes('- [ ] Write Docs'), 'Round-trip unchecked task item');
 
-// Test 9: Initial AmNote Seed verification
+// Test 9: Custom Highlight Color Round-Trip
+const customHighlightMd = `Here is =={color:#bbf7d0}mint green highlight== and standard ==yellow highlight==.`;
+const customHighlightHtml = markdownToHtml(customHighlightMd);
+assert(customHighlightHtml.includes('style="background-color: #bbf7d0"'), 'Preserves custom highlight color in HTML');
+assert(customHighlightHtml.includes('<mark>yellow highlight</mark>'), 'Converts standard highlight to <mark>');
+
+const customBackToMd = htmlToMarkdown(customHighlightHtml);
+assert(customBackToMd.includes('=={color:#bbf7d0}mint green highlight=='), 'Round-trips custom color highlight to markdown');
+assert(customBackToMd.includes('==yellow highlight=='), 'Round-trips standard highlight to markdown');
+
+// Test 10: Image Markdown Conversion Round-Trip
+const imageMd = `Here is an image:\n\n![AmNote Screenshot](https://example.com/screenshot.png)\n\nAnd local image:\n\n![Diagram](data:image/png;base64,iVBORw0KGgo=)`;
+const imageHtml = markdownToHtml(imageMd);
+assert(imageHtml.includes('<img src="https://example.com/screenshot.png" alt="AmNote Screenshot"'), 'Converts markdown image to <img> tag');
+assert(imageHtml.includes('src="data:image/png;base64,iVBORw0KGgo="'), 'Preserves data URL in <img> tag');
+
+const imageBackToMd = htmlToMarkdown(imageHtml);
+assert(imageBackToMd.includes('![AmNote Screenshot](https://example.com/screenshot.png)'), 'Round-trips web image markdown');
+assert(imageBackToMd.includes('![Diagram](data:image/png;base64,iVBORw0KGgo=)'), 'Round-trips base64 image markdown');
+
+// Test 11: Resized and Aligned Image Round-Trip
+const resizedMd = `![Graph|left|50%](https://example.com/graph.png)\n\n![Banner|75%](https://example.com/banner.png)`;
+const resizedHtml = markdownToHtml(resizedMd);
+assert(resizedHtml.includes('width="50%"'), 'Converts percentage width to width attribute');
+assert(resizedHtml.includes('data-align="left"'), 'Converts left alignment to data-align attribute');
+
+const resizedBackToMd = htmlToMarkdown(resizedHtml);
+assert(resizedBackToMd.includes('![Graph|left|50%](https://example.com/graph.png)'), 'Round-trips aligned & resized image markdown');
+assert(resizedBackToMd.includes('![Banner|75%](https://example.com/banner.png)'), 'Round-trips resized image markdown');
+
+// Test 12: Initial AmNote Seed verification
 assert(initialAmNoteSeed.length === 2, 'Initial seed has 2 notes');
 assert(initialAmNoteSeed[0].title === 'Welcome to AmNote', 'First note is Welcome to AmNote');
 

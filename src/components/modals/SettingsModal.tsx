@@ -36,6 +36,7 @@ export const SettingsModal: React.FC = () => {
     previewLines,
     typewriterMode,
     wordGoal,
+    defaultHighlightColor,
     setFontFamily,
     setFontSize,
     setEditorWidth,
@@ -43,6 +44,7 @@ export const SettingsModal: React.FC = () => {
     setPreviewLines,
     setTypewriterMode,
     setWordGoal,
+    setDefaultHighlightColor,
   } = useSettingsStore();
 
   const [activeTab, setActiveTab] = useState<'themes' | 'typography' | 'data'>('typography');
@@ -427,6 +429,60 @@ export const SettingsModal: React.FC = () => {
                         {goal === 0 ? 'Off' : `${goal}w`}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* Default Text Highlight Color */}
+                <div className="space-y-2 pt-2 border-t" style={{ borderColor: 'var(--color-divider)' }}>
+                  <div>
+                    <h3 className="font-semibold text-xs">Default Text Highlight Color</h3>
+                    <p className="text-[11px] opacity-60">Preferred background color for ==highlighted text== and bubble toolbar.</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[
+                      { name: 'Yellow', color: '#fef08a' },
+                      { name: 'Mint Green', color: '#bbf7d0' },
+                      { name: 'Sky Blue', color: '#bfdbfe' },
+                      { name: 'Lavender', color: '#e9d5ff' },
+                      { name: 'Rose Coral', color: '#fecaca' },
+                      { name: 'Warm Amber', color: '#fed7aa' },
+                    ].map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => setDefaultHighlightColor(preset.color)}
+                        title={preset.name}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+                          defaultHighlightColor.toLowerCase() === preset.color.toLowerCase()
+                            ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                            : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
+                        }`}
+                        style={{
+                          borderColor: defaultHighlightColor.toLowerCase() === preset.color.toLowerCase() ? 'var(--color-accent)' : 'var(--color-border)',
+                        }}
+                      >
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/20 shadow-xs"
+                          style={{ backgroundColor: preset.color }}
+                        />
+                        <span>{preset.name}</span>
+                      </button>
+                    ))}
+
+                    {/* Custom Hex Color Picker */}
+                    <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium opacity-80 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all" style={{ borderColor: 'var(--color-border)' }}>
+                      <span
+                        className="w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/20 shadow-xs"
+                        style={{ backgroundColor: defaultHighlightColor }}
+                      />
+                      <span>Custom: <span className="font-mono">{defaultHighlightColor}</span></span>
+                      <input
+                        type="color"
+                        value={defaultHighlightColor}
+                        onChange={(e) => setDefaultHighlightColor(e.target.value)}
+                        className="w-0 h-0 opacity-0 absolute"
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
