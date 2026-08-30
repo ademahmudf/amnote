@@ -8,9 +8,6 @@ import {
   Settings,
   Sparkles,
   HelpCircle,
-  X,
-  Minus,
-  Square,
 } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useNoteStore } from '../../store/useNoteStore';
@@ -40,16 +37,6 @@ export const HeaderBar: React.FC = () => {
     }
   }, []);
 
-  const handleMinimize = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      const appWindow = getCurrentWindow();
-      await appWindow.minimize();
-    } catch (err) {
-      console.warn('Window minimize not available:', err);
-    }
-  };
-
   const handleToggleMaximize = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     try {
@@ -57,16 +44,6 @@ export const HeaderBar: React.FC = () => {
       await appWindow.toggleMaximize();
     } catch (err) {
       console.warn('Window toggleMaximize not available:', err);
-    }
-  };
-
-  const handleClose = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      const appWindow = getCurrentWindow();
-      await appWindow.close();
-    } catch (err) {
-      console.warn('Window close not available:', err);
     }
   };
 
@@ -101,39 +78,11 @@ export const HeaderBar: React.FC = () => {
         borderColor: 'var(--color-divider)',
       }}
     >
-      {/* Left: Window Dots & Layout controls */}
+      {/* Left: Window Dots on macOS, Clean layout on Linux */}
       <div className="flex items-center gap-2" data-tauri-drag-region>
         {/* On macOS: Provide dedicated spacing for the native macOS traffic lights */}
-        {isMac ? (
+        {isMac && (
           <div className="w-16 shrink-0 pointer-events-none" data-tauri-drag-region />
-        ) : (
-          /* Non-macOS: Interactive traffic light buttons */
-          <div className="flex items-center gap-1.5 mr-2 group/dots">
-            <button
-              type="button"
-              onClick={handleClose}
-              title="Close window"
-              className="w-3 h-3 rounded-full bg-rose-500/90 hover:bg-rose-600 transition-transform active:scale-90 flex items-center justify-center cursor-pointer shadow-sm"
-            >
-              <X size={7} className="text-black/80 dark:text-white/80 opacity-0 group-hover/dots:opacity-100 transition-opacity" />
-            </button>
-            <button
-              type="button"
-              onClick={handleMinimize}
-              title="Minimize window"
-              className="w-3 h-3 rounded-full bg-amber-500/90 hover:bg-amber-600 transition-transform active:scale-90 flex items-center justify-center cursor-pointer shadow-sm"
-            >
-              <Minus size={7} className="text-black/80 dark:text-white/80 opacity-0 group-hover/dots:opacity-100 transition-opacity" />
-            </button>
-            <button
-              type="button"
-              onClick={handleToggleMaximize}
-              title="Maximize / Restore window"
-              className="w-3 h-3 rounded-full bg-emerald-500/90 hover:bg-emerald-600 transition-transform active:scale-90 flex items-center justify-center cursor-pointer shadow-sm"
-            >
-              <Square size={6} className="text-black/80 dark:text-white/80 opacity-0 group-hover/dots:opacity-100 transition-opacity" />
-            </button>
-          </div>
         )}
 
         {/* View toggles */}
