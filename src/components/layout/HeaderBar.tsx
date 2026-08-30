@@ -65,12 +65,15 @@ export const HeaderBar: React.FC = () => {
     }
   };
 
+  // macOS header is 41px (40px content + 1px border) so the 26px toggle buttons
+  // centre at y=20 — same centre as the native traffic lights, which AppKit puts
+  // at (trafficLightPosition.y - 9) with a 14px frame. Keep the two values in sync.
   return (
     <div
       data-tauri-drag-region
       onMouseDown={handleDragMouseDown}
       onDoubleClick={handleToggleMaximize}
-      className={`${isMac ? 'h-12' : 'h-10'} border-b flex items-center justify-between px-3 select-none shrink-0 relative cursor-default`}
+      className={`${isMac ? 'h-[41px]' : 'h-10'} border-b flex items-center justify-between px-3 select-none shrink-0 relative cursor-default`}
       style={{
         backgroundColor: 'var(--bg-sidebar)',
         color: 'var(--text-sidebar)',
