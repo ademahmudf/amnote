@@ -5,26 +5,29 @@ export const initialAmNoteSeed: Note[] = [
   {
     id: 'note-welcome-amnote',
     title: 'Welcome to AmNote',
-    content: `# Welcome to AmNote 🐻
+    content: `# Welcome to AmNote
 
-Welcome to **AmNote**, your fast, beautiful, and distraction-free Markdown note taking companion designed for **Omarchy Linux** and **macOS**.
+![AmNote|center|220px](/new-amnote-dark.png)
+
+Welcome to **AmNote** — *Ideas, Thoughts, Noted*. Your fast, beautiful, and distraction-free native Markdown companion designed for **Omarchy Linux** and **macOS**.
 
 All your notes are stored locally in **~/Documents/AmNotes** as human-readable \`.md\` files with standard YAML frontmatter!
 
 ### 🌟 Key Highlights
 - **100% Native Desktop Storage**: All notes live in \`~/Documents/AmNotes/\` on your disk.
+- **Image Cropping & Resizing**: Drag handles, aspect ratio presets, rotate & flip.
+- **Custom Highlight Colors**: Choose preset pastel swatches or hex colors.
 - **Nested Hierarchical Tags**: Organize with \`#guide/basics\` or \`#work/projects/2026\`.
 - **Bidirectional Wiki-Links**: Link between notes using \`[[Welcome to AmNote]]\`.
-- **Bear-Style Squircles**: Smooth checklists with micro-interactions.
 - **Lock & Privacy**: Protect sensitive notes with optional PIN / Passwords.
-- **Multiple Color Themes**: Bear Dark, One Piece, Dracula, Nord, Solarized, and Omarchy OS theme detection.
+- **Multiple Color Themes**: Omarchy Sync, Red Graphite, Nord, Dracula, Solarized, Ayu, Sepia.
 
 ### ⚡ Useful Shortcuts
 - \`Ctrl+N\`: Create a new note
 - \`Ctrl+Shift+F\`: Search notes
 - \`Ctrl+P\` / \`Ctrl+K\`: Command Palette
 - \`Ctrl+Shift+I\`: Note Inspector & Table of Contents
-- \`/\`: Insert headings, tables, checklists, callouts, and code blocks
+- \`/\`: Insert headings, tables, checklists, callouts, and images
 
 #guide/welcome #amnote/getting-started`,
     tags: ['guide/welcome', 'amnote/getting-started'],

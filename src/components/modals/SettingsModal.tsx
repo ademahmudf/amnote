@@ -17,6 +17,7 @@ import { useNoteStore } from '../../store/useNoteStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useSettingsStore, type FontFamily, type EditorWidth, type UiScale } from '../../store/useSettingsStore';
 import { THEMES } from '../../themes/themeDefinitions';
+import { AmNoteLogo } from '../icons/AmNoteLogo';
 import type { ThemeId } from '../../types/note';
 
 export const SettingsModal: React.FC = () => {
@@ -652,13 +653,17 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               {/* About AmNote */}
-              <div className="pt-2 text-center text-xs opacity-50 space-y-1">
-                <div className="flex items-center justify-center gap-1">
-                  <span>AmNote v1.0.0 — Crafted with</span>
-                  <Heart size={12} className="text-rose-500 fill-current" />
-                  <span>by Ade Mahmud</span>
+              <div className="pt-4 pb-2 flex flex-col items-center justify-center text-center space-y-2">
+                <AmNoteLogo size={52} variant="dark-circle" />
+                <div className="space-y-0.5">
+                  <div className="font-extrabold text-sm tracking-tight">AmNote</div>
+                  <div className="text-xs opacity-60 font-medium">Ideas, Thoughts, Noted</div>
                 </div>
-                <div>Designed for Omarchy Linux & macOS</div>
+                <div className="flex items-center justify-center gap-1 text-[11px] opacity-40 pt-1">
+                  <span>v1.0.0 — Crafted with</span>
+                  <Heart size={11} className="text-rose-500 fill-current" />
+                  <span>by Ade Mahmud • Linux & macOS</span>
+                </div>
               </div>
             </div>
           )}

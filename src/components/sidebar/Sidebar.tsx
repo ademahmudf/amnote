@@ -17,6 +17,7 @@ import { useNoteStore } from '../../store/useNoteStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { TagTree } from './TagTree';
+import { AmNoteLogo } from '../icons/AmNoteLogo';
 import type { SystemFilter } from '../../types/note';
 
 export const Sidebar: React.FC = () => {
@@ -62,22 +63,11 @@ export const Sidebar: React.FC = () => {
       }}
     >
       {/* Top Header & Brand */}
-      <div className="p-3 pb-2 flex items-center justify-between border-b" style={{ borderColor: 'var(--color-divider)' }} data-tauri-drag-region>
+      <div className="p-3 py-2.5 flex items-center justify-between border-b" style={{ borderColor: 'var(--color-divider)' }} data-tauri-drag-region>
         <div className="flex items-center gap-2">
-          <div
-            className="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm"
-            style={{
-              backgroundColor: 'var(--color-accent)',
-              color: 'var(--color-accent-text)',
-            }}
-          >
-            ʕ•ᴥ•ʔ
-          </div>
+          <AmNoteLogo size={24} variant="dark-circle" />
           <span className="font-bold text-sm tracking-tight" style={{ color: 'var(--text-sidebar-active)' }}>
             AmNote
-          </span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded bg-black/10 dark:bg-white/10 opacity-70 font-mono">
-            Vault
           </span>
         </div>
 
