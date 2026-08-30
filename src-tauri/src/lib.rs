@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(not(target_os = "macos"))]
 use tauri::Manager;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -284,10 +285,10 @@ fn get_omarchy_theme() -> Result<String, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
+        .setup(|_app| {
             #[cfg(not(target_os = "macos"))]
             {
-                if let Some(window) = app.get_webview_window("main") {
+                if let Some(window) = _app.get_webview_window("main") {
                     let _ = window.set_decorations(false);
                 }
             }

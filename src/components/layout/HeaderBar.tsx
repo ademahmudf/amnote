@@ -70,7 +70,7 @@ export const HeaderBar: React.FC = () => {
       data-tauri-drag-region
       onMouseDown={handleDragMouseDown}
       onDoubleClick={handleToggleMaximize}
-      className="h-10 border-b flex items-center justify-between px-3 select-none shrink-0 relative cursor-default"
+      className={`${isMac ? 'h-11' : 'h-10'} border-b flex items-center justify-between px-3 select-none shrink-0 relative cursor-default`}
       style={{
         backgroundColor: 'var(--bg-sidebar)',
         color: 'var(--text-sidebar)',
@@ -81,7 +81,7 @@ export const HeaderBar: React.FC = () => {
       <div className="flex items-center gap-2" data-tauri-drag-region>
         {/* On macOS: Provide dedicated spacing for the native macOS traffic lights */}
         {isMac && (
-          <div className="w-[72px] shrink-0 pointer-events-none" data-tauri-drag-region />
+          <div className="w-20 shrink-0 pointer-events-none" data-tauri-drag-region />
         )}
 
         {/* View toggles */}
