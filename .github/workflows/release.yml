@@ -1,0 +1,82 @@
+name: Release AmNote
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'macos-latest'
+            args: '--target universal-apple-darwin'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Build frontend
+        run: npm run build:vite
+
+      - name: Build and Package with Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'AmNote ${{ github.ref_name }}'
+          releaseBody: |
+            ## AmNote ${{ github.ref_name }} (Beta Release)
+            
+            Beautiful, distraction-free native Markdown note-taking app inspired by Bear 2 for Omarchy Linux and macOS.
+
+            ### ✨ Key Features:
+            - **Native Markdown Vault**: Direct read/write to `~/Documents/AmNotes` as pure `.md` files with YAML frontmatter.
+            - **Smart Note Cards**: Grouped Pinned Notes header, task checklist badges (`☑ 2/5`), and relative timestamps.
+            - **Interactive Outline & Backlinks**: Click-to-jump Table of Contents and interconnected `[[Note Title]]` wiki backlinks.
+            - **Typewriter Mode (`Ctrl+Shift+T`)**: Keeps active typing line vertically centered.
+            - **Typographies**: Clarika, Bear Sans, Inter, Editorial Serif, JetBrains Mono.
+            - **Themes**: Omarchy Sync, Red Graphite, Nord, Dracula, Solarized, Ayu, Sepia.
+            - **Fast Cheatsheet HUD (`Ctrl+/` or `?`)**: Quick Markdown & shortcut guide.
+
+            ### 📦 Downloads:
+            - **Linux**: `.AppImage` and `.deb`
+            - **macOS**: `.dmg` (Universal binary for Apple Silicon & Intel)
+          releaseDraft: false
+          prerelease: true
+          args: ${{ matrix.args }}

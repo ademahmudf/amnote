@@ -1,0 +1,599 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-sidebar: #18191b;
+    --text-sidebar: #9ca3af;
+    --text-sidebar-active: #ffffff;
+    --hover-sidebar: #242629;
+    --active-sidebar-bg: #2a2c30;
+    --active-sidebar-border: #e53935;
+
+    --bg-notelist: #1f2023;
+    --text-notelist: #e5e7eb;
+    --card-notelist-bg: #26282c;
+    --card-notelist-hover: #2e3035;
+    --card-notelist-active: #35373d;
+    --card-notelist-border: #32343a;
+
+    --bg-editor: #1a1b1e;
+    --text-editor: #f3f4f6;
+    --text-editor-muted: #9ca3af;
+
+    --color-accent: #e53935;
+    --color-accent-hover: #ef5350;
+    --color-accent-text: #ffffff;
+
+    --color-border: #2c2e33;
+    --color-divider: #26282c;
+    --color-code-bg: #131416;
+    --color-tag-bg: #3a2022;
+    --color-tag-text: #ff8a80;
+
+    --callout-note-bg: #1e293b;
+    --callout-tip-bg: #14382c;
+    --callout-warn-bg: #3f2d1c;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--bg-editor);
+    color: var(--text-editor);
+  }
+
+  /* Custom Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.25);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(128, 128, 128, 0.45);
+  }
+}
+
+/* TipTap ProseMirror Editor Styling with Bear-style Overscroll Space */
+.ProseMirror {
+  outline: none !important;
+  min-height: calc(100vh - 220px);
+  padding-bottom: 60vh !important; /* Generous bottom overscroll margin so last line can scroll to center */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  caret-color: var(--color-accent) !important;
+  cursor: text !important;
+  position: relative;
+  scroll-margin-bottom: 30vh;
+}
+
+.ProseMirror * {
+  caret-color: var(--color-accent) !important;
+}
+
+/* Crisp Visible Placeholder */
+.ProseMirror p.is-editor-empty:first-child::before,
+.ProseMirror p.is-empty::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  color: var(--text-editor-muted);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Typography elements */
+.am-heading-prefix,
+.bear-heading-prefix {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+  font-size: 0.72em;
+  border-radius: 6px;
+  vertical-align: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Inactive: hidden by default so typography remains distraction-free */
+.am-heading-prefix.is-inactive,
+.bear-heading-prefix.is-inactive {
+  opacity: 0;
+  max-width: 0;
+  margin-right: 0;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Revealed on Hover over heading */
+.ProseMirror h1:hover .am-heading-prefix.is-inactive,
+.ProseMirror h2:hover .am-heading-prefix.is-inactive,
+.ProseMirror h3:hover .am-heading-prefix.is-inactive,
+.ProseMirror h4:hover .am-heading-prefix.is-inactive,
+.ProseMirror h5:hover .am-heading-prefix.is-inactive,
+.ProseMirror h6:hover .am-heading-prefix.is-inactive,
+.ProseMirror h1:hover .bear-heading-prefix.is-inactive,
+.ProseMirror h2:hover .bear-heading-prefix.is-inactive,
+.ProseMirror h3:hover .bear-heading-prefix.is-inactive,
+.ProseMirror h4:hover .bear-heading-prefix.is-inactive,
+.ProseMirror h5:hover .bear-heading-prefix.is-inactive,
+.ProseMirror h6:hover .bear-heading-prefix.is-inactive {
+  opacity: 0.75;
+  max-width: 60px;
+  margin-right: 0.35em;
+  padding: 0.1em 0.35em;
+  background-color: rgba(128, 128, 128, 0.12);
+  color: var(--color-accent);
+  pointer-events: auto;
+}
+
+/* Revealed on Click / Active Cursor in Heading */
+.am-heading-prefix.is-active,
+.bear-heading-prefix.is-active {
+  opacity: 1;
+  max-width: 60px;
+  margin-right: 0.35em;
+  padding: 0.12em 0.4em;
+  color: var(--color-accent);
+  background-color: rgba(229, 57, 53, 0.15);
+  box-shadow: 0 0 0 1.5px rgba(229, 57, 53, 0.35);
+  pointer-events: auto;
+}
+
+.ProseMirror h1 {
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.025em;
+  color: var(--text-editor);
+}
+
+.ProseMirror h2 {
+  font-size: 1.55rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.35rem;
+  margin-bottom: 0.6rem;
+  color: var(--text-editor);
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.15rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-editor);
+}
+
+.ProseMirror h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.ProseMirror p {
+  margin-top: 0.45rem;
+  margin-bottom: 0.45rem;
+  line-height: 1.65;
+  position: relative;
+}
+
+.ProseMirror strong {
+  font-weight: 600;
+}
+
+.ProseMirror em {
+  font-style: italic;
+}
+
+.ProseMirror mark {
+  background-color: #fef08a;
+  color: #854d0e;
+  padding: 0.05em 0.25em;
+  border-radius: 0.25rem;
+  line-height: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.dark .ProseMirror mark {
+  background-color: #713f12;
+  color: #fef08a;
+}
+
+.ProseMirror code:not(pre code) {
+  background-color: var(--color-code-bg);
+  border: 1px solid var(--color-border);
+  padding: 0.08em 0.32em;
+  border-radius: 0.375rem;
+  font-size: 0.88em;
+  line-height: normal;
+  font-family: "JetBrains Mono", monospace;
+  display: inline;
+  vertical-align: baseline;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.ProseMirror pre {
+  background-color: var(--color-code-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  line-height: 1.45 !important;
+}
+
+.ProseMirror pre code {
+  background: transparent;
+  padding: 0;
+  border: none;
+  font-size: 0.875rem;
+  line-height: 1.45 !important;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--text-editor);
+  display: block;
+}
+
+/* Blockquotes */
+.ProseMirror blockquote {
+  border-left: 3px solid var(--color-accent);
+  margin: 1rem 0;
+  padding-left: 1rem;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* Bullet Lists (unordered) */
+.ProseMirror ul:not([data-type="taskList"]) {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.ProseMirror ul:not([data-type="taskList"]) ul {
+  list-style-type: circle !important;
+  padding-left: 1.4rem !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.ProseMirror ul:not([data-type="taskList"]) ul ul {
+  list-style-type: square !important;
+}
+
+.ProseMirror ul:not([data-type="taskList"]) li {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  line-height: 1.65 !important;
+}
+
+.ProseMirror ul:not([data-type="taskList"]) li::marker {
+  color: var(--color-accent) !important;
+  font-size: 1.05em !important;
+}
+
+/* Numbered Lists (ordered) */
+.ProseMirror ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.ProseMirror ol ol {
+  list-style-type: lower-alpha !important;
+  padding-left: 1.4rem !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.ProseMirror ol li {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  line-height: 1.65 !important;
+}
+
+.ProseMirror ol li::marker {
+  color: var(--color-accent) !important;
+  font-weight: 600 !important;
+}
+
+/* ==========================================================================
+   Bear-Style Task Lists (Checklists) - Sleek Classic Bear Proportions
+   ========================================================================== */
+
+.ProseMirror ul[data-type="taskList"],
+ul[data-type="taskList"] {
+  list-style: none !important;
+  list-style-type: none !important;
+  padding-left: 0 !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.ProseMirror ul[data-type="taskList"] ul[data-type="taskList"] {
+  padding-left: 1.5rem !important;
+  margin-top: 0.2rem !important;
+  margin-bottom: 0.2rem !important;
+  border-left: 1.5px solid var(--color-border);
+  margin-left: 0.55rem !important;
+}
+
+.ProseMirror li[data-type="taskItem"],
+li[data-type="taskItem"],
+.ProseMirror .am-task-item,
+.ProseMirror .bear-task-item {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 0.55rem !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  padding: 0.05rem 0.25rem !important;
+  border-radius: 0.375rem !important;
+  list-style: none !important;
+  list-style-type: none !important;
+  position: relative !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.ProseMirror li[data-type="taskItem"]:hover {
+  background-color: rgba(128, 128, 128, 0.04);
+}
+
+.ProseMirror li[data-type="taskItem"]::marker,
+.ProseMirror .am-task-item::marker,
+.ProseMirror .bear-task-item::marker {
+  display: none !important;
+  content: "" !important;
+}
+
+/* Strict margin-top and margin-bottom resets on all inner blocks to guarantee vertical alignment */
+.ProseMirror ul[data-type="taskList"] li p,
+.ProseMirror ul[data-type="taskList"] li div,
+.ProseMirror li[data-type="taskItem"] p,
+.ProseMirror li[data-type="taskItem"] div,
+.ProseMirror .am-task-item p,
+.ProseMirror .am-task-item div,
+.ProseMirror .bear-task-item p,
+.ProseMirror .bear-task-item div {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Checkbox container / label - EXACT height matching line-height 1.65em */
+.ProseMirror li[data-type="taskItem"] > label,
+li[data-type="taskItem"] > label,
+.ProseMirror .am-task-item > label,
+.ProseMirror .bear-task-item > label {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 1.65em !important; /* Locks checkbox to exact text line height */
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+}
+
+/* Custom Squircle Checkbox */
+.ProseMirror li[data-type="taskItem"] > label input[type="checkbox"],
+.ProseMirror .am-task-item > label input[type="checkbox"],
+.ProseMirror .bear-task-item > label input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 1.12em !important;
+  height: 1.12em !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 22px !important;
+  max-height: 22px !important;
+  border-radius: 4.5px !important;
+  border: 1.5px solid var(--color-border) !important;
+  background-color: rgba(128, 128, 128, 0.08) !important;
+  cursor: pointer !important;
+  position: relative !important;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: inline-grid !important;
+  place-content: center !important;
+  margin: 0 !important;
+  outline: none !important;
+}
+
+/* Checkbox Hover */
+.ProseMirror li[data-type="taskItem"] > label input[type="checkbox"]:hover,
+.ProseMirror .am-task-item > label input[type="checkbox"]:hover,
+.ProseMirror .bear-task-item > label input[type="checkbox"]:hover {
+  border-color: var(--color-accent) !important;
+  background-color: rgba(128, 128, 128, 0.15) !important;
+  box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.15) !important;
+}
+
+/* Checkbox Active / Click */
+.ProseMirror li[data-type="taskItem"] > label input[type="checkbox"]:active,
+.ProseMirror .am-task-item > label input[type="checkbox"]:active,
+.ProseMirror .bear-task-item > label input[type="checkbox"]:active {
+  transform: scale(0.9) !important;
+}
+
+/* Checkbox Checked State */
+.ProseMirror li[data-type="taskItem"] > label input[type="checkbox"]:checked,
+.ProseMirror .am-task-item > label input[type="checkbox"]:checked,
+.ProseMirror .bear-task-item > label input[type="checkbox"]:checked {
+  background-color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Crisp SVG Checkmark */
+.ProseMirror li[data-type="taskItem"] > label input[type="checkbox"]:checked::before,
+.ProseMirror .am-task-item > label input[type="checkbox"]:checked::before,
+.ProseMirror .bear-task-item > label input[type="checkbox"]:checked::before {
+  content: "" !important;
+  display: block !important;
+  width: 0.72em !important;
+  height: 0.72em !important;
+  min-width: 10px !important;
+  min-height: 10px !important;
+  background-color: var(--color-accent-text, #ffffff) !important;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center / contain !important;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center / contain !important;
+  animation: am-check-pop 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
+@keyframes am-check-pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bear-check-pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Task Item Content Block */
+.ProseMirror li[data-type="taskItem"] > div,
+li[data-type="taskItem"] > div,
+.ProseMirror .am-task-item > div,
+.ProseMirror .bear-task-item > div {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.65 !important;
+}
+
+.ProseMirror li[data-type="taskItem"] > div > p,
+.ProseMirror li[data-type="taskItem"] > p,
+.ProseMirror .am-task-item > div > p,
+.ProseMirror .am-task-item > p,
+.ProseMirror .bear-task-item > div > p,
+.ProseMirror .bear-task-item > p {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.65 !important;
+  display: block !important;
+  transition: opacity 0.18s ease, color 0.18s ease, text-decoration 0.18s ease !important;
+}
+
+/* Checked Task Typography */
+.ProseMirror li[data-type="taskItem"][data-checked="true"] > div > p,
+.ProseMirror li[data-type="taskItem"][data-checked="true"] > p,
+.ProseMirror .am-task-item[data-checked="true"] > div > p,
+.ProseMirror .bear-task-item[data-checked="true"] > div > p {
+  text-decoration: line-through !important;
+  text-decoration-color: var(--text-editor-muted) !important;
+  color: var(--text-editor-muted) !important;
+  opacity: 0.55 !important;
+}
+
+/* Tables */
+.ProseMirror table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+}
+
+.ProseMirror table td,
+.ProseMirror table th {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.ProseMirror table th {
+  background-color: var(--color-code-bg);
+  font-weight: 600;
+}
+
+/* Tag pills in Editor (Inline & Smooth Caret Navigation) */
+.ProseMirror .am-tag-pill,
+.am-tag-pill,
+.ProseMirror .bear-tag-pill,
+.bear-tag-pill {
+  background-color: var(--color-tag-bg);
+  color: var(--color-tag-text);
+  font-weight: 500;
+  padding: 0.06em 0.32em;
+  border-radius: 6px;
+  cursor: text !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  caret-color: var(--color-accent) !important;
+  display: inline;
+  vertical-align: baseline;
+  line-height: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* AmNote Wiki Note Links */
+.am-wiki-link,
+.bear-wiki-link {
+  color: var(--color-accent) !important;
+  font-weight: 600;
+  cursor: pointer !important;
+  text-decoration: underline;
+  text-decoration-style: solid;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(229, 57, 53, 0.4);
+  padding: 0.04em 0.25em;
+  border-radius: 4px;
+  background-color: rgba(229, 57, 53, 0.08);
+  line-height: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: all 0.15s ease;
+}
+
+.am-wiki-link:hover,
+.bear-wiki-link:hover {
+  background-color: rgba(229, 57, 53, 0.16);
+  text-decoration-color: var(--color-accent);
+}
+
+/* Horizontal Rule */
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--color-divider);
+  margin: 1.5rem 0;
+}

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="128" fill="#1e2024"/>
+  <rect x="24" y="24" width="464" height="464" rx="104" fill="#18191b" stroke="#2c2e33" stroke-width="8"/>
+  
+  <!-- Bear Silhouette / Face -->
+  <!-- Left Ear -->
+  <circle cx="160" cy="180" r="50" fill="#e53935"/>
+  <circle cx="160" cy="180" r="30" fill="#ff8a80"/>
+  
+  <!-- Right Ear -->
+  <circle cx="352" cy="180" r="50" fill="#e53935"/>
+  <circle cx="352" cy="180" r="30" fill="#ff8a80"/>
+  
+  <!-- Head -->
+  <circle cx="256" cy="270" r="140" fill="#26282c" stroke="#32343a" stroke-width="6"/>
+  
+  <!-- Snout -->
+  <ellipse cx="256" cy="310" rx="70" ry="55" fill="#f3f4f6"/>
+  <!-- Nose -->
+  <path d="M 230 285 Q 256 275 282 285 Q 256 315 230 285 Z" fill="#18191b"/>
+  <!-- Mouth -->
+  <path d="M 256 305 L 256 325 M 240 325 Q 256 338 272 325" stroke="#18191b" stroke-width="5" stroke-linecap="round" fill="none"/>
+  
+  <!-- Eyes -->
+  <circle cx="205" cy="245" r="14" fill="#f3f4f6"/>
+  <circle cx="203" cy="243" r="5" fill="#18191b"/>
+  
+  <circle cx="307" cy="245" r="14" fill="#f3f4f6"/>
+  <circle cx="309" cy="243" r="5" fill="#18191b"/>
+</svg>
