@@ -70,7 +70,7 @@ export const HeaderBar: React.FC = () => {
       data-tauri-drag-region
       onMouseDown={handleDragMouseDown}
       onDoubleClick={handleToggleMaximize}
-      className={`${isMac ? 'h-11' : 'h-10'} border-b flex items-center justify-between px-3 select-none shrink-0 relative cursor-default`}
+      className={`${isMac ? 'h-12' : 'h-10'} border-b flex items-center justify-between px-3 select-none shrink-0 relative cursor-default`}
       style={{
         backgroundColor: 'var(--bg-sidebar)',
         color: 'var(--text-sidebar)',
