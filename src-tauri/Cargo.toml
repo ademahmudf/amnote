@@ -1,6 +1,6 @@
 [package]
 name = "amnote"
-version = "0.1.0"
+version = "1.0.0"
 description = "AmNote - Beautiful Bear-Style Markdown Notes for Omarchy Linux & macOS by Ade Mahmud"
 authors = ["Ade Mahmud"]
 edition = "2021"
