@@ -101,6 +101,41 @@ export const vaultAdapter = {
     return '~/Documents/AmNotes';
   },
 
+  pickVaultFolder: async (): Promise<string | null> => {
+    if (isTauriEnvironment()) {
+      try {
+        return await invokeTauri<string | null>('pick_vault_folder');
+      } catch (err) {
+        console.error('Failed to pick vault folder:', err);
+      }
+    }
+    return null;
+  },
+
+  setVaultPath: async (newPath: string): Promise<string> => {
+    if (isTauriEnvironment()) {
+      try {
+        return await invokeTauri<string>('set_vault_path', { newPath });
+      } catch (err) {
+        console.error('Failed to set vault path:', err);
+        throw err;
+      }
+    }
+    return newPath;
+  },
+
+  resetVaultPath: async (): Promise<string> => {
+    if (isTauriEnvironment()) {
+      try {
+        return await invokeTauri<string>('reset_vault_path');
+      } catch (err) {
+        console.error('Failed to reset vault path:', err);
+        throw err;
+      }
+    }
+    return '~/Documents/AmNotes';
+  },
+
   openVaultInFileManager: async (): Promise<void> => {
     if (isTauriEnvironment()) {
       try {

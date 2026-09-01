@@ -53,7 +53,49 @@ struct NoteFrontmatter {
     pub trashed_at: Option<i64>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+struct AppConfig {
+    #[serde(rename = "customVaultPath", default)]
+    pub custom_vault_path: Option<String>,
+}
+
+fn get_config_file_path() -> PathBuf {
+    let config_dir = dirs::config_dir().unwrap_or_else(|| {
+        dirs::home_dir()
+            .map(|h| h.join(".config"))
+            .unwrap_or_else(|| PathBuf::from("."))
+    });
+    config_dir.join("amnote").join("config.json")
+}
+
+fn read_app_config() -> AppConfig {
+    let path = get_config_file_path();
+    if let Ok(content) = fs::read_to_string(&path) {
+        if let Ok(config) = serde_json::from_str::<AppConfig>(&content) {
+            return config;
+        }
+    }
+    AppConfig::default()
+}
+
+fn save_app_config(config: &AppConfig) -> Result<(), String> {
+    let path = get_config_file_path();
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let json = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
+    fs::write(&path, json).map_err(|e| format!("Failed to write config: {}", e))?;
+    Ok(())
+}
+
 fn resolve_vault_dir() -> PathBuf {
+    let config = read_app_config();
+    if let Some(custom) = config.custom_vault_path {
+        if !custom.trim().is_empty() {
+            return PathBuf::from(custom);
+        }
+    }
+
     let docs_dir = dirs::document_dir().unwrap_or_else(|| {
         dirs::home_dir()
             .map(|h| h.join("Documents"))
@@ -80,6 +122,50 @@ fn ensure_vault_directories() -> Result<PathBuf, String> {
 fn get_vault_path() -> Result<String, String> {
     let vault = ensure_vault_directories()?;
     Ok(vault.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+async fn pick_vault_folder() -> Result<Option<String>, String> {
+    let current_vault = resolve_vault_dir();
+    let mut dialog = rfd::AsyncFileDialog::new().set_title("Select AmNote Vault Folder");
+    if current_vault.exists() {
+        dialog = dialog.set_directory(&current_vault);
+    }
+    let folder = dialog.pick_folder().await;
+    Ok(folder.map(|f| f.path().to_string_lossy().to_string()))
+}
+
+#[tauri::command]
+fn set_vault_path(new_path: String) -> Result<String, String> {
+    let trimmed = new_path.trim();
+    if trimmed.is_empty() {
+        return Err("Vault path cannot be empty".to_string());
+    }
+
+    let p = PathBuf::from(trimmed);
+    if !p.exists() {
+        fs::create_dir_all(&p).map_err(|e| format!("Failed to create folder: {}", e))?;
+    }
+    let trash = p.join(".trash");
+    if !trash.exists() {
+        let _ = fs::create_dir_all(&trash);
+    }
+
+    let mut config = read_app_config();
+    config.custom_vault_path = Some(trimmed.to_string());
+    save_app_config(&config)?;
+
+    Ok(p.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn reset_vault_path() -> Result<String, String> {
+    let mut config = read_app_config();
+    config.custom_vault_path = None;
+    save_app_config(&config)?;
+
+    let default_vault = ensure_vault_directories()?;
+    Ok(default_vault.to_string_lossy().to_string())
 }
 
 #[tauri::command]
@@ -297,6 +383,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_omarchy_theme,
             get_vault_path,
+            pick_vault_folder,
+            set_vault_path,
+            reset_vault_path,
             open_vault_in_file_manager,
             load_notes_from_vault,
             save_note_to_vault,

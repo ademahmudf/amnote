@@ -35,6 +35,9 @@ interface NoteState {
   loadNotes: () => Promise<void>;
   reloadFromDisk: () => Promise<void>;
   openVaultInFileManager: () => Promise<void>;
+  pickAndChangeVault: () => Promise<boolean>;
+  setCustomVaultPath: (newPath: string) => Promise<void>;
+  resetVaultToDefault: () => Promise<void>;
   setActiveNoteId: (id: string | null) => void;
   setActiveFilter: (filter: SystemFilter) => void;
   setSelectedTag: (tag: string | null) => void;
@@ -160,6 +163,51 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
   openVaultInFileManager: async () => {
     await vaultAdapter.openVaultInFileManager();
+  },
+
+  pickAndChangeVault: async () => {
+    const selected = await vaultAdapter.pickVaultFolder();
+    if (selected) {
+      await get().setCustomVaultPath(selected);
+      return true;
+    }
+    return false;
+  },
+
+  setCustomVaultPath: async (newPath: string) => {
+    set({ isLoading: true });
+    try {
+      const activePath = await vaultAdapter.setVaultPath(newPath);
+      const allNotes = await vaultAdapter.loadAllNotes();
+      allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
+      set({
+        vaultPath: activePath,
+        notes: allNotes,
+        activeNoteId: allNotes.length > 0 ? allNotes[0].id : null,
+        isLoading: false,
+      });
+    } catch (err) {
+      console.error('Failed to change vault path:', err);
+      set({ isLoading: false });
+    }
+  },
+
+  resetVaultToDefault: async () => {
+    set({ isLoading: true });
+    try {
+      const defaultPath = await vaultAdapter.resetVaultPath();
+      const allNotes = await vaultAdapter.loadAllNotes();
+      allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
+      set({
+        vaultPath: defaultPath,
+        notes: allNotes,
+        activeNoteId: allNotes.length > 0 ? allNotes[0].id : null,
+        isLoading: false,
+      });
+    } catch (err) {
+      console.error('Failed to reset vault path:', err);
+      set({ isLoading: false });
+    }
   },
 
   setActiveNoteId: (id) => set({ activeNoteId: id }),

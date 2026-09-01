@@ -9,6 +9,8 @@ import {
   Sliders,
   Laptop,
   FolderOpen,
+  FolderInput,
+  RotateCcw,
   RefreshCw,
   Heart,
   LayoutGrid,
@@ -27,6 +29,8 @@ export const SettingsModal: React.FC = () => {
   const vaultPath = useNoteStore((state) => state.vaultPath);
   const openVaultInFileManager = useNoteStore((state) => state.openVaultInFileManager);
   const reloadFromDisk = useNoteStore((state) => state.reloadFromDisk);
+  const pickAndChangeVault = useNoteStore((state) => state.pickAndChangeVault);
+  const resetVaultToDefault = useNoteStore((state) => state.resetVaultToDefault);
 
   const { themeId, setTheme } = useThemeStore();
   const {
@@ -50,6 +54,25 @@ export const SettingsModal: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'themes' | 'typography' | 'data'>('typography');
   const [isReloading, setIsReloading] = useState(false);
+  const [isChangingVault, setIsChangingVault] = useState(false);
+
+  const handlePickVault = async () => {
+    setIsChangingVault(true);
+    try {
+      await pickAndChangeVault();
+    } finally {
+      setIsChangingVault(false);
+    }
+  };
+
+  const handleResetVault = async () => {
+    setIsChangingVault(true);
+    try {
+      await resetVaultToDefault();
+    } finally {
+      setIsChangingVault(false);
+    }
+  };
 
   if (!isSettingsOpen) return null;
 
@@ -590,27 +613,54 @@ export const SettingsModal: React.FC = () => {
                   {vaultPath}
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={openVaultInFileManager}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition-all"
-                    style={{ borderColor: 'var(--color-border)' }}
-                  >
-                    <FolderOpen size={14} />
-                    <span>Open in File Manager</span>
-                  </button>
+                <div className="flex flex-col gap-2 pt-1">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={handlePickVault}
+                      disabled={isChangingVault}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-semibold hover:bg-accent/10 hover:text-accent hover:border-accent transition-all disabled:opacity-50"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    >
+                      <FolderInput size={14} />
+                      <span>{isChangingVault ? 'Changing Vault...' : 'Change Vault Folder...'}</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={handleReloadFromDisk}
-                    disabled={isReloading}
-                    className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl border text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition-all disabled:opacity-50"
-                    style={{ borderColor: 'var(--color-border)' }}
-                  >
-                    <RefreshCw size={14} className={isReloading ? 'animate-spin' : ''} />
-                    <span>{isReloading ? 'Reloading...' : 'Rescan Disk'}</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={openVaultInFileManager}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    >
+                      <FolderOpen size={14} />
+                      <span>Open in File Manager</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleReloadFromDisk}
+                      disabled={isReloading || isChangingVault}
+                      className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl border text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-all disabled:opacity-50"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    >
+                      <RefreshCw size={13} className={isReloading ? 'animate-spin' : ''} />
+                      <span>{isReloading ? 'Reloading...' : 'Rescan Disk'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResetVault}
+                      disabled={isChangingVault}
+                      title="Reset back to default ~/Documents/AmNotes"
+                      className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl border text-xs font-medium opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5 transition-all disabled:opacity-50"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    >
+                      <RotateCcw size={13} />
+                      <span>Reset to Default</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
