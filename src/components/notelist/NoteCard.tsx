@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { Note } from '../../types/note';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { resolveTagIcon } from '../../utils/tagIcons';
+import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
 import {
   Pin,
   MoreVertical,
@@ -211,7 +211,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
                 }}
               >
                 <IconComp size={9} />
-                <span>{tag}</span>
+                <span>{formatTagDisplay(tag)}</span>
               </span>
             );
           })}

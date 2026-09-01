@@ -20,7 +20,6 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { useSettingsStore, type FontFamily, type EditorWidth, type UiScale } from '../../store/useSettingsStore';
 import { THEMES } from '../../themes/themeDefinitions';
 import { AmNoteLogo } from '../icons/AmNoteLogo';
-import type { ThemeId } from '../../types/note';
 
 export const SettingsModal: React.FC = () => {
   const isSettingsOpen = useNoteStore((state) => state.isSettingsOpen);
@@ -32,7 +31,12 @@ export const SettingsModal: React.FC = () => {
   const pickAndChangeVault = useNoteStore((state) => state.pickAndChangeVault);
   const resetVaultToDefault = useNoteStore((state) => state.resetVaultToDefault);
 
-  const { themeId, setTheme } = useThemeStore();
+  const {
+    themeId,
+    setTheme,
+  } = useThemeStore();
+
+  const [themeFilter, setThemeFilter] = useState<'all' | 'dark' | 'light'>('all');
   const {
     fontFamily,
     fontSize,
@@ -517,78 +521,134 @@ export const SettingsModal: React.FC = () => {
           {activeTab === 'themes' && (
             <div className="space-y-6">
               <div>
-                <div className="flex items-center justify-between mb-3">
+                {/* Header & Main Actions */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <div>
-                    <h3 className="font-semibold text-xs">Color Theme</h3>
-                    <p className="text-[11px] opacity-60">Select an editor and UI palette.</p>
+                    <h3 className="font-semibold text-xs">Color Theme Gallery</h3>
+                    <p className="text-[11px] opacity-60">24 Curated Presets. Click any theme to apply.</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setTheme('omarchy-sync')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all hover:bg-black/5 dark:hover:bg-white/5"
-                    style={{ borderColor: 'var(--color-border)' }}
-                  >
-                    <Laptop size={13} />
-                    <span>Sync with Omarchy OS</span>
-                  </button>
+                  
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTheme('omarchy-sync')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all hover:bg-black/5 dark:hover:bg-white/5"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    >
+                      <Laptop size={13} />
+                      <span>Sync OS</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {Object.values(THEMES).map((theme) => {
-                    const isSelected = themeId === theme.id;
+                {/* Filter Pills */}
+                <div className="flex items-center gap-1.5 mb-4 p-1 rounded-xl border bg-black/5 dark:bg-white/5 w-fit" style={{ borderColor: 'var(--color-border)' }}>
+                  {(['all', 'dark', 'light'] as const).map((filter) => {
+                    const isSelected = themeFilter === filter;
+                    const allThemesList = Object.values(THEMES);
+                    const count = allThemesList.filter((t) => {
+                      if (filter === 'all') return true;
+                      if (filter === 'dark') return t.isDark;
+                      if (filter === 'light') return !t.isDark;
+                      return true;
+                    }).length;
+
                     return (
                       <button
-                        key={theme.id}
+                        key={filter}
                         type="button"
-                        onClick={() => setTheme(theme.id as ThemeId)}
-                        className={`p-3 rounded-2xl border text-left transition-all relative overflow-hidden group ${
+                        onClick={() => setThemeFilter(filter)}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-all ${
                           isSelected
-                            ? 'ring-2 ring-accent shadow-lg'
-                            : 'hover:border-border/80 opacity-80 hover:opacity-100'
+                            ? 'bg-accent text-white shadow-xs'
+                            : 'opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
                         }`}
-                        style={{
-                          backgroundColor: theme.noteListCardBg,
-                          borderColor: isSelected ? 'var(--color-accent)' : 'var(--color-border)',
-                        }}
+                        style={{ backgroundColor: isSelected ? 'var(--color-accent)' : undefined }}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <span
-                            className="font-bold text-xs"
-                            style={{ color: theme.editorText }}
-                          >
-                            {theme.name}
-                          </span>
-                          {isSelected && (
-                            <div
-                              className="w-4 h-4 rounded-full flex items-center justify-center text-white"
-                              style={{ backgroundColor: theme.accent }}
-                            >
-                              <Check size={10} />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Theme color swatch preview */}
-                        <div className="flex items-center gap-1.5 pt-1">
-                          <div
-                            className="w-3 h-3 rounded-full border border-black/20"
-                            style={{ backgroundColor: theme.accent }}
-                          />
-                          <div
-                            className="w-3 h-3 rounded-full border border-black/20"
-                            style={{ backgroundColor: theme.editorBg }}
-                          />
-                          <div
-                            className="w-3 h-3 rounded-full border border-black/20"
-                            style={{ backgroundColor: theme.sidebarBg }}
-                          />
-                          <span className="text-[10px] opacity-40 ml-auto uppercase font-mono">
-                            {theme.isDark ? 'Dark' : 'Light'}
-                          </span>
-                        </div>
+                        {filter} ({count})
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Theme Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {Object.values(THEMES)
+                    .filter((theme) => {
+                      if (themeFilter === 'dark') return theme.isDark;
+                      if (themeFilter === 'light') return !theme.isDark;
+                      return true;
+                    })
+                    .map((theme) => {
+                      const isSelected = themeId === theme.id;
+                      return (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() => setTheme(theme.id)}
+                          className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group select-none ${
+                            isSelected
+                              ? 'ring-2 ring-accent shadow-md'
+                              : 'hover:border-border/80 opacity-85 hover:opacity-100 hover:scale-[1.01]'
+                          }`}
+                          style={{
+                            backgroundColor: theme.noteListCardBg,
+                            borderColor: isSelected ? 'var(--color-accent)' : 'var(--color-border)',
+                          }}
+                        >
+                          <div className="w-full">
+                            {/* Card Header */}
+                            <div className="flex items-center justify-between mb-2.5">
+                              <span
+                                className="font-bold text-xs truncate"
+                                style={{ color: theme.editorText }}
+                              >
+                                {theme.name}
+                              </span>
+                              {isSelected && (
+                                <div
+                                  className="w-4 h-4 rounded-full flex items-center justify-center text-white shrink-0"
+                                  style={{ backgroundColor: theme.accent }}
+                                >
+                                  <Check size={10} />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Theme color swatch preview */}
+                            <div className="flex items-center gap-1.5 pt-1">
+                              <div
+                                className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
+                                style={{ backgroundColor: theme.accent }}
+                                title="Accent"
+                              />
+                              <div
+                                className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
+                                style={{ backgroundColor: theme.editorBg }}
+                                title="Editor Background"
+                              />
+                              <div
+                                className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
+                                style={{ backgroundColor: theme.sidebarBg }}
+                                title="Sidebar Background"
+                              />
+                              <div
+                                className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
+                                style={{ backgroundColor: theme.tagBg }}
+                                title="Tag Background"
+                              />
+                              <span className="text-[10px] opacity-40 ml-auto uppercase font-mono">
+                                {theme.isDark ? 'Dark' : 'Light'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="w-full flex items-center justify-between pt-2.5 mt-2 border-t border-black/5 dark:border-white/5 text-[11px] opacity-50 font-medium">
+                            <span>{isSelected ? 'Active' : 'Click to Apply'}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
                 </div>
               </div>
             </div>

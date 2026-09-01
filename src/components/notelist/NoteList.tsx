@@ -2,7 +2,7 @@ import React from 'react';
 import { Search, X, Plus, FileText, Pin } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { resolveTagIcon } from '../../utils/tagIcons';
+import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
 import { NoteCard } from './NoteCard';
 import { SortDropdown } from './SortDropdown';
 
@@ -42,7 +42,7 @@ export const NoteList: React.FC = () => {
 
   // Get active view title and icon
   const viewTitle = selectedTag
-    ? `#${selectedTag}`
+    ? `#${formatTagDisplay(selectedTag)}`
     : activeFilter
     ? activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)
     : 'Notes';

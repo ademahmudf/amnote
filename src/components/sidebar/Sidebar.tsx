@@ -37,11 +37,11 @@ export const Sidebar: React.FC = () => {
   const uiScale = useSettingsStore((state) => state.uiScale);
 
   const itemTextClass = {
-    compact: 'text-xs py-1',
-    standard: 'text-[13px] py-1.5',
-    comfortable: 'text-sm py-1.5',
-    spacious: 'text-[15px] py-2',
-  }[uiScale] || 'text-sm py-1.5';
+    compact: 'text-[11.5px] h-[22px] px-2',
+    standard: 'text-[12px] h-[24px] px-2',
+    comfortable: 'text-[12px] h-[24px] px-2',
+    spacious: 'text-[13px] h-[28px] px-2.5',
+  }[uiScale] || 'text-[12px] h-[24px] px-2';
 
   const systemItems: { id: SystemFilter; label: string; icon: React.FC<{ size?: number; className?: string }>; count: number }[] = [
     { id: 'notes', label: 'Notes', icon: FileText, count: counts.notes },
@@ -55,7 +55,7 @@ export const Sidebar: React.FC = () => {
 
   return (
     <div
-      className="w-60 h-full flex flex-col justify-between border-r select-none shrink-0"
+      className="w-56 h-full flex flex-col justify-between border-r select-none shrink-0"
       style={{
         backgroundColor: 'var(--bg-sidebar)',
         color: 'var(--text-sidebar)',
@@ -63,10 +63,10 @@ export const Sidebar: React.FC = () => {
       }}
     >
       {/* Top Header & Brand */}
-      <div className="p-3 py-2.5 flex items-center justify-between border-b" style={{ borderColor: 'var(--color-divider)' }} data-tauri-drag-region>
+      <div className="px-3 py-2 flex items-center justify-between border-b" style={{ borderColor: 'var(--color-divider)' }} data-tauri-drag-region>
         <div className="flex items-center gap-2">
-          <AmNoteLogo size={24} variant="dark-circle" />
-          <span className="font-bold text-sm tracking-tight" style={{ color: 'var(--text-sidebar-active)' }}>
+          <AmNoteLogo size={22} variant="dark-circle" />
+          <span className="font-bold text-xs tracking-tight" style={{ color: 'var(--text-sidebar-active)' }}>
             AmNote
           </span>
         </div>
@@ -76,29 +76,29 @@ export const Sidebar: React.FC = () => {
             type="button"
             onClick={() => setCommandPaletteOpen(true)}
             title="Command Palette (Ctrl+K)"
-            className="p-1.5 rounded-lg opacity-60 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-all text-xs"
+            className="p-1 rounded opacity-60 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-all text-xs"
           >
-            <Command size={14} />
+            <Command size={13} />
           </button>
           <button
             type="button"
             onClick={() => createNote()}
             title="New Note (Ctrl+N)"
-            className="p-1.5 rounded-lg opacity-80 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-all text-xs"
+            className="p-1 rounded opacity-80 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-all text-xs"
             style={{
               backgroundColor: 'var(--color-accent)',
               color: 'var(--color-accent-text)',
             }}
           >
-            <Plus size={14} />
+            <Plus size={13} />
           </button>
         </div>
       </div>
 
       {/* Main Navigation Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-4">
+      <div className="flex-1 overflow-y-auto px-1.5 py-1.5 space-y-1">
         {/* System Views */}
-        <div className="space-y-0.5">
+        <div className="flex flex-col space-y-0">
           {systemItems.map((item) => {
             const Icon = item.icon;
             const isSelected = activeFilter === item.id;
@@ -106,9 +106,9 @@ export const Sidebar: React.FC = () => {
               <div
                 key={item.id}
                 onClick={() => setActiveFilter(item.id)}
-                className={`group flex items-center justify-between px-2.5 rounded-lg font-medium cursor-pointer transition-all duration-150 ${itemTextClass} ${
+                className={`group flex items-center justify-between rounded-md font-medium cursor-pointer transition-all duration-100 ${itemTextClass} ${
                   isSelected
-                    ? 'shadow-xs'
+                    ? 'shadow-xs font-semibold'
                     : 'opacity-75 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
                 style={{
@@ -119,11 +119,11 @@ export const Sidebar: React.FC = () => {
                     : '2px solid transparent',
                 }}
               >
-                <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
-                  <div className="w-4 h-4 flex items-center justify-center shrink-0">
-                    <Icon size={14} className={isSelected ? 'text-accent' : 'opacity-70'} />
+                <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
+                  <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
+                    <Icon size={13} className={isSelected ? 'text-accent' : 'opacity-70'} />
                   </div>
-                  <span className="truncate font-medium">{item.label}</span>
+                  <span className="truncate">{item.label}</span>
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -137,14 +137,14 @@ export const Sidebar: React.FC = () => {
                         }
                       }}
                       title="Empty Trash"
-                      className="text-[10px] px-1 py-0.5 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 transition-colors"
+                      className="text-[9px] px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 transition-colors"
                     >
                       Empty
                     </button>
                   )}
                   {item.count > 0 && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono transition-opacity ${
+                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono transition-opacity ${
                         isSelected ? 'opacity-90 font-semibold' : 'opacity-40 group-hover:opacity-80'
                       }`}
                     >
@@ -157,10 +157,10 @@ export const Sidebar: React.FC = () => {
           })}
         </div>
 
-        <div className="h-px mx-2" style={{ backgroundColor: 'var(--color-divider)' }} />
-
         {/* Tag Tree */}
-        <TagTree />
+        <div className="pt-1">
+          <TagTree />
+        </div>
       </div>
 
       {/* Bottom Footer Actions */}

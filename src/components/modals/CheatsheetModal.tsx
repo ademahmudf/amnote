@@ -97,7 +97,7 @@ export const CheatsheetModal: React.FC = () => {
     { key: 'Ctrl + 1', desc: 'Toggle Sidebar navigation' },
     { key: 'Ctrl + 2', desc: 'Toggle Note List panel' },
     { key: 'Ctrl + 3', desc: 'Toggle Zen / Focus Mode' },
-    { key: 'Ctrl + I', desc: 'Toggle Note Inspector (TOC & Stats)' },
+    { key: 'Ctrl + Shift + I', desc: 'Toggle Note Inspector (TOC & Stats)' },
     { key: 'Ctrl + ,', desc: 'Open Preferences & Settings' },
     { key: 'Ctrl + /', desc: 'Open this Cheatsheet Guide' },
     { key: 'Ctrl + B', desc: 'Format selection as Bold' },

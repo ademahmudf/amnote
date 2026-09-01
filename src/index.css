@@ -202,18 +202,26 @@
 }
 
 .ProseMirror mark {
-  background-color: rgba(254, 240, 138, 0.45);
-  color: inherit;
-  padding: 0.05em 0.25em;
+  background-color: #fef08a;
+  color: #0f172a !important;
+  padding: 0.08em 0.3em;
   border-radius: 0.25rem;
   line-height: inherit;
+  font-weight: 500;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
 
+/* In dark mode, ensure highlighted text stays sharp and 100% visible */
+.dark .ProseMirror mark {
+  color: #0f172a !important;
+  font-weight: 550;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
 .dark .ProseMirror mark:not([style*="background-color"]):not([data-color]) {
-  background-color: rgba(234, 179, 8, 0.25);
-  color: #fef08a;
+  background-color: #fde047 !important;
+  color: #0f172a !important;
 }
 
 .ProseMirror code:not(pre code) {
@@ -621,4 +629,86 @@ li[data-type="taskItem"] > div,
   border: none;
   border-top: 1px solid var(--color-divider);
   margin: 1.5rem 0;
+}
+
+/* Print Stylesheet for PDF & Native Print */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  /* Hide app chrome during printing */
+  .no-print,
+  nav,
+  header,
+  aside,
+  [data-tauri-drag-region],
+  button,
+  .am-bubble-menu,
+  .am-slash-menu,
+  .floating-outline-hud,
+  .zen-status-hud {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Clean print typography */
+  .ProseMirror {
+    padding: 0 !important;
+    max-width: 100% !important;
+    color: #111827 !important;
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+  }
+
+  .ProseMirror h1 {
+    font-size: 22pt !important;
+    color: #111827 !important;
+    border-bottom: 2px solid #e5e7eb !important;
+    padding-bottom: 6pt !important;
+    margin-top: 0 !important;
+  }
+
+  .ProseMirror h2 {
+    font-size: 16pt !important;
+    color: #1f2937 !important;
+    margin-top: 18pt !important;
+    page-break-after: avoid;
+  }
+
+  .ProseMirror h3 {
+    font-size: 13pt !important;
+    color: #374151 !important;
+    margin-top: 14pt !important;
+    page-break-after: avoid;
+  }
+
+  .ProseMirror pre {
+    background-color: #f3f4f6 !important;
+    border: 1px solid #e5e7eb !important;
+    color: #1f2937 !important;
+    page-break-inside: avoid;
+  }
+
+  .ProseMirror blockquote {
+    border-left: 4px solid #9ca3af !important;
+    color: #4b5563 !important;
+  }
+
+  .am-callout-block {
+    border: 1px solid #d1d5db !important;
+    background-color: #f9fafb !important;
+    color: #111827 !important;
+    page-break-inside: avoid;
+  }
+
+  .am-tag-pill {
+    border: 1px solid #d1d5db !important;
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+  }
 }

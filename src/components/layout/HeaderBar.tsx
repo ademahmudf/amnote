@@ -115,6 +115,7 @@ export const HeaderBar: React.FC = () => {
             <Columns2 size={14} />
           </button>
 
+
           <button
             type="button"
             onClick={toggleFocusMode}

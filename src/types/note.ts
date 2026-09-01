@@ -72,7 +72,19 @@ export type ThemeId =
   | 'sepia'
   | 'ayu-light'
   | 'ayu-mirage'
-  | 'omarchy-sync';
+  | 'omarchy-sync'
+  | 'catppuccin-mocha'
+  | 'catppuccin-latte'
+  | 'tokyo-night'
+  | 'rose-pine'
+  | 'rose-pine-dawn'
+  | 'gruvbox-dark'
+  | 'gruvbox-light'
+  | 'everforest-dark'
+  | 'everforest-light'
+  | 'github-dark'
+  | 'github-light'
+  | 'synthwave-84';
 
 export interface ThemeColors {
   id: ThemeId;

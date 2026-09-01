@@ -8,6 +8,7 @@ interface ThemeState {
   customOmarchyThemeName?: string;
   setTheme: (themeId: ThemeId) => void;
   getThemeColors: () => ThemeColors;
+  resetToDefault: () => void;
   toggleDarkLight: () => void;
 }
 
@@ -17,34 +18,59 @@ export const useThemeStore = create<ThemeState>()(
       themeId: 'red-graphite',
       customOmarchyThemeName: 'One Piece',
 
-      setTheme: (themeId: ThemeId) => {
-        set({ themeId });
-        applyThemeCssVariables(THEMES[themeId] || THEMES['red-graphite']);
-      },
-
       getThemeColors: () => {
         const { themeId } = get();
         return THEMES[themeId] || THEMES['red-graphite'];
       },
 
+      setTheme: (themeId: ThemeId) => {
+        set({ themeId });
+        const theme = THEMES[themeId] || THEMES['red-graphite'];
+        applyThemeCssVariables(theme);
+      },
+
+      resetToDefault: () => {
+        set({ themeId: 'red-graphite' });
+        applyThemeCssVariables(THEMES['red-graphite']);
+      },
+
       toggleDarkLight: () => {
-        const { themeId } = get();
-        if (themeId === 'red-graphite') {
+        const current = get().getThemeColors();
+        if (current.id === 'red-graphite') {
           get().setTheme('red-graphite-light');
-        } else if (themeId === 'red-graphite-light') {
+        } else if (current.id === 'red-graphite-light') {
           get().setTheme('red-graphite');
-        } else if (themeId === 'solarized-dark') {
+        } else if (current.id === 'catppuccin-mocha') {
+          get().setTheme('catppuccin-latte');
+        } else if (current.id === 'catppuccin-latte') {
+          get().setTheme('catppuccin-mocha');
+        } else if (current.id === 'solarized-dark') {
           get().setTheme('solarized-light');
-        } else if (themeId === 'solarized-light') {
+        } else if (current.id === 'solarized-light') {
           get().setTheme('solarized-dark');
+        } else if (current.id === 'gruvbox-dark') {
+          get().setTheme('gruvbox-light');
+        } else if (current.id === 'gruvbox-light') {
+          get().setTheme('gruvbox-dark');
+        } else if (current.id === 'everforest-dark') {
+          get().setTheme('everforest-light');
+        } else if (current.id === 'everforest-light') {
+          get().setTheme('everforest-dark');
+        } else if (current.id === 'github-dark') {
+          get().setTheme('github-light');
+        } else if (current.id === 'github-light') {
+          get().setTheme('github-dark');
+        } else if (current.id === 'rose-pine') {
+          get().setTheme('rose-pine-dawn');
+        } else if (current.id === 'rose-pine-dawn') {
+          get().setTheme('rose-pine');
         } else {
-          const current = THEMES[themeId];
-          get().setTheme(current?.isDark ? 'red-graphite-light' : 'red-graphite');
+          get().setTheme(current.isDark ? 'red-graphite-light' : 'red-graphite');
         }
       },
     }),
     {
-      name: 'bear-theme-storage',
+      name: 'amnote-theme-storage',
     }
   )
 );

@@ -103,4 +103,156 @@ assert(resizedBackToMd.includes('![Banner|75%](https://example.com/banner.png)')
 assert(initialAmNoteSeed.length === 2, 'Initial seed has 2 notes');
 assert(initialAmNoteSeed[0].title === 'Welcome to AmNote', 'First note is Welcome to AmNote');
 
-console.log('\n🎉 All AmNote unit tests passed successfully!');
+// ============================================================================
+// Test 13: Direct ProseMirror AST Serializer Tests
+// ============================================================================
+import { Schema } from '@tiptap/pm/model';
+import { serializeProseMirrorToMarkdown } from '../editor/utils/proseMirrorMarkdownSerializer';
+
+const testSchema = new Schema({
+  nodes: {
+    doc: { content: 'block+' },
+    paragraph: { group: 'block', content: 'inline*' },
+    heading: {
+      group: 'block',
+      content: 'inline*',
+      attrs: { level: { default: 1 } },
+    },
+    blockquote: { group: 'block', content: 'block+' },
+    callout: {
+      group: 'block',
+      content: 'block+',
+      attrs: { type: { default: 'note' } },
+    },
+    codeBlock: {
+      group: 'block',
+      content: 'text*',
+      attrs: { language: { default: '' } },
+    },
+    horizontalRule: { group: 'block' },
+    bulletList: { group: 'block', content: 'listItem+' },
+    orderedList: {
+      group: 'block',
+      content: 'listItem+',
+      attrs: { order: { default: 1 } },
+    },
+    taskList: { group: 'block', content: 'taskItem+' },
+    taskItem: {
+      content: 'paragraph block*',
+      attrs: { checked: { default: false } },
+    },
+    listItem: { content: 'paragraph block*' },
+    table: { group: 'block', content: 'tableRow+' },
+    tableRow: { content: '(tableCell | tableHeader)+' },
+    tableHeader: { content: 'inline*' },
+    tableCell: { content: 'inline*' },
+    image: {
+      inline: true,
+      group: 'inline',
+      attrs: { src: {}, alt: { default: '' }, width: { default: '' }, align: { default: 'center' } },
+    },
+    text: { group: 'inline' },
+  },
+  marks: {
+    bold: {},
+    italic: {},
+    strike: {},
+    code: {},
+    highlight: { attrs: { color: { default: null } } },
+    tag: { attrs: { tag: { default: '' } } },
+    wikiLink: { attrs: { target: { default: '' } } },
+    link: { attrs: { href: { default: '' } } },
+  },
+});
+
+// AST Test 1: Heading + Paragraph + Bold/Italic
+const doc1 = testSchema.nodes.doc.create({}, [
+  testSchema.nodes.heading.create({ level: 2 }, [testSchema.text('ProseMirror AST Architecture')]),
+  testSchema.nodes.paragraph.create({}, [
+    testSchema.text('Building with '),
+    testSchema.text('high performance', [testSchema.marks.bold.create()]),
+    testSchema.text(' and '),
+    testSchema.text('elegance', [testSchema.marks.italic.create()]),
+    testSchema.text('.'),
+  ]),
+]);
+
+const md1 = serializeProseMirrorToMarkdown(doc1);
+assert(md1.includes('## ProseMirror AST Architecture'), 'AST Serializer creates H2 heading');
+assert(md1.includes('**high performance** and *elegance*.'), 'AST Serializer handles bold & italic marks');
+
+// AST Test 2: TaskList with checked & unchecked items
+const doc2 = testSchema.nodes.doc.create({}, [
+  testSchema.nodes.taskList.create({}, [
+    testSchema.nodes.taskItem.create({ checked: true }, [
+      testSchema.nodes.paragraph.create({}, [testSchema.text('Direct AST serializer')]),
+    ]),
+    testSchema.nodes.taskItem.create({ checked: false }, [
+      testSchema.nodes.paragraph.create({}, [testSchema.text('FTS5 Rust indexer')]),
+    ]),
+  ]),
+]);
+
+const md2 = serializeProseMirrorToMarkdown(doc2);
+assert(md2.includes('- [x] Direct AST serializer'), 'AST Serializer handles checked taskItem');
+assert(md2.includes('- [ ] FTS5 Rust indexer'), 'AST Serializer handles unchecked taskItem');
+
+// AST Test 3: Callout Block (> [!TIP])
+const doc3 = testSchema.nodes.doc.create({}, [
+  testSchema.nodes.callout.create({ type: 'tip' }, [
+    testSchema.nodes.paragraph.create({}, [testSchema.text('AST traversal is 10x faster than DOM parsing.')]),
+  ]),
+]);
+
+const md3 = serializeProseMirrorToMarkdown(doc3);
+assert(md3.includes('> [!TIP]'), 'AST Serializer renders callout header');
+assert(md3.includes('> AST traversal is 10x faster than DOM parsing.'), 'AST Serializer renders callout body');
+
+// AST Test 4: Custom Highlight Color + Spaced Tag + WikiLink
+const doc4 = testSchema.nodes.doc.create({}, [
+  testSchema.nodes.paragraph.create({}, [
+    testSchema.text('Check this ', []),
+    testSchema.text('sky blue highlight', [testSchema.marks.highlight.create({ color: '#38bdf8' })]),
+    testSchema.text(' with tag '),
+    testSchema.text('#[[Omarchy Core]]#', [testSchema.marks.tag.create({ tag: 'Omarchy Core' })]),
+    testSchema.text(' and '),
+    testSchema.text('[[Sprint Goals]]', [testSchema.marks.wikiLink.create({ target: 'Sprint Goals' })]),
+  ]),
+]);
+
+const md4 = serializeProseMirrorToMarkdown(doc4);
+assert(md4.includes('=={color:#38bdf8}sky blue highlight=='), 'AST Serializer formats custom color highlight');
+assert(md4.includes('#[[Omarchy Core]]#'), 'AST Serializer formats spaced bracket tag');
+assert(md4.includes('[[Sprint Goals]]'), 'AST Serializer formats cross-note WikiLink');
+
+// AST Test 5: Table Grid Serialization
+const doc5 = testSchema.nodes.doc.create({}, [
+  testSchema.nodes.table.create({}, [
+    testSchema.nodes.tableRow.create({}, [
+      testSchema.nodes.tableHeader.create({}, [testSchema.text('Feature')]),
+      testSchema.nodes.tableHeader.create({}, [testSchema.text('Status')]),
+    ]),
+    testSchema.nodes.tableRow.create({}, [
+      testSchema.nodes.tableCell.create({}, [testSchema.text('AST Serializer')]),
+      testSchema.nodes.tableCell.create({}, [testSchema.text('Production Ready')]),
+    ]),
+  ]),
+]);
+
+const md5 = serializeProseMirrorToMarkdown(doc5);
+assert(md5.includes('| Feature | Status |'), 'AST Serializer creates table header row');
+assert(md5.includes('| --- | --- |'), 'AST Serializer creates table delimiter row');
+assert(md5.includes('| AST Serializer | Production Ready |'), 'AST Serializer creates table data row');
+
+// ============================================================================
+// Test 14: Tag Auto-Capitalization in Sidebar and UI
+// ============================================================================
+import { formatTagDisplay, formatTagSegment } from '../utils/tagIcons';
+
+assert(formatTagSegment('welcome') === 'Welcome', 'Capitalizes simple segment "welcome" -> "Welcome"');
+assert(formatTagSegment('omarchy-linux') === 'Omarchy Linux', 'Capitalizes hyphenated segment "omarchy-linux" -> "Omarchy Linux"');
+assert(formatTagSegment('deep_work') === 'Deep Work', 'Capitalizes underscored segment "deep_work" -> "Deep Work"');
+assert(formatTagDisplay('guide/basics') === 'Guide / Basics', 'Capitalizes nested tag path "guide/basics" -> "Guide / Basics"');
+assert(formatTagDisplay('work/sprint/q3') === 'Work / Sprint / Q3', 'Capitalizes 3-level path "work/sprint/q3" -> "Work / Sprint / Q3"');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, and Tag Capitalization tests passed successfully!');

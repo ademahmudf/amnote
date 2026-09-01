@@ -200,6 +200,42 @@ export function resolveTagIcon(tag: string, customIconName?: string): LucideIcon
 }
 
 /**
+ * Auto-capitalizes tag segments and paths for UI display (e.g. 'omarchy-linux' -> 'Omarchy Linux', 'ideas/apps' -> 'Ideas / Apps')
+ */
+export function formatTagDisplay(tag: string): string {
+  if (!tag) return '';
+  const clean = tag.replace(/^#+/, '');
+  return clean
+    .split('/')
+    .map((segment) =>
+      segment
+        .split(/([-_ ])/)
+        .map((part) => {
+          if (part === '-' || part === '_' || part === ' ') return ' ';
+          return part.charAt(0).toUpperCase() + part.slice(1);
+        })
+        .join('')
+        .trim()
+    )
+    .join(' / ');
+}
+
+/**
+ * Auto-capitalizes a single tag segment for tree node display
+ */
+export function formatTagSegment(segment: string): string {
+  if (!segment) return '';
+  return segment
+    .split(/([-_ ])/)
+    .map((part) => {
+      if (part === '-' || part === '_' || part === ' ') return ' ';
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join('')
+    .trim();
+}
+
+/**
  * Component to render a Tag Icon with optional custom color
  */
 export const TagIconBadge: React.FC<{
