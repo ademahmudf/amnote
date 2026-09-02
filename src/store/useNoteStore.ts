@@ -7,6 +7,7 @@ import {
   mergeVaultNotes,
   type VaultConflict,
 } from '../domain/vaultSync';
+import { noteSearchIndex } from '../domain/searchIndex';
 import { vaultAdapter } from '../db/vaultAdapter';
 import type { BacklinkItem, HeadingItem, Note, NoteStats, SortOption, SystemFilter, TagNodeItem } from '../types/note';
 
@@ -721,6 +722,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
   getFilteredNotes: () => {
     const { notes, activeFilter, selectedTag, searchQuery, sortOption } = get();
+    noteSearchIndex.sync(notes);
 
     let result = [...notes];
 
@@ -768,25 +770,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
     // Apply Search Query
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      
-      if (q.startsWith('#')) {
-        const tagSearch = q.slice(1);
-        result = result.filter((n) =>
-          n.tags.some((t) => t.toLowerCase().includes(tagSearch))
-        );
-      } else if (q.startsWith('@todo')) {
-        result = result.filter((n) => /-\s+\[ \]/i.test(n.content));
-      } else if (q.startsWith('@pinned')) {
-        result = result.filter((n) => n.isPinned);
-      } else {
-        result = result.filter(
-          (n) =>
-            n.title.toLowerCase().includes(q) ||
-            n.content.toLowerCase().includes(q) ||
-            n.tags.some((t) => t.toLowerCase().includes(q))
-        );
-      }
+      result = noteSearchIndex.search(result, searchQuery);
     }
 
     // Apply Sorting (Pinned always on top for normal views)

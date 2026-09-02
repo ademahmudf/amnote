@@ -6,6 +6,7 @@ import { markdownToHtml, htmlToMarkdown } from '../editor/utils/markdownConverte
 import { initialAmNoteSeed } from '../db/vaultAdapter';
 import { mergeVaultNotes } from '../domain/vaultSync';
 import { diffLines } from '../domain/textDiff';
+import { NoteSearchIndex } from '../domain/searchIndex';
 import type { Note } from '../types/note';
 
 function assert(condition: boolean, message: string) {
@@ -310,5 +311,18 @@ assert(diff.some((line) => line.type === 'removed' && line.text === 'two'), 'Dif
 assert(diff.some((line) => line.type === 'added' && line.text === '2'), 'Diff marks lines added on disk');
 assert(diff.some((line) => line.type === 'added' && line.text === 'five'), 'Diff marks suffix additions');
 assert(diff.filter((line) => line.type === 'equal' && line.text === 'three').length === 1, 'Diff preserves unchanged context');
+
+const searchIndex = new NoteSearchIndex();
+const searchableNote = makeConflictNote('searchable', 'Discussed quantum storage and backup safety', 2);
+searchableNote.title = 'Vault Architecture';
+searchableNote.tags = ['guide/search'];
+const otherNote = makeConflictNote('other', 'Unrelated grocery list', 10);
+searchIndex.sync([searchableNote, otherNote]);
+
+assert(searchIndex.search([searchableNote, otherNote], 'quantum')[0]?.id === 'searchable', 'Search index ranks matching content');
+assert(searchIndex.search([searchableNote, otherNote], '#guide')[0]?.id === 'searchable', 'Search index supports tag queries');
+assert(searchIndex.search([searchableNote, otherNote], '@pinned').length === 0, 'Search index supports structured pinned queries');
+searchIndex.add(makeConflictNote('searchable', 'Replaced note content', 3));
+assert(searchIndex.search([searchableNote, otherNote], 'quantum').length === 0, 'Search index replaces changed documents');
 
 console.log('\n🎉 All AmNote unit tests, AST Serializer tests, and Tag Capitalization tests passed successfully!');
