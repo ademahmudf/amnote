@@ -1,3 +1,5 @@
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use base64::Engine as _;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
@@ -171,7 +173,7 @@ fn sync_directory(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn write_atomic(path: &Path, contents: &str) -> Result<(), String> {
+fn write_atomic<T: AsRef<[u8]>>(path: &Path, contents: T) -> Result<(), String> {
     let parent = path
         .parent()
         .ok_or_else(|| format!("Invalid note path: {}", path.display()))?;
@@ -190,7 +192,7 @@ fn write_atomic(path: &Path, contents: &str) -> Result<(), String> {
     let write_result = (|| -> Result<(), String> {
         let mut file = File::create(&temp_path)
             .map_err(|e| format!("Failed to create temporary note file: {}", e))?;
-        file.write_all(contents.as_bytes())
+        file.write_all(contents.as_ref())
             .map_err(|e| format!("Failed to write note: {}", e))?;
         file.sync_all()
             .map_err(|e| format!("Failed to sync note: {}", e))?;
@@ -500,7 +502,9 @@ fn ensure_note_unchanged(path: &Path, expected_content: &str) -> Result<(), Stri
 #[tauri::command]
 fn save_note_to_vault(note: NotePayload, expected_content: Option<String>) -> Result<(), String> {
     let vault = ensure_vault_directories()?;
-    write_note_to_vault(&vault, &note, expected_content.as_deref())
+    write_note_to_vault(&vault, &note, expected_content.as_deref())?;
+    cleanup_unused_attachments(&note)?;
+    Ok(())
 }
 
 fn write_note_to_vault(
@@ -676,9 +680,195 @@ fn spawn_vault_watcher(app: tauri::AppHandle) {
     });
 }
 
+const MAX_ATTACHMENT_BYTES: usize = 20 * 1024 * 1024;
+
+fn sanitize_attachment_name(raw_name: &str) -> Result<String, String> {
+    let file_name = Path::new(raw_name)
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let extension = Path::new(&file_name)
+        .extension()
+        .map(|ext| ext.to_ascii_lowercase().to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    if !matches!(extension.as_str(), "png" | "jpg" | "jpeg" | "webp" | "gif") {
+        return Err("Only PNG, JPEG, WebP, or GIF images are supported.".to_string());
+    }
+
+    let stem = Path::new(&file_name)
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let safe_stem: String = stem
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' || ch == '.' {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .take(100)
+        .collect();
+    let safe_stem = safe_stem.trim_matches('-').trim_matches('.');
+
+    if safe_stem.is_empty() {
+        return Err("Invalid image filename.".to_string());
+    }
+
+    Ok(format!("{}.{}", safe_stem, extension))
+}
+
+fn decode_image_data_url(data_url: &str) -> Result<(String, Vec<u8>), String> {
+    let value = data_url
+        .strip_prefix("data:")
+        .ok_or_else(|| "Invalid image data URL.".to_string())?;
+    let (mime, encoded) = value
+        .split_once(";base64,")
+        .ok_or_else(|| "Invalid image data URL.".to_string())?;
+    let extension = match mime {
+        "image/png" => "png",
+        "image/jpeg" => "jpeg",
+        "image/webp" => "webp",
+        "image/gif" => "gif",
+        _ => return Err("Unsupported image format.".to_string()),
+    };
+
+    let bytes = BASE64_STANDARD
+        .decode(encoded.trim())
+        .map_err(|e| format!("Invalid image data: {}", e))?;
+    if bytes.len() > MAX_ATTACHMENT_BYTES {
+        return Err("Images must be 20 MB or smaller.".to_string());
+    }
+
+    Ok((extension.to_string(), bytes))
+}
+
+#[tauri::command]
+fn save_attachment(note_id: String, file_name: String, data_url: String) -> Result<String, String> {
+    if !is_safe_note_id(&note_id)
+        || !note_id
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
+    {
+        return Err("Invalid note id for attachment storage.".to_string());
+    }
+
+    let vault = ensure_vault_directories()?;
+    let (decoded_extension, bytes) = decode_image_data_url(&data_url)?;
+    let safe_name = sanitize_attachment_name(&file_name)?;
+    let stem = Path::new(&safe_name)
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().to_string())
+        .unwrap_or_else(|| "image".to_string());
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| format!("Failed to create attachment filename: {}", e))?
+        .as_millis();
+    let attachment_name = format!("{}-{}.{}", stem, timestamp, decoded_extension);
+    let attachment_dir = vault.join(".assets").join(&note_id);
+    let attachment_path = attachment_dir.join(&attachment_name);
+
+    write_atomic(&attachment_path, bytes)
+        .map_err(|e| format!("Failed to save attachment: {}", e))?;
+    Ok(format!("amnote-asset://{}/{}", note_id, attachment_name))
+}
+
+fn cleanup_unused_attachments(note: &NotePayload) -> Result<(), String> {
+    if note.is_trashed {
+        return Ok(());
+    }
+
+    let vault = ensure_vault_directories()?;
+    let attachment_dir = vault.join(".assets").join(&note.id);
+    if !attachment_dir.exists() {
+        return Ok(());
+    }
+
+    for entry in fs::read_dir(&attachment_dir)
+        .map_err(|e| format!("Failed to read attachment directory: {}", e))?
+        .flatten()
+    {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !note
+            .content
+            .contains(&format!("amnote-asset://{}/{}", note.id, name))
+        {
+            fs::remove_file(&path)
+                .map_err(|e| format!("Failed to remove unused attachment: {}", e))?;
+        }
+    }
+
+    Ok(())
+}
+
+fn attachment_protocol_response(
+    request: tauri::http::Request<Vec<u8>>,
+) -> tauri::http::Response<Vec<u8>> {
+    let invalid = |message: &'static str| {
+        tauri::http::Response::builder()
+            .status(tauri::http::StatusCode::BAD_REQUEST)
+            .header(tauri::http::header::CONTENT_TYPE, "text/plain")
+            .body(message.as_bytes().to_vec())
+            .unwrap()
+    };
+
+    let relative_path = request.uri().path().trim_start_matches('/');
+    let (note_id, file_name) = match relative_path.split_once('/') {
+        Some(value) => value,
+        None => return invalid("Invalid attachment URL."),
+    };
+
+    if !is_safe_note_id(note_id)
+        || !note_id
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
+    {
+        return invalid("Invalid attachment note id.");
+    }
+    let safe_name = match sanitize_attachment_name(file_name) {
+        Ok(name) => name,
+        Err(_) => return invalid("Invalid attachment filename."),
+    };
+
+    let vault = match ensure_vault_directories() {
+        Ok(path) => path,
+        Err(_) => return invalid("Vault unavailable."),
+    };
+    let path = vault.join(".assets").join(note_id).join(safe_name);
+    match fs::read(path) {
+        Ok(bytes) => {
+            let content_type = match relative_path
+                .rsplit_once('.')
+                .map(|(_, ext)| ext.to_ascii_lowercase())
+            {
+                Some(ext) if ext == "png" => "image/png",
+                Some(ext) if ext == "jpg" || ext == "jpeg" => "image/jpeg",
+                Some(ext) if ext == "webp" => "image/webp",
+                Some(ext) if ext == "gif" => "image/gif",
+                _ => "application/octet-stream",
+            };
+            tauri::http::Response::builder()
+                .header(tauri::http::header::CONTENT_TYPE, content_type)
+                .header("Cache-Control", "private, max-age=31536000, immutable")
+                .body(bytes)
+                .unwrap()
+        }
+        Err(_) => invalid("Attachment not found."),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .register_uri_scheme_protocol("amnote-asset", |_context, request| {
+            attachment_protocol_response(request)
+        })
         .plugin(tauri_plugin_opener::init())
         .setup(|_app| {
             #[cfg(not(target_os = "macos"))]
@@ -702,6 +892,7 @@ pub fn run() {
             mark_vault_initialized,
             get_vault_revision,
             backup_note_version,
+            save_attachment,
             save_note_to_vault,
             delete_note_from_vault,
         ])
@@ -771,5 +962,19 @@ mod tests {
         assert!(result.is_err());
         assert!(!vault.parent().unwrap().join("outside.md").exists());
         fs::remove_dir_all(&vault).ok();
+    }
+
+    #[test]
+    fn attachments_are_sanitized_and_validated() {
+        assert_eq!(
+            sanitize_attachment_name("../../secret path/My Image.png").unwrap(),
+            "My-Image.png"
+        );
+        assert!(sanitize_attachment_name("malicious.svg").is_err());
+        assert!(decode_image_data_url("data:text/html;base64,PGI+").is_err());
+
+        let png = decode_image_data_url("data:image/png;base64,iVBORw0KGgo=").unwrap();
+        assert_eq!(png.0, "png");
+        assert!(!png.1.is_empty());
     }
 }

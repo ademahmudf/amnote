@@ -21,8 +21,9 @@ function safeImageUrl(value: string): string {
   const url = value.trim();
   const isDataImage = /^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(url);
   const isHttp = /^https?:\/\//i.test(url);
+  const isAppAttachment = /^amnote-asset:\/\//i.test(url);
   const isPath = !url.startsWith('//') && !/^[a-z][a-z0-9+.-]*:/i.test(url);
-  return isDataImage || isHttp || isPath ? url : '';
+  return isDataImage || isHttp || isAppAttachment || isPath ? url : '';
 }
 
 function safeHighlightColor(value: string): string {

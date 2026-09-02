@@ -90,6 +90,19 @@ async function invokeTauri<T>(cmd: string, args?: Record<string, unknown>): Prom
 }
 
 export const vaultAdapter = {
+  saveAttachment: async (noteId: string, fileName: string, dataUrl: string): Promise<string> => {
+    if (isTauriEnvironment()) {
+      return invokeTauri<string>('save_attachment', {
+        noteId,
+        fileName,
+        dataUrl,
+      });
+    }
+
+    // Browser previews can still render the in-memory data URL.
+    return dataUrl;
+  },
+
   onVaultChanged: async (callback: () => void): Promise<() => void> => {
     if (isTauriEnvironment()) {
       const { listen } = await import('@tauri-apps/api/event');

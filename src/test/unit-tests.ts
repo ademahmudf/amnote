@@ -305,6 +305,7 @@ assert(synced.conflicts.some((conflict) => conflict.noteId === 'deleted' && !con
 const unsafeMarkdownHtml = markdownToHtml('[click](javascript:alert(1)) ![x](javascript:alert(1))');
 assert(!unsafeMarkdownHtml.includes('javascript:'), 'Markdown HTML conversion blocks javascript URLs');
 assert(unsafeMarkdownHtml.includes('href="#"'), 'Unsafe Markdown links fall back to an inert href');
+assert(markdownToHtml('![x](amnote-asset://note-abc/image-png)').includes('amnote-asset://note-abc/image-png'), 'Markdown renderer permits managed attachment URLs');
 
 const diff = diffLines('one\ntwo\nthree\nfour', 'one\n2\nthree\nfour\nfive');
 assert(diff.some((line) => line.type === 'removed' && line.text === 'two'), 'Diff marks lines removed from the local version');

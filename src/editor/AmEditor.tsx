@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import type { Editor } from '@tiptap/react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -29,6 +30,10 @@ import { serializeProseMirrorToMarkdown } from './utils/proseMirrorMarkdownSeria
 import { useNoteStore } from '../store/useNoteStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { resolveTagIcon } from '../utils/tagIcons';
+import { useEditorContentLifecycle } from './hooks/useEditorContentLifecycle';
+import { useEditorLockFocus } from './hooks/useEditorLockFocus';
+import { useEditorMenuState } from './hooks/useEditorMenuState';
+import { useImageAttachments } from './hooks/useImageAttachments';
 import {
   Pin,
   PinOff,
@@ -101,40 +106,51 @@ export const AmEditor: React.FC = () => {
     wordGoal,
   } = useSettingsStore();
 
-  const [isSlashOpen, setIsSlashOpen] = useState(false);
-  const [slashQuery, setSlashQuery] = useState('');
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const [isWikiMenuOpen, setIsWikiMenuOpen] = useState(false);
-  const [wikiQuery, setWikiQuery] = useState('');
-  const [wikiPosition, setWikiPosition] = useState({ top: 0, left: 0 });
-  const [showBubbleMenu, setShowBubbleMenu] = useState(false);
-  const [bubblePosition, setBubblePosition] = useState({ top: 0, left: 0 });
+  const editorRef = useRef<Editor | null>(null);
+  const {
+    isSlashOpen,
+    setIsSlashOpen,
+    slashQuery,
+    setSlashQuery,
+    menuPosition,
+    setMenuPosition,
+    isWikiMenuOpen,
+    setIsWikiMenuOpen,
+    wikiQuery,
+    setWikiQuery,
+    wikiPosition,
+    setWikiPosition,
+    showBubbleMenu,
+    setShowBubbleMenu,
+    bubblePosition,
+    setBubblePosition,
+    isSlashOpenRef,
+    isWikiMenuOpenRef,
+  } = useEditorMenuState();
 
-  const isSlashOpenRef = useRef(isSlashOpen);
-  isSlashOpenRef.current = isSlashOpen;
-
-  const isWikiMenuOpenRef = useRef(isWikiMenuOpen);
-  isWikiMenuOpenRef.current = isWikiMenuOpen;
-
-  // Image Upload & Lightbox state
-  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
-  const [lightboxZoom, setLightboxZoom] = useState(1);
-  const [copiedImage, setCopiedImage] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Unlock screen state
-  const [unlockPassword, setUnlockPassword] = useState('');
-  const [unlockError, setUnlockError] = useState(false);
-  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const {
+    lightboxImage,
+    setLightboxImage,
+    lightboxZoom,
+    setLightboxZoom,
+    copiedImage,
+    setCopiedImage,
+    attachmentError,
+    fileInputRef,
+    uploadAndInsert,
+    insertImageFromFile,
+  } = useImageAttachments({ editorRef });
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastLoadedEditorRef = useRef<unknown>(null);
-  const lastLoadedNoteIdRef = useRef<string | null>(null);
-  const lastUnlockedRef = useRef<boolean>(true);
-  const editorReloadTokenRef = useRef<number>(0);
-  const isInternalUpdatingRef = useRef(false);
 
   const isUnlocked = activeNote ? isNoteUnlocked(activeNote.id) : true;
+  const {
+    unlockPassword,
+    setUnlockPassword,
+    unlockError,
+    setUnlockError,
+    passwordInputRef,
+  } = useEditorLockFocus(activeNote, isUnlocked);
   const initialHtml = activeNote ? markdownToHtml(activeNote.content) : '<p></p>';
 
   const editor = useEditor({
@@ -211,17 +227,7 @@ export const AmEditor: React.FC = () => {
             const file = files[i];
             if (file.type.startsWith('image/')) {
               event.preventDefault();
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                const src = e.target?.result as string;
-                if (src) {
-                  const { schema } = view.state;
-                  const node = schema.nodes.image.create({ src, alt: file.name || 'Pasted image' });
-                  const tr = view.state.tr.replaceSelectionWith(node);
-                  view.dispatch(tr);
-                }
-              };
-              reader.readAsDataURL(file);
+              void uploadAndInsert(file, view);
               return true;
             }
           }
@@ -236,18 +242,7 @@ export const AmEditor: React.FC = () => {
             if (file.type.startsWith('image/')) {
               event.preventDefault();
               const coords = view.posAtCoords({ left: event.clientX, top: event.clientY });
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                const src = e.target?.result as string;
-                if (src) {
-                  const { schema } = view.state;
-                  const node = schema.nodes.image.create({ src, alt: file.name || 'Dropped image' });
-                  const pos = coords ? coords.pos : view.state.selection.from;
-                  const tr = view.state.tr.insert(pos, node);
-                  view.dispatch(tr);
-                }
-              };
-              reader.readAsDataURL(file);
+              void uploadAndInsert(file, view, coords ? { left: event.clientX, top: event.clientY } : undefined);
               return true;
             }
           }
@@ -363,65 +358,16 @@ export const AmEditor: React.FC = () => {
     },
   });
 
-  // Load content when editor instance mounts, note ID switches, or when transitioning from locked -> unlocked
   useEffect(() => {
-    if (!editor || !activeNote) return;
+    editorRef.current = editor;
+  }, [editor]);
 
-    const editorInstanceChanged = lastLoadedEditorRef.current !== editor;
-    const noteIdChanged = lastLoadedNoteIdRef.current !== activeNote.id;
-    const justUnlocked = !lastUnlockedRef.current && isUnlocked;
-    const externalReloadRequested =
-      editorReloadTokenRef.current !== editorReloadToken;
-    lastUnlockedRef.current = isUnlocked;
-    editorReloadTokenRef.current = editorReloadToken;
-
-    if (editorInstanceChanged || noteIdChanged || justUnlocked || externalReloadRequested) {
-      lastLoadedEditorRef.current = editor;
-      lastLoadedNoteIdRef.current = activeNote.id;
-      isInternalUpdatingRef.current = true;
-      const htmlContent = markdownToHtml(activeNote.content);
-      editor.commands.setContent(htmlContent, { emitUpdate: false });
-      isInternalUpdatingRef.current = false;
-
-      // Auto-select title if new note or untitled, so user can immediately type to replace it
-      if (noteIdChanged) {
-        setTimeout(() => {
-          if (!editor.isDestroyed) {
-            const firstNode = editor.state.doc.firstChild;
-            if (firstNode && firstNode.type.name === 'heading' && firstNode.attrs.level === 1) {
-              const titleText = firstNode.textContent.trim();
-              if (titleText === 'New Note' || titleText === 'Untitled') {
-                const start = 1;
-                const end = 1 + firstNode.textContent.length;
-                editor.chain().focus().setTextSelection({ from: start, to: end }).run();
-              }
-            }
-          }
-        }, 30);
-      }
-    }
-  }, [activeNote?.id, activeNote?.content, isUnlocked, editor, editorReloadToken]);
-
-  // Focus password input when locked note is opened
-  useEffect(() => {
-    if (activeNote?.isLocked && !isUnlocked) {
-      setUnlockPassword('');
-      setUnlockError(false);
-      setTimeout(() => passwordInputRef.current?.focus(), 50);
-    }
-  }, [activeNote?.id, isUnlocked, activeNote?.isLocked]);
-
-  // Insert image file into editor
-  const insertImageFromFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const src = e.target?.result as string;
-      if (src && editor) {
-        editor.chain().focus().setImage({ src, alt: file.name || 'Image' }).run();
-      }
-    };
-    reader.readAsDataURL(file);
-  };
+  const { isInternalUpdatingRef } = useEditorContentLifecycle({
+    editor,
+    activeNote,
+    isUnlocked,
+    editorReloadToken,
+  });
 
   const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -432,30 +378,6 @@ export const AmEditor: React.FC = () => {
     }
     e.target.value = '';
   };
-
-  // Listen for global trigger image upload event from slash menu or toolbar
-  useEffect(() => {
-    const handleTrigger = () => {
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
-    };
-
-    const handleOpenLightbox = (e: Event) => {
-      const customEvent = e as CustomEvent<{ src: string; alt: string }>;
-      if (customEvent.detail) {
-        setLightboxImage(customEvent.detail);
-        setLightboxZoom(1);
-      }
-    };
-
-    window.addEventListener('amnote:trigger-image-upload', handleTrigger);
-    window.addEventListener('amnote:open-lightbox', handleOpenLightbox);
-    return () => {
-      window.removeEventListener('amnote:trigger-image-upload', handleTrigger);
-      window.removeEventListener('amnote:open-lightbox', handleOpenLightbox);
-    };
-  }, []);
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -874,6 +796,12 @@ export const AmEditor: React.FC = () => {
           <span>Saved</span>
         </div>
       </div>
+
+      {attachmentError && (
+        <div role="alert" className="px-4 py-1.5 text-xs text-amber-600 bg-amber-500/10 border-t border-amber-500/20">
+          {attachmentError}
+        </div>
+      )}
 
       {/* Hidden File Input for Native Image Uploads */}
       <input
