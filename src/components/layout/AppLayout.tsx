@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useThemeStore, applyThemeCssVariables } from '../../store/useThemeStore';
@@ -12,9 +12,11 @@ import { SettingsModal } from '../modals/SettingsModal';
 import { ExportModal } from '../modals/ExportModal';
 import { PasswordModal } from '../modals/PasswordModal';
 import { CheatsheetModal } from '../modals/CheatsheetModal';
+import { ConflictDiffModal } from '../modals/ConflictDiffModal';
 
 export const AppLayout: React.FC = () => {
   const init = useNoteStore((state) => state.init);
+  const syncIfVaultChanged = useNoteStore((state) => state.syncIfVaultChanged);
   const isLoading = useNoteStore((state) => state.isLoading);
   const isSidebarOpen = useNoteStore((state) => state.isSidebarOpen);
   const isNoteListOpen = useNoteStore((state) => state.isNoteListOpen);
@@ -31,6 +33,9 @@ export const AppLayout: React.FC = () => {
   const activeNoteId = useNoteStore((state) => state.activeNoteId);
   const persistenceError = useNoteStore((state) => state.persistenceError);
   const clearPersistenceError = useNoteStore((state) => state.clearPersistenceError);
+  const vaultConflicts = useNoteStore((state) => state.vaultConflicts);
+  const resolveVaultConflict = useNoteStore((state) => state.resolveVaultConflict);
+  const [activeConflictId, setActiveConflictId] = useState<string | null>(null);
 
   const { getThemeColors } = useThemeStore();
 
@@ -39,6 +44,29 @@ export const AppLayout: React.FC = () => {
     init();
     applyThemeCssVariables(getThemeColors());
   }, [init, getThemeColors]);
+
+  // Poll the lightweight vault fingerprint so external editors and sync tools
+  // are reflected without requiring the user to press reload.
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== 'hidden') {
+        void syncIfVaultChanged();
+      }
+    }, 2500);
+
+    return () => window.clearInterval(interval);
+  }, [syncIfVaultChanged]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void syncIfVaultChanged();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [syncIfVaultChanged]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -167,6 +195,28 @@ export const AppLayout: React.FC = () => {
         </div>
       )}
 
+      {vaultConflicts.map((conflict) => (
+        <div
+          key={conflict.noteId}
+          role="alert"
+          className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 text-sm"
+          style={{ backgroundColor: '#d97706', color: '#ffffff' }}
+        >
+          <span className="min-w-0 flex-1 truncate">
+            <strong className="font-semibold">{conflict.title}</strong> changed in AmNote and on disk. Choose which version to keep.
+          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              className="rounded px-2 py-1 underline hover:opacity-90"
+              onClick={() => setActiveConflictId(conflict.noteId)}
+            >
+              Review changes
+            </button>
+          </div>
+        </div>
+      ))}
+
       {/* Main 3-Pane Body */}
       <div className="flex-1 flex overflow-hidden">
         {/* Pane 1: Sidebar */}
@@ -188,6 +238,23 @@ export const AppLayout: React.FC = () => {
       <ExportModal />
       <PasswordModal />
       <CheatsheetModal />
+      {(() => {
+        const activeConflict = vaultConflicts.find(
+          (conflict) => conflict.noteId === activeConflictId
+        );
+        if (!activeConflict) return null;
+
+        return (
+          <ConflictDiffModal
+            conflict={activeConflict}
+            onResolve={(resolution) => {
+              setActiveConflictId(null);
+              resolveVaultConflict(activeConflict.noteId, resolution);
+            }}
+            onClose={() => setActiveConflictId(null)}
+          />
+        );
+      })()}
     </div>
   );
 };

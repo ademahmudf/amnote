@@ -84,6 +84,7 @@ export const AmEditor: React.FC = () => {
   const setSelectedTag = useNoteStore((state) => state.setSelectedTag);
   const setActiveNoteId = useNoteStore((state) => state.setActiveNoteId);
   const createNote = useNoteStore((state) => state.createNote);
+  const editorReloadToken = useNoteStore((state) => state.editorReloadToken);
 
   const {
     fontFamily,
@@ -130,6 +131,7 @@ export const AmEditor: React.FC = () => {
   const lastLoadedEditorRef = useRef<unknown>(null);
   const lastLoadedNoteIdRef = useRef<string | null>(null);
   const lastUnlockedRef = useRef<boolean>(true);
+  const editorReloadTokenRef = useRef<number>(0);
   const isInternalUpdatingRef = useRef(false);
 
   const isUnlocked = activeNote ? isNoteUnlocked(activeNote.id) : true;
@@ -368,9 +370,12 @@ export const AmEditor: React.FC = () => {
     const editorInstanceChanged = lastLoadedEditorRef.current !== editor;
     const noteIdChanged = lastLoadedNoteIdRef.current !== activeNote.id;
     const justUnlocked = !lastUnlockedRef.current && isUnlocked;
+    const externalReloadRequested =
+      editorReloadTokenRef.current !== editorReloadToken;
     lastUnlockedRef.current = isUnlocked;
+    editorReloadTokenRef.current = editorReloadToken;
 
-    if (editorInstanceChanged || noteIdChanged || justUnlocked) {
+    if (editorInstanceChanged || noteIdChanged || justUnlocked || externalReloadRequested) {
       lastLoadedEditorRef.current = editor;
       lastLoadedNoteIdRef.current = activeNote.id;
       isInternalUpdatingRef.current = true;
@@ -395,7 +400,7 @@ export const AmEditor: React.FC = () => {
         }, 30);
       }
     }
-  }, [activeNote?.id, isUnlocked, editor]);
+  }, [activeNote?.id, activeNote?.content, isUnlocked, editor, editorReloadToken]);
 
   // Focus password input when locked note is opened
   useEffect(() => {

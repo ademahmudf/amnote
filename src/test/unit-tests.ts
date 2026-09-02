@@ -4,6 +4,9 @@ import {
 } from '../domain/markdownMetadata';
 import { markdownToHtml, htmlToMarkdown } from '../editor/utils/markdownConverter';
 import { initialAmNoteSeed } from '../db/vaultAdapter';
+import { mergeVaultNotes } from '../domain/vaultSync';
+import { diffLines } from '../domain/textDiff';
+import type { Note } from '../types/note';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -257,5 +260,55 @@ assert(formatTagSegment('omarchy-linux') === 'Omarchy Linux', 'Capitalizes hyphe
 assert(formatTagSegment('deep_work') === 'Deep Work', 'Capitalizes underscored segment "deep_work" -> "Deep Work"');
 assert(formatTagDisplay('guide/basics') === 'Guide / Basics', 'Capitalizes nested tag path "guide/basics" -> "Guide / Basics"');
 assert(formatTagDisplay('work/sprint/q3') === 'Work / Sprint / Q3', 'Capitalizes 3-level path "work/sprint/q3" -> "Work / Sprint / Q3"');
+
+// ============================================================================
+// Test 15: Conflict-safe vault reconciliation
+// ============================================================================
+function makeConflictNote(id: string, content: string, updatedAt = 1): Note {
+  return {
+    id,
+    title: `Note ${id}`,
+    content,
+    tags: [],
+    isPinned: false,
+    isArchived: false,
+    isTrashed: false,
+    isLocked: false,
+    createdAt: 1,
+    updatedAt,
+  };
+}
+
+const localNotes = [
+  makeConflictNote('clean', 'disk version', 2),
+  makeConflictNote('dirty', 'local edit', 3),
+  makeConflictNote('deleted', 'local deletion survivor', 4),
+];
+const diskNotes = [
+  makeConflictNote('clean', 'external metadata update', 5),
+  makeConflictNote('dirty', 'external edit', 6),
+];
+
+const synced = mergeVaultNotes({
+  localNotes,
+  diskNotes,
+  dirtyNoteIds: { dirty: true, deleted: true },
+});
+
+assert(synced.conflicts.length === 2, 'Vault merge detects content and deletion conflicts');
+assert(synced.notes.find((note) => note.id === 'clean')?.content === 'external metadata update', 'Vault merge accepts clean external updates');
+assert(synced.notes.find((note) => note.id === 'dirty')?.content === 'local edit', 'Vault merge preserves conflicting local edits');
+assert(synced.conflicts.some((conflict) => conflict.noteId === 'dirty' && conflict.diskNote?.content === 'external edit'), 'Vault merge keeps the disk version available for conflict resolution');
+assert(synced.conflicts.some((conflict) => conflict.noteId === 'deleted' && !conflict.diskNote), 'Vault merge detects locally dirty notes deleted on disk');
+
+const unsafeMarkdownHtml = markdownToHtml('[click](javascript:alert(1)) ![x](javascript:alert(1))');
+assert(!unsafeMarkdownHtml.includes('javascript:'), 'Markdown HTML conversion blocks javascript URLs');
+assert(unsafeMarkdownHtml.includes('href="#"'), 'Unsafe Markdown links fall back to an inert href');
+
+const diff = diffLines('one\ntwo\nthree\nfour', 'one\n2\nthree\nfour\nfive');
+assert(diff.some((line) => line.type === 'removed' && line.text === 'two'), 'Diff marks lines removed from the local version');
+assert(diff.some((line) => line.type === 'added' && line.text === '2'), 'Diff marks lines added on disk');
+assert(diff.some((line) => line.type === 'added' && line.text === 'five'), 'Diff marks suffix additions');
+assert(diff.filter((line) => line.type === 'equal' && line.text === 'three').length === 1, 'Diff preserves unchanged context');
 
 console.log('\n🎉 All AmNote unit tests, AST Serializer tests, and Tag Capitalization tests passed successfully!');

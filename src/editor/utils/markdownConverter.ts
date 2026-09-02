@@ -1,5 +1,36 @@
 // Robust bidirectional Markdown <-> HTML converter for TipTap editor
 
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function safeLinkUrl(value: string): string {
+  const url = value.trim();
+  return /^(https?:|mailto:|tel:|#|\/(?!\/))/i.test(url) ? url : '#';
+}
+
+function safeImageUrl(value: string): string {
+  const url = value.trim();
+  const isDataImage = /^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(url);
+  const isHttp = /^https?:\/\//i.test(url);
+  const isPath = !url.startsWith('//') && !/^[a-z][a-z0-9+.-]*:/i.test(url);
+
+  return isDataImage || isHttp || isPath ? url : '';
+}
+
+function safeHighlightColor(value: string): string {
+  return /^(#[0-9a-f]{3,8}|[a-z]+|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0?\.\d+|1)\s*)?\))$/i.test(
+    value.trim()
+  )
+    ? value.trim()
+    : '#facc15';
+}
+
 export function markdownToHtml(md: string): string {
   if (!md || !md.trim()) return '<p></p>';
 
@@ -48,7 +79,10 @@ export function markdownToHtml(md: string): string {
     // Highlight: =={color:...}text== or ==text==
     out = out.replace(
       /==\{color:([^}]+)\}([^=]+)==/g,
-      '<mark data-color="$1" style="background-color: $1">$2</mark>'
+      (_match, color, text) => {
+        const safeColor = safeHighlightColor(color);
+        return `<mark data-color="${escapeHtmlAttribute(safeColor)}" style="background-color: ${safeColor}">${text}</mark>`;
+      }
     );
     out = out.replace(/==([^=]+)==/g, '<mark>$1</mark>');
 
@@ -71,34 +105,40 @@ export function markdownToHtml(md: string): string {
           });
         }
 
+        const safeSrc = safeImageUrl(url);
         const widthAttr = width ? ` width="${width}" style="width: ${width};"` : '';
         const alignAttr = ` data-align="${align}"`;
-        return `<img src="${url}" alt="${cleanAlt}" class="am-editor-image"${widthAttr}${alignAttr} />`;
+        return `<img src="${escapeHtmlAttribute(safeSrc)}" alt="${escapeHtmlAttribute(cleanAlt)}" class="am-editor-image"${widthAttr}${alignAttr} />`;
       }
     );
 
     // Links: [text](url)
-    out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+    out = out.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      (_match, text, url) => `<a href="${escapeHtmlAttribute(safeLinkUrl(url))}">${text}</a>`
+    );
 
     // Bracketed spaced tags: #[[tag name]]#
     out = out.replace(
       /#\[\[([^\]]+)\]\]#/g,
       (_match, p1) => {
         const cleanTag = p1.trim().toLowerCase().replace(/\s+/g, '-');
-        return `<span data-tag="${cleanTag}" class="am-tag-pill bear-tag-pill">#${p1.trim()}</span>`;
+        return `<span data-tag="${escapeHtmlAttribute(cleanTag)}" class="am-tag-pill bear-tag-pill">#${escapeHtmlAttribute(p1.trim())}</span>`;
       }
     );
 
     // Standard tags: #tag or #category/subcategory
     out = out.replace(
-      /(^|\s)#([a-zA-Z0-9_\-\/]+)(?=\s|$|[.,!?;:])/g,
-      '$1<span data-tag="$2" class="am-tag-pill bear-tag-pill">#$2</span>'
+      /(^|\s)#([a-zA-Z0-9_/-]+)(?=\s|$|[.,!?;:])/g,
+      (_match, prefix, tag) =>
+        `${prefix}<span data-tag="${escapeHtmlAttribute(tag)}" class="am-tag-pill bear-tag-pill">#${escapeHtmlAttribute(tag)}</span>`
     );
 
     // Wiki-links: [[Note Title]]
     out = out.replace(
       /\[\[([^\]]+)\]\]/g,
-      '<span data-wiki-target="$1" class="am-wiki-link bear-wiki-link">[[ $1 ]]</span>'
+      (_match, target) =>
+        `<span data-wiki-target="${escapeHtmlAttribute(target)}" class="am-wiki-link bear-wiki-link">[[ ${escapeHtmlAttribute(target)} ]]</span>`
     );
 
     return out;
@@ -123,7 +163,8 @@ export function markdownToHtml(md: string): string {
       } else {
         flushList();
         inCodeBlock = true;
-        codeBlockLang = trimmed.slice(3).trim();
+        const requestedLang = trimmed.slice(3).trim();
+        codeBlockLang = /^[a-z0-9+#.-]+$/i.test(requestedLang) ? requestedLang : '';
         codeBlockLines = [];
       }
       continue;

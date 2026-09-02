@@ -3,6 +3,10 @@ import {
   extractTagsFromContent,
   extractWikiLinksFromContent,
 } from '../domain/markdownMetadata';
+import {
+  mergeVaultNotes,
+  type VaultConflict,
+} from '../domain/vaultSync';
 import { vaultAdapter } from '../db/vaultAdapter';
 import type { BacklinkItem, HeadingItem, Note, NoteStats, SortOption, SystemFilter, TagNodeItem } from '../types/note';
 
@@ -14,6 +18,9 @@ interface NoteState {
   searchQuery: string;
   sortOption: SortOption;
   vaultPath: string;
+  vaultRevision: string | null;
+  vaultConflicts: VaultConflict[];
+  dirtyNoteIds: Record<string, true>;
   
   // Layout toggles
   isSidebarOpen: boolean;
@@ -33,11 +40,18 @@ interface NoteState {
   // Computed & helper getters
   isLoading: boolean;
   persistenceError: string | null;
+  isSyncingVault: boolean;
+  editorReloadToken: number;
   
   // Actions
   init: () => Promise<void>;
   loadNotes: () => Promise<void>;
   reloadFromDisk: () => Promise<void>;
+  syncIfVaultChanged: () => Promise<boolean>;
+  resolveVaultConflict: (
+    noteId: string,
+    resolution: 'local' | 'disk' | 'both'
+  ) => Promise<void>;
   openVaultInFileManager: () => Promise<void>;
   pickAndChangeVault: () => Promise<boolean>;
   setCustomVaultPath: (newPath: string) => Promise<void>;
@@ -105,6 +119,14 @@ function persistenceMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function isSaveConflict(error: unknown): boolean {
+  return error instanceof Error && error.message.startsWith('CONFLICT:');
+}
+
+function newNoteId(): string {
+  return `note-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+}
+
 // Helper to extract a clean title from markdown
 function extractTitleFromContent(content: string): string {
   const lines = content.trim().split('\n');
@@ -128,6 +150,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   searchQuery: '',
   sortOption: 'updated-desc',
   vaultPath: '~/Documents/AmNotes',
+  vaultRevision: null,
+  vaultConflicts: [],
   
   isSidebarOpen: true,
   isNoteListOpen: true,
@@ -141,8 +165,11 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   passwordModalNoteId: null,
   
   unlockedNotes: {},
+  dirtyNoteIds: {},
   isLoading: true,
   persistenceError: null,
+  isSyncingVault: false,
+  editorReloadToken: 0,
 
   init: async () => {
     try {
@@ -156,6 +183,9 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         activeNoteId: allNotes.length > 0 ? allNotes[0].id : null,
         isLoading: false,
         persistenceError: null,
+        vaultRevision: await vaultAdapter.getVaultRevision(),
+        dirtyNoteIds: {},
+        vaultConflicts: [],
       });
     } catch (err) {
       console.error('Failed to initialize vault:', err);
@@ -169,9 +199,15 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   loadNotes: async () => {
     const allNotes = await vaultAdapter.loadAllNotes();
     allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
-    
+    const merged = mergeVaultNotes({
+      localNotes: get().notes,
+      diskNotes: allNotes,
+      dirtyNoteIds: get().dirtyNoteIds,
+    });
+
     set({
-      notes: allNotes,
+      notes: merged.notes,
+      vaultConflicts: merged.conflicts,
       activeNoteId: allNotes.length > 0 && !get().activeNoteId ? allNotes[0].id : get().activeNoteId,
     });
   },
@@ -179,7 +215,159 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   reloadFromDisk: async () => {
     const allNotes = await vaultAdapter.loadAllNotes();
     allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
-    set({ notes: allNotes });
+    const merged = mergeVaultNotes({
+      localNotes: get().notes,
+      diskNotes: allNotes,
+      dirtyNoteIds: get().dirtyNoteIds,
+    });
+
+    set({
+      notes: merged.notes,
+      vaultConflicts: merged.conflicts,
+      vaultRevision: await vaultAdapter.getVaultRevision(),
+    });
+  },
+
+  syncIfVaultChanged: async () => {
+    if (get().isSyncingVault) return false;
+
+    set({ isSyncingVault: true });
+    try {
+      const revision = await vaultAdapter.getVaultRevision();
+      if (get().vaultRevision === revision) {
+        return false;
+      }
+
+      const allNotes = await vaultAdapter.loadAllNotes();
+      allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
+      const merged = mergeVaultNotes({
+        localNotes: get().notes,
+        diskNotes: allNotes,
+        dirtyNoteIds: Object.fromEntries(
+          Object.keys(get().dirtyNoteIds).map((id) => [id, true as const])
+        ),
+      });
+      const activeNoteExists = merged.notes.some((note) => note.id === get().activeNoteId);
+
+      set({
+        notes: merged.notes,
+        vaultConflicts: merged.conflicts,
+        vaultRevision: revision,
+        activeNoteId: activeNoteExists
+          ? get().activeNoteId
+          : allNotes.length > 0
+            ? allNotes[0].id
+            : null,
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed to sync vault:', err);
+      set({ persistenceError: persistenceMessage(err, 'Unable to synchronize vault changes.') });
+      return false;
+    } finally {
+      set({ isSyncingVault: false });
+    }
+  },
+
+  resolveVaultConflict: async (noteId, resolution) => {
+    const conflict = get().vaultConflicts.find((item) => item.noteId === noteId);
+    if (!conflict) return;
+
+    // A conflict resolution intentionally discards one representation, so both
+    // sides are preserved before any destructive action.
+    try {
+      await vaultAdapter.backupNoteVersion(conflict.localNote, 'local');
+      if (conflict.diskNote) {
+        await vaultAdapter.backupNoteVersion(conflict.diskNote, 'disk');
+      }
+    } catch (err) {
+      console.error('Failed to back up conflicting note versions:', err);
+      set({
+        persistenceError: persistenceMessage(err, 'Unable to back up the conflicting versions.'),
+      });
+      return;
+    }
+
+    const clearConflict = (state: NoteState) => ({
+      dirtyNoteIds: Object.fromEntries(
+        Object.entries(state.dirtyNoteIds).filter(([dirtyId]) => dirtyId !== noteId)
+      ),
+      vaultConflicts: state.vaultConflicts.filter((item) => item.noteId !== noteId),
+    });
+
+    if (resolution === 'local') {
+      try {
+        await vaultAdapter.saveNote(
+          conflict.localNote,
+          conflict.diskNote?.content
+        );
+      } catch (err) {
+        console.error('Failed to resolve vault conflict with local version:', err);
+        set({
+          persistenceError: persistenceMessage(err, 'Unable to keep the local version.'),
+        });
+        return;
+      }
+
+      const vaultRevision = await vaultAdapter.getVaultRevision();
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          note.id === noteId ? conflict.localNote : note
+        ),
+        ...clearConflict(get()),
+        vaultRevision,
+      }));
+      return;
+    }
+
+    if (resolution === 'disk') {
+      if (!conflict.diskNote) return;
+
+      set((state) => ({
+        notes: state.notes.flatMap((note) =>
+          note.id === noteId ? [conflict.diskNote as Note] : [note]
+        ),
+        ...clearConflict(get()),
+        editorReloadToken: state.editorReloadToken + 1,
+      }));
+      return;
+    }
+
+    if (!conflict.diskNote) {
+      await get().resolveVaultConflict(noteId, 'local');
+      return;
+    }
+
+    const localCopy: Note = {
+      ...conflict.localNote,
+      id: newNoteId(),
+      title: `${conflict.localNote.title} (local copy)`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    try {
+      await vaultAdapter.saveNote(localCopy, conflict.localNote.content);
+    } catch (err) {
+      console.error('Failed to save local conflict copy:', err);
+      set({
+        persistenceError: persistenceMessage(err, 'Unable to keep both versions.'),
+      });
+      return;
+    }
+
+    const vaultRevision = await vaultAdapter.getVaultRevision();
+
+    set((state) => ({
+      notes: [
+        conflict.diskNote as Note,
+        localCopy,
+        ...state.notes.filter((note) => note.id !== noteId),
+      ],
+      ...clearConflict(get()),
+      editorReloadToken: state.editorReloadToken + 1,
+      vaultRevision,
+    }));
   },
 
   openVaultInFileManager: async () => {
@@ -315,17 +503,27 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     const current = get().notes.find((n) => n.id === id);
     if (!current) return;
 
+    if (get().vaultConflicts.some((conflict) => conflict.noteId === id)) {
+      return;
+    }
+
     const merged = { ...current, ...updates, updatedAt: updates.updatedAt || Date.now() };
     try {
-      await vaultAdapter.saveNote(merged);
+      await vaultAdapter.saveNote(merged, current.content);
     } catch (err) {
       console.error('Failed to update note:', err);
       set({ persistenceError: persistenceMessage(err, 'Unable to save your change.') });
+      if (isSaveConflict(err)) {
+        void get().syncIfVaultChanged();
+      }
       return;
     }
     
     set((state) => ({
       notes: state.notes.map((n) => (n.id === id ? merged : n)),
+      dirtyNoteIds: Object.fromEntries(
+        Object.entries(state.dirtyNoteIds).filter(([dirtyId]) => dirtyId !== id)
+      ),
     }));
   },
 
@@ -348,15 +546,34 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     // Instant Zustand store update -> re-renders NoteList & NoteCard immediately
     set((state) => ({
       notes: state.notes.map((n) => (n.id === id ? updatedNote : n)),
+      dirtyNoteIds: persistToDisk
+        ? state.dirtyNoteIds
+        : { ...state.dirtyNoteIds, [id]: true },
+      vaultConflicts: state.vaultConflicts.map((conflict) =>
+        conflict.noteId === id
+          ? { ...conflict, title: updatedNote.title, localNote: updatedNote }
+          : conflict
+      ),
     }));
 
     if (persistToDisk) {
       try {
-        await vaultAdapter.saveNote(updatedNote);
+        await vaultAdapter.saveNote(updatedNote, current.content);
       } catch (err) {
         console.error('Failed to persist note content:', err);
         set({ persistenceError: persistenceMessage(err, 'Unable to save your change.') });
+        set((state) => ({ dirtyNoteIds: { ...state.dirtyNoteIds, [id]: true } }));
+        if (isSaveConflict(err)) {
+          void get().syncIfVaultChanged();
+        }
+        return;
       }
+
+      set((state) => ({
+        dirtyNoteIds: Object.fromEntries(
+          Object.entries(state.dirtyNoteIds).filter(([dirtyId]) => dirtyId !== id)
+        ),
+      }));
     }
   },
 

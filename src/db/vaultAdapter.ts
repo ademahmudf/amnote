@@ -90,6 +90,22 @@ async function invokeTauri<T>(cmd: string, args?: Record<string, unknown>): Prom
 }
 
 export const vaultAdapter = {
+  backupNoteVersion: async (note: Note, label: 'local' | 'disk'): Promise<string> => {
+    if (isTauriEnvironment()) {
+      return invokeTauri<string>('backup_note_version', { note, label });
+    }
+
+    throw new Error('Conflict backups require the AmNote desktop runtime.');
+  },
+
+  getVaultRevision: async (): Promise<string> => {
+    if (isTauriEnvironment()) {
+      return invokeTauri<string>('get_vault_revision');
+    }
+
+    throw new Error('Vault revision checks require the AmNote desktop runtime.');
+  },
+
   getVaultPath: async (): Promise<string> => {
     if (isTauriEnvironment()) {
       try {
@@ -169,9 +185,12 @@ export const vaultAdapter = {
     throw new Error('Vault persistence requires the AmNote desktop runtime.');
   },
 
-  saveNote: async (note: Note): Promise<void> => {
+  saveNote: async (note: Note, expectedContent?: string): Promise<void> => {
     if (isTauriEnvironment()) {
-      await invokeTauri<void>('save_note_to_vault', { note });
+      await invokeTauri<void>('save_note_to_vault', {
+        note,
+        expectedContent,
+      });
       return;
     }
 

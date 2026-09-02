@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
 use std::fs::{self, File};
+use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -225,6 +227,43 @@ fn write_vault_marker(vault: &Path) -> Result<(), String> {
     write_atomic(&vault_marker_path(vault), &marker)
 }
 
+fn collect_vault_revision(vault: &Path) -> Result<u64, String> {
+    let mut files = Vec::new();
+    let directories = [vault.to_path_buf(), vault.join(".trash")];
+
+    for directory in directories {
+        let entries = fs::read_dir(&directory)
+            .map_err(|e| format!("Failed to read vault directory: {}", e))?;
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() || path.extension().map_or(true, |ext| ext != "md") {
+                continue;
+            }
+
+            let relative_path = path
+                .strip_prefix(vault)
+                .map_err(|e| format!("Failed to resolve vault file: {}", e))?
+                .to_string_lossy()
+                .to_string();
+            let metadata = fs::metadata(&path)
+                .map_err(|e| format!("Failed to read vault file metadata: {}", e))?;
+            let modified = metadata
+                .modified()
+                .map_err(|e| format!("Failed to read vault file timestamp: {}", e))?
+                .duration_since(UNIX_EPOCH)
+                .map_err(|e| format!("Invalid vault file timestamp: {}", e))?;
+
+            files.push((relative_path, modified.as_nanos() as u64, metadata.len()));
+        }
+    }
+
+    files.sort();
+    let mut hasher = DefaultHasher::new();
+    files.hash(&mut hasher);
+    Ok(hasher.finish())
+}
+
 #[tauri::command]
 fn get_vault_path() -> Result<String, String> {
     let vault = ensure_vault_directories()?;
@@ -412,19 +451,23 @@ fn mark_vault_initialized() -> Result<(), String> {
 }
 
 #[tauri::command]
-fn save_note_to_vault(note: NotePayload) -> Result<(), String> {
+fn get_vault_revision() -> Result<String, String> {
     let vault = ensure_vault_directories()?;
-    validate_note_id(&note.id)?;
+    let revision = collect_vault_revision(&vault)?;
+    Ok(revision.to_string())
+}
 
+#[tauri::command]
+fn serialize_note(note: &NotePayload) -> Result<String, String> {
     let frontmatter = NoteFrontmatter {
         id: note.id.clone(),
         title: note.title.clone(),
-        tags: note.tags,
+        tags: note.tags.clone(),
         is_pinned: note.is_pinned,
         is_archived: note.is_archived,
         is_trashed: note.is_trashed,
         is_locked: note.is_locked,
-        lock_hash: note.lock_hash,
+        lock_hash: note.lock_hash.clone(),
         created_at: note.created_at,
         updated_at: note.updated_at,
         trashed_at: note.trashed_at,
@@ -432,11 +475,46 @@ fn save_note_to_vault(note: NotePayload) -> Result<(), String> {
 
     let frontmatter_yaml = serde_yaml::to_string(&frontmatter)
         .map_err(|e| format!("Failed to serialize note metadata: {}", e))?;
+    Ok(format!("---\n{}---\n\n{}", frontmatter_yaml, note.content))
+}
 
-    let file_content = format!("---\n{}---\n\n{}", frontmatter_yaml, note.content);
+fn ensure_note_unchanged(path: &Path, expected_content: &str) -> Result<(), String> {
+    if !path.exists() {
+        return Err("CONFLICT: Note was deleted in the vault.".to_string());
+    }
 
+    let disk_note = parse_markdown_file(path)
+        .ok_or_else(|| "CONFLICT: Note on disk could not be parsed.".to_string())?;
+    if disk_note.content != expected_content {
+        return Err("CONFLICT: Note changed in the vault before this save.".to_string());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn save_note_to_vault(note: NotePayload, expected_content: Option<String>) -> Result<(), String> {
+    let vault = ensure_vault_directories()?;
+    write_note_to_vault(&vault, &note, expected_content.as_deref())
+}
+
+fn write_note_to_vault(
+    vault: &Path,
+    note: &NotePayload,
+    expected_content: Option<&str>,
+) -> Result<(), String> {
+    validate_note_id(&note.id)?;
+    let file_content = serialize_note(note)?;
     let active_path = note_file_path(&vault, &note.id, false)?;
     let trash_path = note_file_path(&vault, &note.id, true)?;
+    let target_path = if note.is_trashed {
+        &trash_path
+    } else {
+        &active_path
+    };
+    if let Some(expected_content) = expected_content {
+        ensure_note_unchanged(target_path, expected_content)?;
+    }
 
     if note.is_trashed {
         write_atomic(&trash_path, &file_content)?;
@@ -455,6 +533,37 @@ fn save_note_to_vault(note: NotePayload) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[tauri::command]
+fn backup_note_version(note: NotePayload, label: String) -> Result<String, String> {
+    let vault = ensure_vault_directories()?;
+    backup_note_to_vault(&vault, &note, &label)
+}
+
+fn backup_note_to_vault(vault: &Path, note: &NotePayload, label: &str) -> Result<String, String> {
+    validate_note_id(&note.id)?;
+    if !label.is_empty()
+        && label.len() <= 64
+        && label
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-')
+    {
+        // Valid backup label.
+    } else {
+        return Err(format!("Invalid backup label: {label:?}"));
+    }
+
+    let backup_dir = vault.join(".backups");
+    fs::create_dir_all(&backup_dir)
+        .map_err(|e| format!("Failed to create backup directory: {}", e))?;
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| format!("Failed to create backup filename: {}", e))?
+        .as_millis();
+    let backup_path = backup_dir.join(format!("{}-{}-{}.md", timestamp, note.id, label));
+    write_atomic(&backup_path, &serialize_note(&note)?)?;
+    Ok(backup_path.to_string_lossy().to_string())
 }
 
 #[tauri::command]
@@ -531,9 +640,76 @@ pub fn run() {
             load_notes_from_vault,
             is_vault_initialized,
             mark_vault_initialized,
+            get_vault_revision,
+            backup_note_version,
             save_note_to_vault,
             delete_note_from_vault,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AmNote desktop application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_note(id: &str, content: &str) -> NotePayload {
+        NotePayload {
+            id: id.to_string(),
+            title: "Integration test".to_string(),
+            content: content.to_string(),
+            tags: vec!["test".to_string()],
+            is_pinned: false,
+            is_archived: false,
+            is_trashed: false,
+            is_locked: None,
+            lock_hash: None,
+            created_at: 1,
+            updated_at: 2,
+            trashed_at: None,
+        }
+    }
+
+    fn temp_vault(name: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path =
+            std::env::temp_dir().join(format!("amnote-{}-{}-{}", name, std::process::id(), unique));
+        fs::create_dir_all(path.join(".trash")).unwrap();
+        path
+    }
+
+    #[test]
+    fn note_writes_are_checked_and_backed_up() {
+        let vault = temp_vault("integration");
+        let note = test_note("note-test", "original content");
+
+        write_note_to_vault(&vault, &note, None).unwrap();
+        let active_path = note_file_path(&vault, &note.id, false).unwrap();
+        let disk_note = parse_markdown_file(&active_path).unwrap();
+        assert_eq!(disk_note.content, "original content");
+
+        let conflict = write_note_to_vault(&vault, &note, Some("different content"));
+        assert!(conflict.unwrap_err().contains("CONFLICT"));
+
+        let local_backup = backup_note_to_vault(&vault, &note, "local").unwrap();
+        let disk_note_payload = test_note("note-test", "disk content");
+        let disk_backup = backup_note_to_vault(&vault, &disk_note_payload, "disk").unwrap();
+        assert!(local_backup.contains(".backups"));
+        assert!(fs::metadata(local_backup).unwrap().len() > 0);
+        assert!(fs::metadata(disk_backup).unwrap().len() > 0);
+
+        fs::remove_dir_all(&vault).ok();
+    }
+
+    #[test]
+    fn note_ids_cannot_escape_the_vault() {
+        let vault = temp_vault("traversal");
+        let result = note_file_path(&vault, "../../outside", false);
+        assert!(result.is_err());
+        assert!(!vault.parent().unwrap().join("outside.md").exists());
+        fs::remove_dir_all(&vault).ok();
+    }
 }
