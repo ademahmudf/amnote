@@ -1,4 +1,7 @@
-import { extractTagsFromContent, extractWikiLinksFromContent } from '../db/database';
+import {
+  extractTagsFromContent,
+  extractWikiLinksFromContent,
+} from '../domain/markdownMetadata';
 import { markdownToHtml, htmlToMarkdown } from '../editor/utils/markdownConverter';
 import { initialAmNoteSeed } from '../db/vaultAdapter';
 

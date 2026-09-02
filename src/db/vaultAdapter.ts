@@ -148,43 +148,42 @@ export const vaultAdapter = {
 
   loadAllNotes: async (): Promise<Note[]> => {
     if (isTauriEnvironment()) {
-      try {
-        const notes = await invokeTauri<Note[]>('load_notes_from_vault');
-        if (notes && notes.length > 0) {
-          return notes;
-        }
+      const notes = await invokeTauri<Note[]>('load_notes_from_vault');
+      if (notes && notes.length > 0) {
+        return notes;
+      }
 
-        // Fresh vault on first start: seed default notes
+      // A vault with no notes is valid. The marker prevents re-seeding after
+      // a user intentionally deletes every note.
+      const isFreshVault = await invokeTauri<boolean>('is_vault_initialized');
+      if (!isFreshVault) {
         for (const seedNote of initialAmNoteSeed) {
           await invokeTauri<void>('save_note_to_vault', { note: seedNote });
         }
-        return initialAmNoteSeed;
-      } catch (err) {
-        console.error('Failed to load notes from Tauri vault:', err);
+        await invokeTauri<void>('mark_vault_initialized');
       }
+      return notes;
     }
 
-    // In-memory / browser fallback for test suites
-    return initialAmNoteSeed;
+    // Browser preview has no authoritative vault; do not pretend saves succeeded.
+    throw new Error('Vault persistence requires the AmNote desktop runtime.');
   },
 
   saveNote: async (note: Note): Promise<void> => {
     if (isTauriEnvironment()) {
-      try {
-        await invokeTauri<void>('save_note_to_vault', { note });
-      } catch (err) {
-        console.error('Failed to save note to Tauri vault:', err);
-      }
+      await invokeTauri<void>('save_note_to_vault', { note });
+      return;
     }
+
+    throw new Error(`Failed to save "${note.title}": Vault persistence requires the AmNote desktop runtime.`);
   },
 
   deleteNote: async (id: string, permanent = false): Promise<void> => {
     if (isTauriEnvironment()) {
-      try {
-        await invokeTauri<void>('delete_note_from_vault', { id, permanent });
-      } catch (err) {
-        console.error('Failed to delete note from Tauri vault:', err);
-      }
+      await invokeTauri<void>('delete_note_from_vault', { id, permanent });
+      return;
     }
+
+    throw new Error('Failed to delete note: Vault persistence requires the AmNote desktop runtime.');
   },
 };

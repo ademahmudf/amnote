@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import { extractTagsFromContent, extractWikiLinksFromContent } from '../db/database';
+import {
+  extractTagsFromContent,
+  extractWikiLinksFromContent,
+} from '../domain/markdownMetadata';
 import { vaultAdapter } from '../db/vaultAdapter';
 import type { BacklinkItem, HeadingItem, Note, NoteStats, SortOption, SystemFilter, TagNodeItem } from '../types/note';
 
@@ -29,6 +32,7 @@ interface NoteState {
   
   // Computed & helper getters
   isLoading: boolean;
+  persistenceError: string | null;
   
   // Actions
   init: () => Promise<void>;
@@ -43,6 +47,7 @@ interface NoteState {
   setSelectedTag: (tag: string | null) => void;
   setSearchQuery: (query: string) => void;
   setSortOption: (option: SortOption) => void;
+  clearPersistenceError: () => void;
   
   toggleSidebar: () => void;
   toggleNoteList: () => void;
@@ -94,6 +99,12 @@ async function hashPassword(pwd: string): Promise<string> {
   }
 }
 
+function persistenceMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error) return error;
+  return fallback;
+}
+
 // Helper to extract a clean title from markdown
 function extractTitleFromContent(content: string): string {
   const lines = content.trim().split('\n');
@@ -131,18 +142,28 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   
   unlockedNotes: {},
   isLoading: true,
+  persistenceError: null,
 
   init: async () => {
-    const vaultPath = await vaultAdapter.getVaultPath();
-    const allNotes = await vaultAdapter.loadAllNotes();
-    allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
+    try {
+      const vaultPath = await vaultAdapter.getVaultPath();
+      const allNotes = await vaultAdapter.loadAllNotes();
+      allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
 
-    set({
-      vaultPath,
-      notes: allNotes,
-      activeNoteId: allNotes.length > 0 ? allNotes[0].id : null,
-      isLoading: false,
-    });
+      set({
+        vaultPath,
+        notes: allNotes,
+        activeNoteId: allNotes.length > 0 ? allNotes[0].id : null,
+        isLoading: false,
+        persistenceError: null,
+      });
+    } catch (err) {
+      console.error('Failed to initialize vault:', err);
+      set({
+        isLoading: false,
+        persistenceError: persistenceMessage(err, 'Unable to open the notes vault.'),
+      });
+    }
   },
 
   loadNotes: async () => {
@@ -188,7 +209,10 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       });
     } catch (err) {
       console.error('Failed to change vault path:', err);
-      set({ isLoading: false });
+      set({
+        isLoading: false,
+        persistenceError: persistenceMessage(err, 'Unable to change the notes vault.'),
+      });
     }
   },
 
@@ -206,7 +230,10 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       });
     } catch (err) {
       console.error('Failed to reset vault path:', err);
-      set({ isLoading: false });
+      set({
+        isLoading: false,
+        persistenceError: persistenceMessage(err, 'Unable to reset the notes vault.'),
+      });
     }
   },
 
@@ -230,6 +257,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSortOption: (option) => set({ sortOption: option }),
+  clearPersistenceError: () => set({ persistenceError: null }),
 
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
   toggleNoteList: () => set((state) => ({ isNoteListOpen: !state.isNoteListOpen })),
@@ -267,7 +295,14 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       updatedAt: Date.now(),
     };
 
-    await vaultAdapter.saveNote(newNote);
+    try {
+      await vaultAdapter.saveNote(newNote);
+    } catch (err) {
+      console.error('Failed to create note:', err);
+      set({ persistenceError: persistenceMessage(err, 'Unable to create the note on disk.') });
+      return '';
+    }
+
     set((state) => ({
       notes: [newNote, ...state.notes],
       activeNoteId: newNote.id,
@@ -281,7 +316,13 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     if (!current) return;
 
     const merged = { ...current, ...updates, updatedAt: updates.updatedAt || Date.now() };
-    await vaultAdapter.saveNote(merged);
+    try {
+      await vaultAdapter.saveNote(merged);
+    } catch (err) {
+      console.error('Failed to update note:', err);
+      set({ persistenceError: persistenceMessage(err, 'Unable to save your change.') });
+      return;
+    }
     
     set((state) => ({
       notes: state.notes.map((n) => (n.id === id ? merged : n)),
@@ -310,7 +351,12 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     }));
 
     if (persistToDisk) {
-      await vaultAdapter.saveNote(updatedNote);
+      try {
+        await vaultAdapter.saveNote(updatedNote);
+      } catch (err) {
+        console.error('Failed to persist note content:', err);
+        set({ persistenceError: persistenceMessage(err, 'Unable to save your change.') });
+      }
     }
   },
 
@@ -341,7 +387,14 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   },
 
   deletePermanently: async (id) => {
-    await vaultAdapter.deleteNote(id, true);
+    try {
+      await vaultAdapter.deleteNote(id, true);
+    } catch (err) {
+      console.error('Failed to delete note permanently:', err);
+      set({ persistenceError: persistenceMessage(err, 'Unable to delete the note permanently.') });
+      return;
+    }
+
     set((state) => {
       const remaining = state.notes.filter((n) => n.id !== id);
       const filtered = remaining.filter((n) => n.isTrashed);
@@ -365,7 +418,14 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       updatedAt: Date.now(),
     };
 
-    await vaultAdapter.saveNote(newNote);
+    try {
+      await vaultAdapter.saveNote(newNote);
+    } catch (err) {
+      console.error('Failed to duplicate note:', err);
+      set({ persistenceError: persistenceMessage(err, 'Unable to duplicate the note.') });
+      return '';
+    }
+
     set((state) => ({
       notes: [newNote, ...state.notes],
       activeNoteId: newNote.id,
@@ -377,7 +437,13 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   emptyTrash: async () => {
     const trashedNotes = get().notes.filter((n) => n.isTrashed);
     for (const note of trashedNotes) {
-      await vaultAdapter.deleteNote(note.id, true);
+      try {
+        await vaultAdapter.deleteNote(note.id, true);
+      } catch (err) {
+        console.error('Failed to empty trash:', err);
+        set({ persistenceError: persistenceMessage(err, 'Unable to empty the trash.') });
+        return;
+      }
     }
     set((state) => ({
       notes: state.notes.filter((n) => !n.isTrashed),

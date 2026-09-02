@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::fs;
+use std::fs::{self, File};
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 #[cfg(not(target_os = "macos"))]
 use tauri::Manager;
 
@@ -59,6 +61,11 @@ struct AppConfig {
     pub custom_vault_path: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct VaultMarker {
+    initialized: bool,
+}
+
 fn get_config_file_path() -> PathBuf {
     let config_dir = dirs::config_dir().unwrap_or_else(|| {
         dirs::home_dir()
@@ -84,8 +91,7 @@ fn save_app_config(config: &AppConfig) -> Result<(), String> {
         let _ = fs::create_dir_all(parent);
     }
     let json = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
-    fs::write(&path, json).map_err(|e| format!("Failed to write config: {}", e))?;
-    Ok(())
+    write_atomic(&path, &json)
 }
 
 fn resolve_vault_dir() -> PathBuf {
@@ -104,18 +110,119 @@ fn resolve_vault_dir() -> PathBuf {
     docs_dir.join("AmNotes")
 }
 
+fn is_safe_note_id(id: &str) -> bool {
+    if id.is_empty() || id.len() > 200 {
+        return false;
+    }
+
+    let mut chars = id.chars();
+    if !chars.next().is_some_and(char::is_alphanumeric) {
+        return false;
+    }
+
+    id.chars()
+        .all(|ch| ch.is_alphanumeric() || matches!(ch, '-' | '_' | '.' | '(' | ')' | ' '))
+        && !id.contains("..")
+}
+
+fn validate_note_id(id: &str) -> Result<(), String> {
+    if is_safe_note_id(id) {
+        Ok(())
+    } else {
+        Err(format!("Invalid note id: {id:?}"))
+    }
+}
+
+fn note_file_path(vault: &Path, id: &str, trashed: bool) -> Result<PathBuf, String> {
+    validate_note_id(id)?;
+
+    let directory = if trashed {
+        vault.join(".trash")
+    } else {
+        vault.to_path_buf()
+    };
+    let canonical_directory = directory
+        .canonicalize()
+        .map_err(|e| format!("Failed to resolve vault directory: {}", e))?;
+    let path = canonical_directory.join(format!("{}.md", id));
+
+    if !path.starts_with(&canonical_directory) {
+        return Err(format!("Note path escapes vault: {id:?}"));
+    }
+
+    Ok(path)
+}
+
+fn sync_directory(path: &Path) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        let directory =
+            File::open(parent).map_err(|e| format!("Failed to open vault directory: {}", e))?;
+        directory
+            .sync_all()
+            .map_err(|e| format!("Failed to sync vault directory: {}", e))?;
+    }
+    Ok(())
+}
+
+fn write_atomic(path: &Path, contents: &str) -> Result<(), String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| format!("Invalid note path: {}", path.display()))?;
+    fs::create_dir_all(parent).map_err(|e| format!("Failed to create note directory: {}", e))?;
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| format!("Failed to create temporary filename: {}", e))?
+        .as_nanos();
+    let filename = path
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| "note".to_string());
+    let temp_path = parent.join(format!(".{filename}.{timestamp}.tmp"));
+
+    let write_result = (|| -> Result<(), String> {
+        let mut file = File::create(&temp_path)
+            .map_err(|e| format!("Failed to create temporary note file: {}", e))?;
+        file.write_all(contents.as_bytes())
+            .map_err(|e| format!("Failed to write note: {}", e))?;
+        file.sync_all()
+            .map_err(|e| format!("Failed to sync note: {}", e))?;
+        drop(file);
+        fs::rename(&temp_path, path).map_err(|e| format!("Failed to replace note: {}", e))?;
+        Ok(())
+    })();
+
+    if write_result.is_err() {
+        let _ = fs::remove_file(&temp_path);
+    }
+    write_result?;
+    sync_directory(path)
+}
+
 fn ensure_vault_directories() -> Result<PathBuf, String> {
     let vault = resolve_vault_dir();
     let trash = vault.join(".trash");
 
     if !vault.exists() {
-        fs::create_dir_all(&vault).map_err(|e| format!("Failed to create vault directory: {}", e))?;
+        fs::create_dir_all(&vault)
+            .map_err(|e| format!("Failed to create vault directory: {}", e))?;
     }
     if !trash.exists() {
-        fs::create_dir_all(&trash).map_err(|e| format!("Failed to create trash directory: {}", e))?;
+        fs::create_dir_all(&trash)
+            .map_err(|e| format!("Failed to create trash directory: {}", e))?;
     }
 
     Ok(vault)
+}
+
+fn vault_marker_path(vault: &Path) -> PathBuf {
+    vault.join(".amnote.json")
+}
+
+fn write_vault_marker(vault: &Path) -> Result<(), String> {
+    let marker = serde_json::to_string_pretty(&VaultMarker { initialized: true })
+        .map_err(|e| format!("Failed to serialize vault marker: {}", e))?;
+    write_atomic(&vault_marker_path(vault), &marker)
 }
 
 #[tauri::command]
@@ -171,7 +278,7 @@ fn reset_vault_path() -> Result<String, String> {
 #[tauri::command]
 fn open_vault_in_file_manager() -> Result<(), String> {
     let vault = ensure_vault_directories()?;
-    
+
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
@@ -277,13 +384,37 @@ fn load_notes_from_vault() -> Result<Vec<NotePayload>, String> {
     }
 
     notes.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    if !notes.is_empty() && !vault_marker_path(&vault).exists() {
+        write_vault_marker(&vault)?;
+    }
     Ok(notes)
+}
+
+#[tauri::command]
+fn is_vault_initialized() -> Result<bool, String> {
+    let vault = ensure_vault_directories()?;
+    let path = vault_marker_path(&vault);
+    if !path.exists() {
+        return Ok(false);
+    }
+
+    let content =
+        fs::read_to_string(&path).map_err(|e| format!("Failed to read vault marker: {}", e))?;
+    let marker: VaultMarker = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse vault marker: {}", e))?;
+    Ok(marker.initialized)
+}
+
+#[tauri::command]
+fn mark_vault_initialized() -> Result<(), String> {
+    let vault = ensure_vault_directories()?;
+    write_vault_marker(&vault)
 }
 
 #[tauri::command]
 fn save_note_to_vault(note: NotePayload) -> Result<(), String> {
     let vault = ensure_vault_directories()?;
-    let trash = vault.join(".trash");
+    validate_note_id(&note.id)?;
 
     let frontmatter = NoteFrontmatter {
         id: note.id.clone(),
@@ -304,21 +435,23 @@ fn save_note_to_vault(note: NotePayload) -> Result<(), String> {
 
     let file_content = format!("---\n{}---\n\n{}", frontmatter_yaml, note.content);
 
-    let active_path = vault.join(format!("{}.md", note.id));
-    let trash_path = trash.join(format!("{}.md", note.id));
+    let active_path = note_file_path(&vault, &note.id, false)?;
+    let trash_path = note_file_path(&vault, &note.id, true)?;
 
     if note.is_trashed {
+        write_atomic(&trash_path, &file_content)?;
         if active_path.exists() {
-            let _ = fs::remove_file(&active_path);
+            fs::remove_file(&active_path)
+                .map_err(|e| format!("Failed to remove active note after trash: {}", e))?;
+            sync_directory(&active_path)?;
         }
-        fs::write(&trash_path, file_content)
-            .map_err(|e| format!("Failed to write trashed note: {}", e))?;
     } else {
+        write_atomic(&active_path, &file_content)?;
         if trash_path.exists() {
-            let _ = fs::remove_file(&trash_path);
+            fs::remove_file(&trash_path)
+                .map_err(|e| format!("Failed to remove stale trashed note: {}", e))?;
+            sync_directory(&trash_path)?;
         }
-        fs::write(&active_path, file_content)
-            .map_err(|e| format!("Failed to write note: {}", e))?;
     }
 
     Ok(())
@@ -327,18 +460,26 @@ fn save_note_to_vault(note: NotePayload) -> Result<(), String> {
 #[tauri::command]
 fn delete_note_from_vault(id: String, permanent: bool) -> Result<(), String> {
     let vault = ensure_vault_directories()?;
-    let active_path = vault.join(format!("{}.md", id));
-    let trash_path = vault.join(".trash").join(format!("{}.md", id));
+    let active_path = note_file_path(&vault, &id, false)?;
+    let trash_path = note_file_path(&vault, &id, true)?;
 
     if permanent {
         if active_path.exists() {
-            let _ = fs::remove_file(&active_path);
+            fs::remove_file(&active_path)
+                .map_err(|e| format!("Failed to delete active note: {}", e))?;
         }
         if trash_path.exists() {
-            let _ = fs::remove_file(&trash_path);
+            fs::remove_file(&trash_path)
+                .map_err(|e| format!("Failed to delete trashed note: {}", e))?;
         }
+        sync_directory(&active_path)?;
     } else if active_path.exists() {
-        let _ = fs::rename(&active_path, &trash_path);
+        if trash_path.exists() {
+            return Err(format!("A trashed note already exists for id {id:?}"));
+        }
+        fs::rename(&active_path, &trash_path)
+            .map_err(|e| format!("Failed to move note to trash: {}", e))?;
+        sync_directory(&active_path)?;
     }
 
     Ok(())
@@ -388,6 +529,8 @@ pub fn run() {
             reset_vault_path,
             open_vault_in_file_manager,
             load_notes_from_vault,
+            is_vault_initialized,
+            mark_vault_initialized,
             save_note_to_vault,
             delete_note_from_vault,
         ])

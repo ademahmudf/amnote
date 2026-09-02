@@ -10,7 +10,7 @@
     "build": "tsc -b && vite build && tauri build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "npx tsx src/test/unit-tests.ts",
+    "test": "tsx src/test/unit-tests.ts",
     "tauri": "tauri"
   },
   "dependencies": {
@@ -35,7 +35,6 @@
     "@types/canvas-confetti": "^1.9.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
-    "dexie": "^4.4.5",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.37.0",
@@ -53,6 +52,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "oxlint": "^1.79.0",
+    "tsx": "^4.23.13",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }
