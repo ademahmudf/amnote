@@ -8,6 +8,7 @@ import {
   Settings,
   Sparkles,
   HelpCircle,
+  Info,
 } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useNoteStore } from '../../store/useNoteStore';
@@ -23,6 +24,8 @@ export const HeaderBar: React.FC = () => {
   const setCommandPaletteOpen = useNoteStore((state) => state.setCommandPaletteOpen);
   const setSettingsOpen = useNoteStore((state) => state.setSettingsOpen);
   const setCheatsheetOpen = useNoteStore((state) => state.setCheatsheetOpen);
+  const isInfoDrawerOpen = useNoteStore((state) => state.isInfoDrawerOpen);
+  const toggleInfoDrawer = useNoteStore((state) => state.toggleInfoDrawer);
 
   const { getThemeColors } = useThemeStore();
   const currentTheme = getThemeColors();
@@ -165,6 +168,23 @@ export const HeaderBar: React.FC = () => {
           <Sparkles size={11} />
           <span>{currentTheme.name.split(' ')[0]}</span>
         </div>
+
+        <button
+          type="button"
+          onClick={toggleInfoDrawer}
+          title="Note Stats & Info (Ctrl+Shift+I)"
+          className={`p-1.5 rounded-lg text-xs transition-all ${
+            isInfoDrawerOpen
+              ? 'bg-accent text-white'
+              : 'opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
+          }`}
+          style={{
+            backgroundColor: isInfoDrawerOpen ? 'var(--color-accent)' : undefined,
+            color: isInfoDrawerOpen ? 'var(--color-accent-text)' : undefined,
+          }}
+        >
+          <Info size={14} />
+        </button>
 
         <button
           type="button"

@@ -80,6 +80,7 @@ export const AmEditor: React.FC = () => {
   const setActiveNoteId = useNoteStore((state) => state.setActiveNoteId);
   const createNote = useNoteStore((state) => state.createNote);
   const editorReloadToken = useNoteStore((state) => state.editorReloadToken);
+  const toggleInfoDrawer = useNoteStore((state) => state.toggleInfoDrawer);
 
   const {
     fontFamily,
@@ -630,12 +631,17 @@ export const AmEditor: React.FC = () => {
         }}
       >
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={toggleInfoDrawer}
+            title="Open Note Stats & Details (Ctrl+Shift+I)"
+            className="flex items-center gap-1.5 hover:opacity-100 hover:text-foreground transition-colors cursor-pointer"
+          >
             <FileText size={12} className="opacity-60" />
             <span>{words} words</span>
             <span className="opacity-40">•</span>
             <span>{chars} chars</span>
-          </div>
+          </button>
           <div className="flex items-center gap-1.5">
             <Clock size={12} className="opacity-60" />
             <span>{readTime} min</span>

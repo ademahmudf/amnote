@@ -262,7 +262,6 @@ export const SettingsModal: React.FC = () => {
             <h2 className="font-bold text-sm">AmNote Preferences</h2>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] opacity-40 font-mono hidden sm:inline">Drag to move</span>
             <button
               type="button"
               onClick={() => setSettingsOpen(false)}
