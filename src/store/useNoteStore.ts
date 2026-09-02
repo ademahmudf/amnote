@@ -1,15 +1,30 @@
 import { create } from 'zustand';
 import {
   extractTagsFromContent,
-  extractWikiLinksFromContent,
 } from '../domain/markdownMetadata';
 import {
   mergeVaultNotes,
   type VaultConflict,
 } from '../domain/vaultSync';
-import { noteSearchIndex } from '../domain/searchIndex';
+import {
+  extractTitleFromContent,
+  hashPassword,
+  isSaveConflict,
+  newNoteId,
+  persistenceMessage,
+} from '../domain/noteUtils';
+import {
+  getActiveNote as selectActiveNote,
+  getBacklinks as selectBacklinks,
+  getFilteredNotes as selectFilteredNotes,
+  getHeadings as selectHeadings,
+  getNoteStats as selectNoteStats,
+  getSystemCounts as selectSystemCounts,
+  getTagTree as selectTagTree,
+} from '../domain/noteSelectors';
 import { vaultAdapter } from '../db/vaultAdapter';
-import type { BacklinkItem, HeadingItem, Note, NoteStats, SortOption, SystemFilter, TagNodeItem } from '../types/note';
+import type { Note, SortOption, SystemFilter, TagNodeItem } from '../types/note';
+import type { BacklinkItem, HeadingItem, NoteStats } from '../types/note';
 
 interface NoteState {
   notes: Note[];
@@ -102,46 +117,7 @@ interface NoteState {
   getHeadings: (noteId: string) => HeadingItem[];
 }
 
-async function hashPassword(pwd: string): Promise<string> {
-  if (!pwd) return '';
-  try {
-    const msgUint8 = new TextEncoder().encode(pwd);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  } catch {
-    return btoa(pwd);
-  }
-}
-
-function persistenceMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string' && error) return error;
-  return fallback;
-}
-
-function isSaveConflict(error: unknown): boolean {
-  return error instanceof Error && error.message.startsWith('CONFLICT:');
-}
-
-function newNoteId(): string {
-  return `note-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-}
-
-// Helper to extract a clean title from markdown
-function extractTitleFromContent(content: string): string {
-  const lines = content.trim().split('\n');
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const titleMatch = trimmed.match(/^#+\s*(.*)$/);
-    if (titleMatch && titleMatch[1].trim()) {
-      return titleMatch[1].trim();
-    }
-    return trimmed;
-  }
-  return 'Untitled Note';
-}
+// Note metadata helpers live in domain/noteUtils.ts.
 
 export const useNoteStore = create<NoteState>((set, get) => ({
   notes: [],
@@ -717,225 +693,41 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   // Computed Helpers
   getActiveNote: () => {
     const { notes, activeNoteId } = get();
-    return notes.find((n) => n.id === activeNoteId);
+    return selectActiveNote(notes, activeNoteId);
   },
 
   getFilteredNotes: () => {
     const { notes, activeFilter, selectedTag, searchQuery, sortOption } = get();
-    noteSearchIndex.sync(notes);
-
-    let result = [...notes];
-
-    // Apply System Filter
-    if (activeFilter) {
-      switch (activeFilter) {
-        case 'notes':
-          result = result.filter((n) => !n.isArchived && !n.isTrashed);
-          break;
-        case 'today': {
-          const startOfDay = new Date().setHours(0, 0, 0, 0);
-          result = result.filter(
-            (n) => !n.isTrashed && n.updatedAt >= startOfDay
-          );
-          break;
-        }
-        case 'todo': {
-          result = result.filter(
-            (n) => !n.isTrashed && /-\s+\[ \]/i.test(n.content)
-          );
-          break;
-        }
-        case 'untagged':
-          result = result.filter((n) => !n.isTrashed && n.tags.length === 0);
-          break;
-        case 'locked':
-          result = result.filter((n) => !n.isTrashed && n.isLocked);
-          break;
-        case 'archive':
-          result = result.filter((n) => !n.isTrashed && n.isArchived);
-          break;
-        case 'trash':
-          result = result.filter((n) => n.isTrashed);
-          break;
-      }
-    } else if (selectedTag) {
-      result = result.filter(
-        (n) =>
-          !n.isTrashed &&
-          n.tags.some(
-            (t) => t === selectedTag || t.startsWith(`${selectedTag}/`)
-          )
-      );
-    }
-
-    // Apply Search Query
-    if (searchQuery.trim()) {
-      result = noteSearchIndex.search(result, searchQuery);
-    }
-
-    // Apply Sorting (Pinned always on top for normal views)
-    result.sort((a, b) => {
-      if (activeFilter !== 'trash') {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-      }
-
-      switch (sortOption) {
-        case 'updated-desc':
-          return b.updatedAt - a.updatedAt;
-        case 'updated-asc':
-          return a.updatedAt - b.updatedAt;
-        case 'created-desc':
-          return b.createdAt - a.createdAt;
-        case 'created-asc':
-          return a.createdAt - b.createdAt;
-        case 'title-asc':
-          return a.title.localeCompare(b.title);
-        case 'title-desc':
-          return b.title.localeCompare(a.title);
-        default:
-          return b.updatedAt - a.updatedAt;
-      }
+    return selectFilteredNotes(notes, {
+      activeFilter,
+      selectedTag,
+      searchQuery,
+      sortOption,
     });
-
-    return result;
   },
 
   getTagTree: () => {
     const { notes } = get();
-    const rootTree: Record<string, TagNodeItem> = {};
-
-    const activeNotes = notes.filter((n) => !n.isTrashed);
-
-    activeNotes.forEach((note) => {
-      note.tags.forEach((tagPath) => {
-        const segments = tagPath.split('/').filter(Boolean);
-        let currentLevel = rootTree;
-        let cumulativePath = '';
-
-        segments.forEach((segment, idx) => {
-          cumulativePath = cumulativePath ? `${cumulativePath}/${segment}` : segment;
-
-          if (!currentLevel[segment]) {
-            currentLevel[segment] = {
-              name: cumulativePath,
-              segment,
-              count: 0,
-              children: {},
-            };
-          }
-
-          if (idx === segments.length - 1) {
-            currentLevel[segment].count += 1;
-          }
-
-          currentLevel = currentLevel[segment].children;
-        });
-      });
-    });
-
-    function toArray(tree: Record<string, TagNodeItem>): TagNodeItem[] {
-      return Object.values(tree)
-        .map((node) => ({
-          ...node,
-          children: node.children,
-        }))
-        .sort((a, b) => a.segment.localeCompare(b.segment));
-    }
-
-    return toArray(rootTree);
+    return selectTagTree(notes);
   },
 
   getSystemCounts: () => {
     const { notes } = get();
-    const startOfDay = new Date().setHours(0, 0, 0, 0);
-
-    return {
-      notes: notes.filter((n) => !n.isArchived && !n.isTrashed).length,
-      today: notes.filter((n) => !n.isTrashed && n.updatedAt >= startOfDay).length,
-      todo: notes.filter((n) => !n.isTrashed && /-\s+\[ \]/i.test(n.content)).length,
-      untagged: notes.filter((n) => !n.isTrashed && n.tags.length === 0).length,
-      locked: notes.filter((n) => !n.isTrashed && n.isLocked).length,
-      archive: notes.filter((n) => !n.isTrashed && n.isArchived).length,
-      trash: notes.filter((n) => n.isTrashed).length,
-    };
+    return selectSystemCounts(notes);
   },
 
   getBacklinks: (noteId: string) => {
     const { notes } = get();
-    const targetNote = notes.find((n) => n.id === noteId);
-    if (!targetNote) return [];
-
-    const backlinks: BacklinkItem[] = [];
-
-    notes.forEach((otherNote) => {
-      if (otherNote.id === noteId || otherNote.isTrashed) return;
-
-      const wikiLinks = extractWikiLinksFromContent(otherNote.content);
-      const isLinked = wikiLinks.some(
-        (target) => target.toLowerCase().trim() === targetNote.title.toLowerCase().trim()
-      );
-
-      if (isLinked) {
-        backlinks.push({
-          noteId: otherNote.id,
-          title: otherNote.title,
-          updatedAt: otherNote.updatedAt,
-        });
-      }
-    });
-
-    return backlinks;
+    return selectBacklinks(notes, noteId);
   },
 
   getNoteStats: (noteId: string) => {
     const { notes } = get();
-    const note = notes.find((n) => n.id === noteId);
-    if (!note) {
-      return {
-        words: 0,
-        characters: 0,
-        charactersNoSpaces: 0,
-        paragraphs: 0,
-        readTimeMinutes: 0,
-      };
-    }
-
-    const text = note.content.trim();
-    const words = text.match(/\S+/g)?.length || 0;
-    const characters = text.length;
-    const charactersNoSpaces = text.replace(/\s+/g, '').length;
-    const paragraphs = text.split(/\n\n+/).filter(Boolean).length;
-    const readTimeMinutes = Math.max(1, Math.ceil(words / 200));
-
-    return {
-      words,
-      characters,
-      charactersNoSpaces,
-      paragraphs,
-      readTimeMinutes,
-    };
+    return selectNoteStats(notes, noteId);
   },
 
   getHeadings: (noteId: string) => {
     const { notes } = get();
-    const note = notes.find((n) => n.id === noteId);
-    if (!note) return [];
-
-    const headings: HeadingItem[] = [];
-    const lines = note.content.split('\n');
-
-    lines.forEach((line, idx) => {
-      const match = line.trim().match(/^(#{1,6})\s+(.*)$/);
-      if (match) {
-        headings.push({
-          id: `heading-${idx}`,
-          level: match[1].length,
-          text: match[2].trim(),
-        });
-      }
-    });
-
-    return headings;
+    return selectHeadings(notes, noteId);
   },
 }));
