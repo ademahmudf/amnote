@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useThemeStore, applyThemeCssVariables } from '../../store/useThemeStore';
+import { vaultAdapter } from '../../db/vaultAdapter';
 import { HeaderBar } from './HeaderBar';
 import { Sidebar } from '../sidebar/Sidebar';
 import { NoteList } from '../notelist/NoteList';
@@ -55,6 +56,23 @@ export const AppLayout: React.FC = () => {
     }, 2500);
 
     return () => window.clearInterval(interval);
+  }, [syncIfVaultChanged]);
+
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    vaultAdapter.onVaultChanged(() => {
+      void syncIfVaultChanged();
+    }).then((cleanup) => {
+      if (cancelled) cleanup();
+      else unsubscribe = cleanup;
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, [syncIfVaultChanged]);
 
   useEffect(() => {

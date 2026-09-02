@@ -90,6 +90,15 @@ async function invokeTauri<T>(cmd: string, args?: Record<string, unknown>): Prom
 }
 
 export const vaultAdapter = {
+  onVaultChanged: async (callback: () => void): Promise<() => void> => {
+    if (isTauriEnvironment()) {
+      const { listen } = await import('@tauri-apps/api/event');
+      return listen('vault-changed', callback);
+    }
+
+    return () => {};
+  },
+
   backupNoteVersion: async (note: Note, label: 'local' | 'disk'): Promise<string> => {
     if (isTauriEnvironment()) {
       return invokeTauri<string>('backup_note_version', { note, label });

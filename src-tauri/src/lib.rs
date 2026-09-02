@@ -1,10 +1,15 @@
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::fs::{self, File};
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc;
+use std::thread;
+use std::time::{Duration, Instant};
 use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::Emitter;
 #[cfg(not(target_os = "macos"))]
 use tauri::Manager;
 
@@ -617,6 +622,60 @@ fn get_omarchy_theme() -> Result<String, String> {
     Ok("red-graphite".to_string())
 }
 
+fn spawn_vault_watcher(app: tauri::AppHandle) {
+    thread::spawn(move || {
+        let vault = match ensure_vault_directories() {
+            Ok(path) => path,
+            Err(error) => {
+                eprintln!("Unable to watch vault: {error}");
+                return;
+            }
+        };
+
+        let (event_sender, event_receiver) = mpsc::channel::<Instant>();
+        let watcher_result =
+            notify::recommended_watcher(move |result: Result<notify::Event, notify::Error>| {
+                if result.is_ok() {
+                    let _ = event_sender.send(Instant::now());
+                }
+            });
+
+        let mut watcher: RecommendedWatcher = match watcher_result {
+            Ok(watcher) => watcher,
+            Err(error) => {
+                eprintln!("Native vault watcher unavailable: {error}");
+                return;
+            }
+        };
+
+        if let Err(error) = watcher.watch(&vault, RecursiveMode::Recursive) {
+            eprintln!("Unable to watch vault path: {error}");
+            return;
+        }
+
+        loop {
+            if event_receiver.recv().is_err() {
+                return;
+            }
+
+            // Editors and sync tools often emit many events for one save.
+            let debounce_deadline = Instant::now() + Duration::from_millis(250);
+            while Instant::now() < debounce_deadline {
+                if event_receiver
+                    .recv_timeout(debounce_deadline.saturating_duration_since(Instant::now()))
+                    .is_err()
+                {
+                    break;
+                }
+            }
+
+            if let Err(error) = app.emit("vault-changed", ()) {
+                eprintln!("Unable to notify frontend about vault change: {error}");
+            }
+        }
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -628,6 +687,7 @@ pub fn run() {
                     let _ = window.set_decorations(false);
                 }
             }
+            spawn_vault_watcher(_app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
