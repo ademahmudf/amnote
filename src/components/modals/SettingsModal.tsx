@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Heart,
   LayoutGrid,
+  GripHorizontal,
 } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useThemeStore } from '../../store/useThemeStore';
@@ -40,7 +41,10 @@ export const SettingsModal: React.FC = () => {
   const {
     fontFamily,
     fontSize,
+    lineHeight,
     editorWidth,
+    paragraphSpacing,
+    paragraphIndent,
     uiScale,
     previewLines,
     typewriterMode,
@@ -48,7 +52,10 @@ export const SettingsModal: React.FC = () => {
     defaultHighlightColor,
     setFontFamily,
     setFontSize,
+    setLineHeight,
     setEditorWidth,
+    setParagraphSpacing,
+    setParagraphIndent,
     setUiScale,
     setPreviewLines,
     setTypewriterMode,
@@ -56,9 +63,67 @@ export const SettingsModal: React.FC = () => {
     setDefaultHighlightColor,
   } = useSettingsStore();
 
+  const numericLineHeight =
+    typeof lineHeight === 'number'
+      ? lineHeight
+      : lineHeight === 'normal'
+      ? 1.45
+      : lineHeight === 'loose'
+      ? 1.95
+      : 1.65;
+
   const [activeTab, setActiveTab] = useState<'themes' | 'typography' | 'data'>('typography');
   const [isReloading, setIsReloading] = useState(false);
   const [isChangingVault, setIsChangingVault] = useState(false);
+
+  const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = React.useRef<{ startX: number; startY: number; initialX: number; initialY: number } | null>(null);
+
+  const handleHeaderMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, select, textarea')) return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialX: position.x,
+      initialY: position.y,
+    };
+  };
+
+  React.useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !dragStartRef.current) return;
+      const dx = e.clientX - dragStartRef.current.startX;
+      const dy = e.clientY - dragStartRef.current.startY;
+      setPosition({
+        x: dragStartRef.current.initialX + dx,
+        y: dragStartRef.current.initialY + dy,
+      });
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        dragStartRef.current = null;
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  React.useEffect(() => {
+    if (isSettingsOpen) {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [isSettingsOpen]);
 
   const handlePickVault = async () => {
     setIsChangingVault(true);
@@ -170,12 +235,14 @@ export const SettingsModal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 animate-in fade-in duration-150"
       onClick={() => setSettingsOpen(false)}
     >
       <div
-        className="w-full max-w-2xl max-h-[88vh] rounded-2xl shadow-2xl border overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+        className="w-full max-w-2xl max-h-[88vh] rounded-2xl shadow-2xl border overflow-hidden flex flex-col animate-in zoom-in-95 duration-150 relative"
         style={{
+          transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+          transition: isDragging ? 'none' : 'transform 0.05s ease-out',
           backgroundColor: 'var(--card-notelist-bg)',
           borderColor: 'var(--color-border)',
           color: 'var(--text-editor)',
@@ -184,20 +251,26 @@ export const SettingsModal: React.FC = () => {
       >
         {/* Header */}
         <div
-          className="px-6 py-4 border-b flex items-center justify-between"
+          className="px-6 py-3.5 border-b flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
           style={{ borderColor: 'var(--color-divider)' }}
+          onMouseDown={handleHeaderMouseDown}
+          title="Click and drag to move window"
         >
           <div className="flex items-center gap-2.5">
-            <Sliders size={18} className="text-accent" style={{ color: 'var(--color-accent)' }} />
+            <GripHorizontal size={16} className="opacity-40 hover:opacity-100 transition-opacity" />
+            <Sliders size={17} className="text-accent" style={{ color: 'var(--color-accent)' }} />
             <h2 className="font-bold text-sm">AmNote Preferences</h2>
           </div>
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(false)}
-            className="p-1 rounded-lg opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5 transition-opacity"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] opacity-40 font-mono hidden sm:inline">Drag to move</span>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(false)}
+              className="p-1 rounded-lg opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5 transition-opacity"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Tab Switcher */}
@@ -358,32 +431,99 @@ export const SettingsModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Font Size Slider */}
-              <div className="space-y-3">
+              {/* Font Size Slider & Presets */}
+              <div className="space-y-3 p-4 rounded-2xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--color-border)' }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-xs">Editor Text Size</h3>
-                    <p className="text-[11px] opacity-60">Adjust editor writing font scale.</p>
+                    <h3 className="font-semibold text-xs">Font Size</h3>
+                    <p className="text-[11px] opacity-60">Adjust editor font size scale.</p>
                   </div>
-                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-black/10 dark:bg-white/10">
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold border border-accent/20">
                     {fontSize}px
                   </span>
                 </div>
                 <input
                   type="range"
-                  min={13}
-                  max={24}
+                  min={12}
+                  max={32}
                   value={fontSize}
                   onChange={(e) => setFontSize(Number(e.target.value))}
                   className="w-full accent-accent cursor-pointer"
                 />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[13, 14, 16, 18, 20, 24, 28].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setFontSize(size)}
+                      className={`px-2.5 py-1 rounded-lg border text-xs font-mono font-medium transition-all ${
+                        fontSize === size
+                          ? 'border-accent bg-accent text-white font-bold'
+                          : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-70'
+                      }`}
+                      style={{
+                        borderColor: fontSize === size ? 'var(--color-accent)' : 'var(--color-border)',
+                      }}
+                    >
+                      {size}px
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Canvas Width */}
+              {/* Line Height Slider & Presets */}
+              <div className="space-y-3 p-4 rounded-2xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-xs">Line Height</h3>
+                    <p className="text-[11px] opacity-60">Vertical line height multiplier for editor text.</p>
+                  </div>
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold border border-accent/20">
+                    {numericLineHeight.toFixed(2)}x
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={1.1}
+                  max={2.4}
+                  step={0.05}
+                  value={numericLineHeight}
+                  onChange={(e) => setLineHeight(parseFloat(e.target.value))}
+                  className="w-full accent-accent cursor-pointer"
+                />
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {[
+                    { val: 1.3, label: 'Tight', desc: '1.30x' },
+                    { val: 1.5, label: 'Standard', desc: '1.50x' },
+                    { val: 1.65, label: 'Relaxed', desc: '1.65x' },
+                    { val: 1.9, label: 'Loose', desc: '1.90x' },
+                    { val: 2.2, label: 'Spacious', desc: '2.20x' },
+                  ].map((lh) => (
+                    <button
+                      key={lh.val}
+                      type="button"
+                      onClick={() => setLineHeight(lh.val)}
+                      className={`p-2 rounded-xl border text-center transition-all ${
+                        Math.abs(numericLineHeight - lh.val) < 0.03
+                          ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                          : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
+                      }`}
+                      style={{
+                        borderColor: Math.abs(numericLineHeight - lh.val) < 0.03 ? 'var(--color-accent)' : 'var(--color-border)',
+                      }}
+                    >
+                      <div className="text-xs font-semibold">{lh.label}</div>
+                      <div className="text-[10px] opacity-60 mt-0.5">{lh.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Line Width / Canvas Width */}
               <div className="space-y-3">
                 <div>
-                  <h3 className="font-semibold text-xs">Canvas Width</h3>
-                  <p className="text-[11px] opacity-60">Maximum writing container width.</p>
+                  <h3 className="font-semibold text-xs">Line Width (Canvas Width)</h3>
+                  <p className="text-[11px] opacity-60">Maximum horizontal width for writing column.</p>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {widthOptions.map((w) => (
@@ -393,17 +533,160 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => setEditorWidth(w.id)}
                       className={`p-2.5 rounded-xl border text-center transition-all ${
                         editorWidth === w.id
-                          ? 'border-accent bg-accent/10 text-accent font-semibold'
+                          ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                       }`}
                       style={{
                         borderColor: editorWidth === w.id ? 'var(--color-accent)' : 'var(--color-border)',
                       }}
                     >
-                      <div className="text-xs">{w.label}</div>
+                      <div className="text-xs font-semibold">{w.label}</div>
                       <div className="text-[10px] opacity-60 mt-0.5">{w.desc.split(' ')[0]}</div>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Paragraph Spacing Slider & Presets */}
+              <div className="space-y-3 p-4 rounded-2xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-xs">Paragraph Spacing</h3>
+                    <p className="text-[11px] opacity-60">Vertical gap between paragraphs.</p>
+                  </div>
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold border border-accent/20">
+                    {paragraphSpacing ?? 8}px
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={32}
+                  step={1}
+                  value={paragraphSpacing ?? 8}
+                  onChange={(e) => setParagraphSpacing(Number(e.target.value))}
+                  className="w-full accent-accent cursor-pointer"
+                />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { val: 0, label: 'Compact', desc: '0px' },
+                    { val: 8, label: 'Standard', desc: '8px' },
+                    { val: 16, label: 'Relaxed', desc: '16px' },
+                    { val: 24, label: 'Double', desc: '24px' },
+                  ].map((ps) => (
+                    <button
+                      key={ps.val}
+                      type="button"
+                      onClick={() => setParagraphSpacing(ps.val)}
+                      className={`p-2 rounded-xl border text-center transition-all ${
+                        (paragraphSpacing ?? 8) === ps.val
+                          ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                          : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
+                      }`}
+                      style={{
+                        borderColor: (paragraphSpacing ?? 8) === ps.val ? 'var(--color-accent)' : 'var(--color-border)',
+                      }}
+                    >
+                      <div className="text-xs font-semibold">{ps.label}</div>
+                      <div className="text-[10px] opacity-60 mt-0.5">{ps.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Paragraph Indent Slider & Presets */}
+              <div className="space-y-3 p-4 rounded-2xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-xs">Paragraph First-Line Indent</h3>
+                    <p className="text-[11px] opacity-60">Indentation offset for the first line of each paragraph.</p>
+                  </div>
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold border border-accent/20">
+                    {paragraphIndent ?? 0}px
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={48}
+                  step={2}
+                  value={paragraphIndent ?? 0}
+                  onChange={(e) => setParagraphIndent(Number(e.target.value))}
+                  className="w-full accent-accent cursor-pointer"
+                />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { val: 0, label: 'None (Flush)', desc: '0px' },
+                    { val: 16, label: 'Light', desc: '16px' },
+                    { val: 24, label: 'Classic Book', desc: '24px' },
+                    { val: 32, label: 'Deep Indent', desc: '32px' },
+                  ].map((pi) => (
+                    <button
+                      key={pi.val}
+                      type="button"
+                      onClick={() => setParagraphIndent(pi.val)}
+                      className={`p-2 rounded-xl border text-center transition-all ${
+                        (paragraphIndent ?? 0) === pi.val
+                          ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                          : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
+                      }`}
+                      style={{
+                        borderColor: (paragraphIndent ?? 0) === pi.val ? 'var(--color-accent)' : 'var(--color-border)',
+                      }}
+                    >
+                      <div className="text-xs font-semibold">{pi.label}</div>
+                      <div className="text-[10px] opacity-60 mt-0.5">{pi.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Live Interactive Typography Preview Box */}
+              <div className="space-y-2 p-4 rounded-2xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-xs">Live Typography Preview</h3>
+                  <span className="text-[10px] opacity-50 uppercase tracking-wider font-mono">Interactive Sample</span>
+                </div>
+                <div
+                  className="p-4 rounded-xl border transition-all select-none shadow-xs"
+                  style={{
+                    backgroundColor: 'var(--bg-editor)',
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--text-editor)',
+                    fontFamily:
+                      fontFamily === 'clarika'
+                        ? '"Clarika", "Outfit", "Plus Jakarta Sans", sans-serif'
+                        : fontFamily === 'bear-sans'
+                        ? '"Plus Jakarta Sans", "Bear Sans UI", sans-serif'
+                        : fontFamily === 'serif'
+                        ? '"Newsreader", Georgia, serif'
+                        : fontFamily === 'mono'
+                        ? '"JetBrains Mono", monospace'
+                        : fontFamily === 'system'
+                        ? '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                        : 'Inter, sans-serif',
+                    fontSize: `${fontSize}px`,
+                    lineHeight: numericLineHeight,
+                  }}
+                >
+                  <p
+                    style={{
+                      marginTop: `${(paragraphSpacing ?? 8) / 2}px`,
+                      marginBottom: `${(paragraphSpacing ?? 8) / 2}px`,
+                      textIndent: `${paragraphIndent ?? 0}px`,
+                    }}
+                  >
+                    The quick brown fox jumps over the lazy dog. AmNote provides an elegant, distraction-free markdown canvas crafted for writers and thinkers.
+                  </p>
+                  <p
+                    style={{
+                      marginTop: `${(paragraphSpacing ?? 8) / 2}px`,
+                      marginBottom: `${(paragraphSpacing ?? 8) / 2}px`,
+                      textIndent: `${paragraphIndent ?? 0}px`,
+                    }}
+                  >
+                    Adjust font size, line height, canvas line width, paragraph spacing, and first-line indents to create your perfect custom writing environment.
+                  </p>
                 </div>
               </div>
 

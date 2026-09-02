@@ -74,6 +74,7 @@
   cursor: text !important;
   position: relative;
   scroll-margin-bottom: 30vh;
+  line-height: inherit;
 }
 
 .ProseMirror * {
@@ -187,9 +188,10 @@
 }
 
 .ProseMirror p {
-  margin-top: 0.45rem;
-  margin-bottom: 0.45rem;
-  line-height: 1.65;
+  margin-top: calc(var(--paragraph-spacing, 8px) / 2);
+  margin-bottom: calc(var(--paragraph-spacing, 8px) / 2);
+  text-indent: var(--paragraph-indent, 0px);
+  line-height: inherit;
   position: relative;
 }
 
@@ -315,7 +317,7 @@
 .ProseMirror ul:not([data-type="taskList"]) li {
   margin-top: 0.25rem !important;
   margin-bottom: 0.25rem !important;
-  line-height: 1.65 !important;
+  line-height: inherit !important;
 }
 
 .ProseMirror ul:not([data-type="taskList"]) li::marker {
@@ -341,7 +343,7 @@
 .ProseMirror ol li {
   margin-top: 0.25rem !important;
   margin-bottom: 0.25rem !important;
-  line-height: 1.65 !important;
+  line-height: inherit !important;
 }
 
 .ProseMirror ol li::marker {
@@ -412,6 +414,7 @@ li[data-type="taskItem"],
   margin-bottom: 0 !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
+  text-indent: 0 !important;
 }
 
 /* Checkbox container / label - EXACT height matching line-height 1.65em */
@@ -426,7 +429,7 @@ li[data-type="taskItem"] > label,
   -webkit-user-select: none !important;
   margin: 0 !important;
   padding: 0 !important;
-  height: 1.65em !important; /* Locks checkbox to exact text line height */
+  height: calc(1em * var(--line-height, 1.65)) !important;
   cursor: pointer !important;
   flex-shrink: 0 !important;
   line-height: 1 !important;
@@ -528,7 +531,7 @@ li[data-type="taskItem"] > div,
   min-width: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
-  line-height: 1.65 !important;
+  line-height: inherit !important;
 }
 
 .ProseMirror li[data-type="taskItem"] > div > p,
@@ -539,7 +542,7 @@ li[data-type="taskItem"] > div,
 .ProseMirror .bear-task-item > p {
   margin: 0 !important;
   padding: 0 !important;
-  line-height: 1.65 !important;
+  line-height: inherit !important;
   display: block !important;
   transition: opacity 0.18s ease, color 0.18s ease, text-decoration 0.18s ease !important;
 }

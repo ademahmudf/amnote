@@ -88,7 +88,10 @@ export const AmEditor: React.FC = () => {
   const {
     fontFamily,
     fontSize,
+    lineHeight,
     editorWidth,
+    paragraphSpacing,
+    paragraphIndent,
     autoSaveDelayMs,
     tagIcons,
     tagColors,
@@ -188,7 +191,7 @@ export const AmEditor: React.FC = () => {
     ],
     editorProps: {
       attributes: {
-        class: 'focus:outline-none min-h-[500px] leading-relaxed max-w-none text-editor',
+        class: 'focus:outline-none min-h-[500px] max-w-none text-editor',
       },
       handleKeyDown: (_view, event) => {
         if (isSlashOpenRef.current || isWikiMenuOpenRef.current) {
@@ -498,7 +501,16 @@ export const AmEditor: React.FC = () => {
     full: 'max-w-full',
   }[editorWidth];
 
-  const fontStyle = {
+  const numericLineHeight =
+    typeof lineHeight === 'number'
+      ? lineHeight
+      : lineHeight === 'normal'
+      ? 1.45
+      : lineHeight === 'loose'
+      ? 1.95
+      : 1.65;
+
+  const fontStyle: React.CSSProperties = {
     fontFamily:
       fontFamily === 'clarika'
         ? '"Clarika", "Clarika Pro", "Outfit", "Plus Jakarta Sans", sans-serif'
@@ -512,6 +524,10 @@ export const AmEditor: React.FC = () => {
         ? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     fontSize: `${fontSize}px`,
+    lineHeight: numericLineHeight,
+    ['--line-height' as unknown as string]: `${numericLineHeight}`,
+    ['--paragraph-spacing' as unknown as string]: `${paragraphSpacing ?? 8}px`,
+    ['--paragraph-indent' as unknown as string]: `${paragraphIndent ?? 0}px`,
   };
 
   const words = activeNote.content.trim().match(/\S+/g)?.length || 0;

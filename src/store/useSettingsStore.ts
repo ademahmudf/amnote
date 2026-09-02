@@ -8,8 +8,10 @@ export type UiScale = 'compact' | 'standard' | 'comfortable' | 'spacious';
 interface SettingsState {
   fontFamily: FontFamily;
   fontSize: number; // in px, default 16
-  lineHeight: 'normal' | 'relaxed' | 'loose';
+  lineHeight: number | 'normal' | 'relaxed' | 'loose'; // multiplier, default 1.65
   editorWidth: EditorWidth;
+  paragraphSpacing: number; // in px, default 8
+  paragraphIndent: number; // in px, default 0
   uiScale: UiScale; // Controls sidebar, note list, header font scale
   previewLines: number; // Snippet lines: 1, 2, 3, 4
   typewriterMode: boolean; // Keep cursor vertically centered
@@ -26,8 +28,10 @@ interface SettingsState {
   
   setFontFamily: (font: FontFamily) => void;
   setFontSize: (size: number) => void;
-  setLineHeight: (height: 'normal' | 'relaxed' | 'loose') => void;
+  setLineHeight: (height: number | 'normal' | 'relaxed' | 'loose') => void;
   setEditorWidth: (width: EditorWidth) => void;
+  setParagraphSpacing: (spacing: number) => void;
+  setParagraphIndent: (indent: number) => void;
   setUiScale: (scale: UiScale) => void;
   setPreviewLines: (lines: number) => void;
   setTypewriterMode: (enabled: boolean) => void;
@@ -45,8 +49,10 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       fontFamily: 'bear-sans',
       fontSize: 16,
-      lineHeight: 'relaxed',
+      lineHeight: 1.65,
       editorWidth: 'comfort',
+      paragraphSpacing: 8,
+      paragraphIndent: 0,
       uiScale: 'comfortable',
       previewLines: 2,
       typewriterMode: false,
@@ -63,6 +69,8 @@ export const useSettingsStore = create<SettingsState>()(
       setFontSize: (fontSize) => set({ fontSize }),
       setLineHeight: (lineHeight) => set({ lineHeight }),
       setEditorWidth: (editorWidth) => set({ editorWidth }),
+      setParagraphSpacing: (paragraphSpacing) => set({ paragraphSpacing }),
+      setParagraphIndent: (paragraphIndent) => set({ paragraphIndent }),
       setUiScale: (uiScale) => set({ uiScale }),
       setPreviewLines: (previewLines) => set({ previewLines }),
       setTypewriterMode: (typewriterMode) => set({ typewriterMode }),

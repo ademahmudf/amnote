@@ -37,11 +37,25 @@ export const Sidebar: React.FC = () => {
   const uiScale = useSettingsStore((state) => state.uiScale);
 
   const itemTextClass = {
-    compact: 'text-[11.5px] h-[22px] px-2',
-    standard: 'text-[12px] h-[24px] px-2',
-    comfortable: 'text-[12px] h-[24px] px-2',
-    spacious: 'text-[13px] h-[28px] px-2.5',
-  }[uiScale] || 'text-[12px] h-[24px] px-2';
+    compact: 'text-[12px] h-[25px] px-2',
+    standard: 'text-[13.5px] h-[28px] px-2.5',
+    comfortable: 'text-[15px] h-[32px] px-2.5',
+    spacious: 'text-[16.5px] h-[36px] px-3',
+  }[uiScale] || 'text-[13.5px] h-[28px] px-2.5';
+
+  const iconSize = {
+    compact: 13,
+    standard: 14,
+    comfortable: 15,
+    spacious: 16.5,
+  }[uiScale] || 14;
+
+  const counterSize = {
+    compact: 'text-[9.5px]',
+    standard: 'text-[10.5px]',
+    comfortable: 'text-[11.5px]',
+    spacious: 'text-[12.5px]',
+  }[uiScale] || 'text-[10.5px]';
 
   const systemItems: { id: SystemFilter; label: string; icon: React.FC<{ size?: number; className?: string }>; count: number }[] = [
     { id: 'notes', label: 'Notes', icon: FileText, count: counts.notes },
@@ -119,9 +133,9 @@ export const Sidebar: React.FC = () => {
                     : '2px solid transparent',
                 }}
               >
-                <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
-                  <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
-                    <Icon size={13} className={isSelected ? 'text-accent' : 'opacity-70'} />
+                <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
+                  <div className="flex items-center justify-center shrink-0">
+                    <Icon size={iconSize} className={isSelected ? 'text-accent' : 'opacity-70'} />
                   </div>
                   <span className="truncate">{item.label}</span>
                 </div>
@@ -144,7 +158,7 @@ export const Sidebar: React.FC = () => {
                   )}
                   {item.count > 0 && (
                     <span
-                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono transition-opacity ${
+                      className={`${counterSize} px-1.5 py-0.2 rounded-full font-mono transition-opacity ${
                         isSelected ? 'opacity-90 font-semibold' : 'opacity-40 group-hover:opacity-80'
                       }`}
                     >
