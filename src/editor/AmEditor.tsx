@@ -29,16 +29,12 @@ import { markdownToHtml } from './utils/markdownConverter';
 import { serializeProseMirrorToMarkdown } from './utils/proseMirrorMarkdownSerializer';
 import { useNoteStore } from '../store/useNoteStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { resolveTagIcon } from '../utils/tagIcons';
+import { clearTagIconSvgCache } from '../utils/tagIcons';
 import { useEditorContentLifecycle } from './hooks/useEditorContentLifecycle';
 import { useEditorLockFocus } from './hooks/useEditorLockFocus';
 import { useEditorMenuState } from './hooks/useEditorMenuState';
 import { useImageAttachments } from './hooks/useImageAttachments';
 import {
-  Pin,
-  PinOff,
-  Info,
-  Share2,
   Trash2,
   RotateCcw,
   Clock,
@@ -75,17 +71,11 @@ const CustomTaskItem = TaskItem.extend({
 export const AmEditor: React.FC = () => {
   const activeNote = useNoteStore((state) => state.getActiveNote());
   const updateNoteContent = useNoteStore((state) => state.updateNoteContent);
-  const togglePin = useNoteStore((state) => state.togglePin);
-  const trashNote = useNoteStore((state) => state.trashNote);
   const restoreNote = useNoteStore((state) => state.restoreNote);
   const deletePermanently = useNoteStore((state) => state.deletePermanently);
-  const toggleInfoDrawer = useNoteStore((state) => state.toggleInfoDrawer);
-  const isInfoDrawerOpen = useNoteStore((state) => state.isInfoDrawerOpen);
-  const setExportModalOpen = useNoteStore((state) => state.setExportModalOpen);
   const setPasswordModalOpen = useNoteStore((state) => state.setPasswordModalOpen);
   const unlockNote = useNoteStore((state) => state.unlockNote);
   const isNoteUnlocked = useNoteStore((state) => state.isNoteUnlocked);
-  const relockNote = useNoteStore((state) => state.relockNote);
   const setSelectedTag = useNoteStore((state) => state.setSelectedTag);
   const setActiveNoteId = useNoteStore((state) => state.setActiveNoteId);
   const createNote = useNoteStore((state) => state.createNote);
@@ -252,13 +242,17 @@ export const AmEditor: React.FC = () => {
       handleClick: (_view, _pos, event) => {
         const target = event.target as HTMLElement;
 
-        // Handle Tag Pill clicks
+        // Handle Tag Pill clicks: clicking the icon or Ctrl/Cmd-clicking filters by tag
         const tagPill = target.closest('[data-tag]') as HTMLElement | null;
         if (tagPill) {
-          const tag = tagPill.getAttribute('data-tag');
-          if (tag) {
-            setSelectedTag(tag);
-            return true;
+          const isIcon = Boolean(target.closest('.am-tag-icon-widget'));
+          const isModifier = event.ctrlKey || event.metaKey;
+          if (isIcon || isModifier) {
+            const tag = tagPill.getAttribute('data-tag');
+            if (tag) {
+              setSelectedTag(tag);
+              return true;
+            }
           }
         }
 
@@ -361,6 +355,13 @@ export const AmEditor: React.FC = () => {
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
+
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) {
+      clearTagIconSvgCache();
+      editor.view.dispatch(editor.state.tr.setMeta('tagStylesChanged', true));
+    }
+  }, [editor, tagIcons, tagColors]);
 
   const { isInternalUpdatingRef } = useEditorContentLifecycle({
     editor,
@@ -494,120 +495,7 @@ export const AmEditor: React.FC = () => {
         </div>
       )}
 
-      {/* Editor Top Toolbar */}
-      <div
-        className="h-12 border-b flex items-center justify-between px-6 select-none shrink-0"
-        style={{ borderColor: 'var(--color-divider)' }}
-      >
-          <div className="flex items-center gap-2 overflow-hidden">
-            {activeNote.tags.length > 0 && (
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-                {activeNote.tags.map((tag) => {
-                  const customIcon = tagIcons[tag];
-                  const customColor = tagColors[tag];
-                  const IconComp = resolveTagIcon(tag, customIcon);
 
-                  return (
-                    <button
-                      key={tag}
-                      onClick={() => setSelectedTag(tag)}
-                      className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all hover:scale-105"
-                      style={{
-                        backgroundColor: customColor ? `${customColor}20` : 'var(--color-tag-bg)',
-                        color: customColor || 'var(--color-tag-text)',
-                      }}
-                    >
-                      <IconComp size={10} />
-                      <span>#{tag}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Action icons */}
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => togglePin(activeNote.id)}
-              title={activeNote.isPinned ? 'Unpin note' : 'Pin note to top'}
-              className={`p-1.5 rounded-lg text-xs transition-all ${
-                activeNote.isPinned ? 'text-accent font-bold' : 'opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-              style={{ color: activeNote.isPinned ? 'var(--color-accent)' : undefined }}
-            >
-              {activeNote.isPinned ? <Pin size={16} className="fill-current" /> : <PinOff size={16} />}
-            </button>
-
-            {/* Lock / Password Button */}
-            <button
-              type="button"
-              onClick={() => {
-                if (activeNote.isLocked && isUnlocked) {
-                  relockNote(activeNote.id);
-                } else {
-                  setPasswordModalOpen(true, activeNote.id);
-                }
-              }}
-              title={
-                activeNote.isLocked
-                  ? isUnlocked
-                    ? 'Note is unlocked. Click to re-lock'
-                    : 'Note is locked'
-                  : 'Protect note with password'
-              }
-              className={`p-1.5 rounded-lg text-xs transition-all ${
-                activeNote.isLocked
-                  ? isUnlocked
-                    ? 'text-emerald-400 hover:bg-emerald-500/10'
-                    : 'text-amber-400 hover:bg-amber-500/10'
-                  : 'opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-            >
-              {activeNote.isLocked ? (
-                isUnlocked ? <Unlock size={16} /> : <Lock size={16} />
-              ) : (
-                <Lock size={16} />
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setExportModalOpen(true)}
-              title="Export note (Markdown, HTML, PDF)"
-              className="p-1.5 rounded-lg opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5 transition-all text-xs"
-            >
-              <Share2 size={16} />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => trashNote(activeNote.id)}
-              title="Move to Trash"
-              className="p-1.5 rounded-lg opacity-60 hover:opacity-100 hover:bg-rose-500/10 hover:text-rose-400 transition-all text-xs"
-            >
-              <Trash2 size={16} />
-            </button>
-
-            <div className="w-px h-4 mx-1" style={{ backgroundColor: 'var(--color-divider)' }} />
-
-            <button
-              type="button"
-              onClick={toggleInfoDrawer}
-              title="Note Info & Table of Contents (Ctrl+Shift+I)"
-              className={`p-1.5 rounded-lg transition-all text-xs ${
-                isInfoDrawerOpen ? 'bg-accent text-white' : 'opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-              style={{
-                backgroundColor: isInfoDrawerOpen ? 'var(--color-accent)' : undefined,
-                color: isInfoDrawerOpen ? 'var(--color-accent-text)' : undefined,
-              }}
-            >
-              <Info size={16} />
-            </button>
-          </div>
-        </div>
 
       {/* Main Canvas Scroll Area OR Lock Overlay Screen */}
       {activeNote.isLocked && !isUnlocked ? (

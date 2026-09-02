@@ -1,65 +1,21 @@
-import { Mark, mergeAttributes } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { getTagIconDataUrl } from '../../utils/tagIcons';
 
 export interface TagOptions {
   HTMLAttributes: Record<string, any>;
   onTagClick?: (tag: string) => void;
 }
 
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    tag: {
-      setTag: (attributes: { tag: string }) => ReturnType;
-      toggleTag: (attributes: { tag: string }) => ReturnType;
-      unsetTag: () => ReturnType;
-    };
-  }
-}
-
-export const TagMark = Mark.create<TagOptions>({
+export const TagExtension = Extension.create<TagOptions>({
   name: 'tag',
 
   addOptions() {
     return {
       HTMLAttributes: {},
     };
-  },
-
-  addAttributes() {
-    return {
-      tag: {
-        default: null,
-        parseHTML: (element) => element.getAttribute('data-tag'),
-        renderHTML: (attributes) => {
-          if (!attributes.tag) {
-            return {};
-          }
-          return {
-            'data-tag': attributes.tag,
-          };
-        },
-      },
-    };
-  },
-
-  parseHTML() {
-    return [
-      {
-        tag: 'span[data-tag]',
-      },
-    ];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return [
-      'span',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        class: 'am-tag-pill bear-tag-pill',
-      }),
-      0,
-    ];
   },
 
   addProseMirrorPlugins() {
@@ -70,7 +26,7 @@ export const TagMark = Mark.create<TagOptions>({
           decorations(state) {
             const decorations: Decoration[] = [];
             const { doc } = state;
-            const { tagColors } = useSettingsStore.getState();
+            const { tagColors, tagIcons } = useSettingsStore.getState();
 
             doc.descendants((node, pos) => {
               if (node.isText && node.text) {
@@ -80,16 +36,40 @@ export const TagMark = Mark.create<TagOptions>({
                 while ((match = spacedRegex.exec(node.text)) !== null) {
                   const from = pos + match.index;
                   const to = from + match[0].length;
-                  const cleanTag = match[1].trim().toLowerCase().replace(/\s+/g, '-');
-                  const customColor = tagColors[cleanTag];
+                  const rawTag = match[1].trim();
+                  const cleanTag = rawTag.toLowerCase().replace(/\s+/g, '-');
+                  const customIcon = tagIcons[cleanTag] || tagIcons[rawTag];
+                  const customColor = tagColors[cleanTag] || tagColors[rawTag];
+                  const iconUrl = getTagIconDataUrl(cleanTag, customIcon);
 
+                  const styleProps = [
+                    `--tag-icon: url('${iconUrl}')`,
+                    customColor ? `background-color: ${customColor}20` : undefined,
+                    customColor ? `color: ${customColor}` : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join('; ');
+
+                  // Outer tag pill includes icon via ::before and text together
                   decorations.push(
                     Decoration.inline(from, to, {
                       class: 'am-tag-pill bear-tag-pill',
                       'data-tag': cleanTag,
-                      style: customColor
-                        ? `background-color: ${customColor}22; color: ${customColor}; border: 1px solid ${customColor}40; border-radius: 6px; padding: 0.1em 0.35em;`
-                        : 'background-color: var(--color-tag-bg); color: var(--color-tag-text); border-radius: 6px; padding: 0.1em 0.35em;',
+                      style: styleProps,
+                    })
+                  );
+
+                  // Hide opening '#[['
+                  decorations.push(
+                    Decoration.inline(from, from + 3, {
+                      class: 'am-tag-hash-hidden',
+                    })
+                  );
+
+                  // Hide closing ']]#'
+                  decorations.push(
+                    Decoration.inline(to - 3, to, {
+                      class: 'am-tag-hash-hidden',
                     })
                   );
                 }
@@ -106,15 +86,32 @@ export const TagMark = Mark.create<TagOptions>({
                   const from = pos + startOffset;
                   const to = from + fullMatch.length;
                   const cleanTag = tagBody.toLowerCase();
-                  const customColor = tagColors[cleanTag];
+                  const leafSegment = cleanTag.includes('/') ? cleanTag.split('/').pop()! : cleanTag;
+                  const customIcon = tagIcons[cleanTag] || tagIcons[leafSegment];
+                  const customColor = tagColors[cleanTag] || tagColors[leafSegment];
+                  const iconUrl = getTagIconDataUrl(cleanTag, customIcon);
 
+                  const styleProps = [
+                    `--tag-icon: url('${iconUrl}')`,
+                    customColor ? `background-color: ${customColor}20` : undefined,
+                    customColor ? `color: ${customColor}` : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join('; ');
+
+                  // Outer tag pill includes icon via ::before and text together
                   decorations.push(
                     Decoration.inline(from, to, {
                       class: 'am-tag-pill bear-tag-pill',
                       'data-tag': cleanTag,
-                      style: customColor
-                        ? `background-color: ${customColor}22; color: ${customColor}; border: 1px solid ${customColor}40; border-radius: 6px; padding: 0.1em 0.35em;`
-                        : 'background-color: var(--color-tag-bg); color: var(--color-tag-text); border-radius: 6px; padding: 0.1em 0.35em;',
+                      style: styleProps,
+                    })
+                  );
+
+                  // Hide '#' symbol
+                  decorations.push(
+                    Decoration.inline(from, from + 1, {
+                      class: 'am-tag-hash-hidden',
                     })
                   );
                 }
@@ -128,3 +125,5 @@ export const TagMark = Mark.create<TagOptions>({
     ];
   },
 });
+
+export const TagMark = TagExtension;

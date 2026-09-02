@@ -38,6 +38,13 @@ const tags2 = extractTagsFromContent(testText2);
 assert(tags2.includes('omarchy-linux'), 'Extracts bracket tag #[[Omarchy Linux]]#');
 assert(tags2.includes('sprint-goals-2026'), 'Extracts bracket tag #[[Sprint Goals 2026]]#');
 
+// Test 2b: Tags with numbers and hyphens (e.g. #tag-1)
+const testTextTagNumber = `Testing tag with number #tag-1 and #release-v2 and #sprint-10`;
+const tagsNumber = extractTagsFromContent(testTextTagNumber);
+assert(tagsNumber.includes('tag-1'), 'Extracts tag with number #tag-1');
+assert(tagsNumber.includes('release-v2'), 'Extracts #release-v2');
+assert(tagsNumber.includes('sprint-10'), 'Extracts #sprint-10');
+
 // Test 3: Wiki-Links Parsing
 const testText3 = `Read [[Welcome to AmNote]] and check [[Markdown Cheatsheet]] for syntax!`;
 const links = extractWikiLinksFromContent(testText3);
@@ -254,13 +261,38 @@ assert(md5.includes('| AST Serializer | Production Ready |'), 'AST Serializer cr
 // ============================================================================
 // Test 14: Tag Auto-Capitalization in Sidebar and UI
 // ============================================================================
-import { formatTagDisplay, formatTagSegment } from '../utils/tagIcons';
+import { formatTagDisplay, formatTagSegment, getTagIconSvgString, getTagIconDataUrl, clearTagIconSvgCache } from '../utils/tagIcons';
 
 assert(formatTagSegment('welcome') === 'Welcome', 'Capitalizes simple segment "welcome" -> "Welcome"');
 assert(formatTagSegment('omarchy-linux') === 'Omarchy Linux', 'Capitalizes hyphenated segment "omarchy-linux" -> "Omarchy Linux"');
 assert(formatTagSegment('deep_work') === 'Deep Work', 'Capitalizes underscored segment "deep_work" -> "Deep Work"');
 assert(formatTagDisplay('guide/basics') === 'Guide / Basics', 'Capitalizes nested tag path "guide/basics" -> "Guide / Basics"');
 assert(formatTagDisplay('work/sprint/q3') === 'Work / Sprint / Q3', 'Capitalizes 3-level path "work/sprint/q3" -> "Work / Sprint / Q3"');
+
+// Test Tag Icon SVG string generation
+const workSvg = getTagIconSvgString('work');
+assert(workSvg.includes('<svg') && workSvg.includes('lucide-briefcase'), 'Generates valid SVG string for auto-matched tag icon');
+assert(workSvg.includes('width="0.9em"') && workSvg.includes('height="0.9em"'), 'Default icon size uses proportional 0.9em scaling');
+
+const customRocketSvg = getTagIconSvgString('anytag', 'Rocket');
+assert(customRocketSvg.includes('<svg') && customRocketSvg.includes('lucide-rocket'), 'Generates valid SVG string for custom configured tag icon');
+
+const cachedSvg = getTagIconSvgString('work');
+assert(cachedSvg === workSvg, 'Returns cached SVG string on repeated calls');
+
+// Test Tag Icon Data URL generation for embedded pseudo-element
+const workDataUrl = getTagIconDataUrl('work');
+assert(workDataUrl.startsWith('data:image/svg+xml,'), 'Generates valid data URL for tag icon');
+assert(workDataUrl.includes('lucide-briefcase'), 'Data URL contains icon name');
+
+clearTagIconSvgCache();
+const postClearSvg = getTagIconSvgString('work');
+assert(postClearSvg === workSvg, 'Regenerates identical SVG after cache clear');
+const postClearDataUrl = getTagIconDataUrl('work');
+assert(postClearDataUrl === workDataUrl, 'Regenerates identical data URL after cache clear');
+
+const coloredSvg = getTagIconSvgString('travel', undefined, '0.9em', '#3b82f6');
+assert(coloredSvg.includes('color:#3b82f6') || coloredSvg.includes('color: #3b82f6'), 'Applies custom color to tag SVG');
 
 // ============================================================================
 // Test 15: Conflict-safe vault reconciliation

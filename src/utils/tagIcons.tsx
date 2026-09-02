@@ -1,4 +1,5 @@
 import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import {
   Briefcase,
   BookOpen,
@@ -254,3 +255,65 @@ export const TagIconBadge: React.FC<{
     />
   );
 };
+
+const tagIconSvgCache = new Map<string, string>();
+
+/**
+ * Returns a static SVG string representation of the resolved tag icon,
+ * ideal for ProseMirror widget decorations.
+ */
+export function getTagIconSvgString(
+  tag: string,
+  customIconName?: string,
+  size: number | string = '0.9em',
+  color?: string
+): string {
+  const cacheKey = `${tag}:${customIconName || ''}:${size}:${color || ''}`;
+  const cached = tagIconSvgCache.get(cacheKey);
+  if (cached) return cached;
+
+  const IconComp = resolveTagIcon(tag, customIconName);
+  const svg = renderToStaticMarkup(
+    React.createElement(IconComp, {
+      size: size as any,
+      className: 'am-tag-svg align-baseline shrink-0',
+      style: color ? { color } : undefined,
+      strokeWidth: 2.2,
+    })
+  );
+  tagIconSvgCache.set(cacheKey, svg);
+  return svg;
+}
+
+const tagIconDataUrlCache = new Map<string, string>();
+
+/**
+ * Returns a data:image/svg+xml URL representation of the resolved tag icon,
+ * ideal for CSS mask-image and background-image on tag pills.
+ */
+export function getTagIconDataUrl(
+  tag: string,
+  customIconName?: string
+): string {
+  const cacheKey = `${tag}:${customIconName || ''}`;
+  const cached = tagIconDataUrlCache.get(cacheKey);
+  if (cached) return cached;
+
+  const IconComp = resolveTagIcon(tag, customIconName);
+  const svg = renderToStaticMarkup(
+    React.createElement(IconComp, {
+      size: 16,
+      color: 'black',
+      strokeWidth: 2.2,
+    })
+  );
+  const dataUrl = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  tagIconDataUrlCache.set(cacheKey, dataUrl);
+  return dataUrl;
+}
+
+export function clearTagIconSvgCache(): void {
+  tagIconSvgCache.clear();
+  tagIconDataUrlCache.clear();
+}
+

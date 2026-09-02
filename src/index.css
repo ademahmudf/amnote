@@ -580,26 +580,70 @@ li[data-type="taskItem"] > div,
   font-weight: 600;
 }
 
-/* Tag pills in Editor (Inline & Smooth Caret Navigation) */
+/* Tag pills in Editor matching NoteCard in Preview Note Bar */
 .ProseMirror .am-tag-pill,
 .am-tag-pill,
 .ProseMirror .bear-tag-pill,
 .bear-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05em 0.45em 0.08em 0.4em;
+  border-radius: 9999px;
   background-color: var(--color-tag-bg);
   color: var(--color-tag-text);
+  font-size: 1em;
   font-weight: 500;
-  padding: 0.06em 0.32em;
-  border-radius: 6px;
+  line-height: normal;
+  vertical-align: 0.06em;
   cursor: text !important;
   user-select: text !important;
   -webkit-user-select: text !important;
   caret-color: var(--color-accent) !important;
-  display: inline;
-  vertical-align: baseline;
-  line-height: inherit;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Tag Icon embedded directly inside the pill before text */
+.ProseMirror .am-tag-pill::before,
+.am-tag-pill::before,
+.ProseMirror .bear-tag-pill::before,
+.bear-tag-pill::before {
+  content: '';
+  display: inline-block;
+  width: 0.82em;
+  height: 0.82em;
+  margin-right: 0.28em;
+  transform: translateY(0.09em);
+  background-color: currentColor;
+  -webkit-mask-image: var(--tag-icon);
+  mask-image: var(--tag-icon);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* When inside or wrapping a <mark> highlight, blend smoothly */
+.ProseMirror mark .am-tag-pill,
+.ProseMirror mark.am-tag-pill,
+.ProseMirror .am-tag-pill mark {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  color: inherit !important;
+}
+
+.dark .ProseMirror mark .am-tag-pill,
+.dark .ProseMirror mark.am-tag-pill,
+.dark .ProseMirror .am-tag-pill mark {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: inherit !important;
+}
+
+/* Visually hide the '#' inside tag pill while preserving text for editing */
+.am-tag-hash-hidden {
+  display: none !important;
 }
 
 /* AmNote Wiki Note Links */

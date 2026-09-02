@@ -106,6 +106,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
     spacious: 'text-[12px]',
   }[uiScale] || 'text-[11.5px]';
 
+  const badgeSize = {
+    compact: 'text-[9.5px]',
+    standard: 'text-[10.5px]',
+    comfortable: 'text-[11px]',
+    spacious: 'text-[12px]',
+  }[uiScale] || 'text-[10.5px]';
+
   return (
     <div
       onClick={() => setActiveNoteId(note.id)}
@@ -183,15 +190,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
 
             return (
               <span
-                className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[10px] font-mono font-medium shrink-0 ${
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ${badgeSize} font-mono font-medium leading-none shrink-0 ${
                   isAllDone
                     ? 'bg-emerald-500/15 text-emerald-500 dark:text-emerald-400'
                     : 'bg-black/10 dark:bg-white/10 opacity-70'
                 }`}
                 title={`Tasks: ${doneTasks} of ${taskMatches.length} completed`}
               >
-                <CheckSquare size={10} />
-                <span>{isAllDone ? 'Done' : `${doneTasks}/${taskMatches.length}`}</span>
+                <CheckSquare size="0.95em" className="shrink-0 -translate-y-[0.08em]" />
+                <span className="leading-none">{isAllDone ? 'Done' : `${doneTasks}/${taskMatches.length}`}</span>
               </span>
             );
           })()}
@@ -204,19 +211,19 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
             return (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[10px] font-medium"
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${badgeSize} font-medium leading-none`}
                 style={{
                   backgroundColor: customColor ? `${customColor}20` : 'var(--color-tag-bg)',
                   color: customColor || 'var(--color-tag-text)',
                 }}
               >
-                <IconComp size={9} />
-                <span>{formatTagDisplay(tag)}</span>
+                <IconComp size="0.95em" className="shrink-0 -translate-y-[0.08em]" />
+                <span className="leading-none">{formatTagDisplay(tag)}</span>
               </span>
             );
           })}
           {note.tags.length > 3 && (
-            <span className="text-[10px] opacity-40">+{note.tags.length - 3}</span>
+            <span className={`${badgeSize} opacity-40 leading-none`}>+{note.tags.length - 3}</span>
           )}
         </div>
       )}

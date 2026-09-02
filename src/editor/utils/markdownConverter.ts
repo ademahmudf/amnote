@@ -250,8 +250,8 @@ export function htmlToMarkdown(html: string): string {
         }
         const tag = el.getAttribute('data-tag');
         if (tag) {
-          if (tag.includes('-') || tag.includes(' ')) {
-            return `#[[${el.textContent?.replace(/^#/, '').trim()}]]#`;
+          if (tag.includes(' ')) {
+            return `#[[${tag}]]#`;
           }
           return `#${tag}`;
         }
