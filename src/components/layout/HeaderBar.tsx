@@ -9,11 +9,15 @@ import {
   Sparkles,
   HelpCircle,
   Info,
+  FileText,
+  Pin,
+  Lock,
 } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { useThemeStore } from '../../store/useThemeStore';
-import { formatTagDisplay } from '../../utils/tagIcons';
+import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
 
 export const HeaderBar: React.FC = () => {
   const isSidebarOpen = useNoteStore((state) => state.isSidebarOpen);
@@ -30,6 +34,14 @@ export const HeaderBar: React.FC = () => {
   const activeNote = useNoteStore((state) => state.getActiveNote());
   const selectedTag = useNoteStore((state) => state.selectedTag);
   const activeFilter = useNoteStore((state) => state.activeFilter);
+
+  const tagIcons = useSettingsStore((state) => state.tagIcons);
+  const tagColors = useSettingsStore((state) => state.tagColors);
+
+  const primaryTag = selectedTag || activeNote?.tags?.[0];
+  const customTagIcon = primaryTag ? tagIcons[primaryTag] : undefined;
+  const customTagColor = primaryTag ? tagColors[primaryTag] : undefined;
+  const TagIconComp = primaryTag ? resolveTagIcon(primaryTag, customTagIcon) : FileText;
 
   const { getThemeColors } = useThemeStore();
   const currentTheme = getThemeColors();
@@ -151,11 +163,22 @@ export const HeaderBar: React.FC = () => {
         >
           {activeNote ? (
             <div className="flex items-center gap-1.5 min-w-0 overflow-hidden text-left">
-              <span className="opacity-50 shrink-0 font-medium">
-                {selectedTag ? `#${formatTagDisplay(selectedTag)}` : activeFilter ? activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1) : 'Notes'}
+              {activeNote.isPinned && (
+                <Pin size={11} className="text-accent fill-current shrink-0" style={{ color: 'var(--color-accent)' }} />
+              )}
+              {activeNote.isLocked && (
+                <Lock size={12} className="text-amber-400 shrink-0" />
+              )}
+              <TagIconComp
+                size={13}
+                className="shrink-0 transition-colors"
+                style={{ color: customTagColor || (primaryTag ? 'var(--color-accent)' : undefined) }}
+              />
+              <span className="opacity-60 shrink-0 font-medium text-[11.5px]">
+                {primaryTag ? `#${formatTagDisplay(primaryTag)}` : activeFilter ? activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1) : 'Notes'}
               </span>
               <span className="opacity-40 shrink-0">/</span>
-              <span className="font-semibold truncate" style={{ color: 'var(--text-sidebar-active)' }}>
+              <span className="font-semibold truncate text-[12px]" style={{ color: 'var(--text-sidebar-active)' }}>
                 {activeNote.title || 'Untitled'}
               </span>
             </div>
