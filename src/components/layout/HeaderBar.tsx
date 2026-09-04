@@ -175,7 +175,7 @@ export const HeaderBar: React.FC = () => {
                 style={{ color: customTagColor || (primaryTag ? 'var(--color-accent)' : undefined) }}
               />
               <span className="opacity-60 shrink-0 font-medium text-[11.5px]">
-                {primaryTag ? `#${formatTagDisplay(primaryTag)}` : activeFilter ? activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1) : 'Notes'}
+                {primaryTag ? formatTagDisplay(primaryTag) : activeFilter ? activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1) : 'Notes'}
               </span>
               <span className="opacity-40 shrink-0">/</span>
               <span className="font-semibold truncate text-[12px]" style={{ color: 'var(--text-sidebar-active)' }}>
