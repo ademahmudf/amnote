@@ -13,6 +13,7 @@ import {
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useThemeStore } from '../../store/useThemeStore';
+import { formatTagDisplay } from '../../utils/tagIcons';
 
 export const HeaderBar: React.FC = () => {
   const isSidebarOpen = useNoteStore((state) => state.isSidebarOpen);
@@ -26,6 +27,9 @@ export const HeaderBar: React.FC = () => {
   const setCheatsheetOpen = useNoteStore((state) => state.setCheatsheetOpen);
   const isInfoDrawerOpen = useNoteStore((state) => state.isInfoDrawerOpen);
   const toggleInfoDrawer = useNoteStore((state) => state.toggleInfoDrawer);
+  const activeNote = useNoteStore((state) => state.getActiveNote());
+  const selectedTag = useNoteStore((state) => state.selectedTag);
+  const activeFilter = useNoteStore((state) => state.activeFilter);
 
   const { getThemeColors } = useThemeStore();
   const currentTheme = getThemeColors();
@@ -138,20 +142,34 @@ export const HeaderBar: React.FC = () => {
         </div>
       </div>
 
-      {/* Center: App Title / Search launcher */}
+      {/* Center: Note Breadcrumb / Search launcher */}
       <div className="flex-1 flex justify-center px-4" data-tauri-drag-region>
         <button
           type="button"
           onClick={() => setCommandPaletteOpen(true)}
-          className="flex items-center gap-2 px-3 py-1 rounded-xl bg-black/5 dark:bg-white/5 border border-transparent hover:border-border/60 transition-all text-xs opacity-75 hover:opacity-100 max-w-sm w-full justify-between"
+          className="flex items-center gap-2 px-3 py-1 rounded-xl bg-black/5 dark:bg-white/5 border border-transparent hover:border-border/60 transition-all text-xs opacity-85 hover:opacity-100 max-w-md w-full justify-between group shadow-2xs"
         >
-          <div className="flex items-center gap-2">
-            <Search size={12} className="opacity-60" />
-            <span className="truncate">Search notes & commands...</span>
+          {activeNote ? (
+            <div className="flex items-center gap-1.5 min-w-0 overflow-hidden text-left">
+              <span className="opacity-50 shrink-0 font-medium">
+                {selectedTag ? `#${formatTagDisplay(selectedTag)}` : activeFilter ? activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1) : 'Notes'}
+              </span>
+              <span className="opacity-40 shrink-0">/</span>
+              <span className="font-semibold truncate" style={{ color: 'var(--text-sidebar-active)' }}>
+                {activeNote.title || 'Untitled'}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Search size={12} className="opacity-60" />
+              <span className="truncate">Search notes & commands...</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 shrink-0 pl-2">
+            <kbd className="text-[10px] px-1.5 py-0.2 rounded bg-black/10 dark:bg-white/10 font-mono opacity-60 group-hover:opacity-100 transition-opacity">
+              Ctrl+K
+            </kbd>
           </div>
-          <kbd className="text-[10px] px-1.5 py-0.2 rounded bg-black/10 dark:bg-white/10 font-mono opacity-60 shrink-0">
-            Ctrl+K
-          </kbd>
         </button>
       </div>
 

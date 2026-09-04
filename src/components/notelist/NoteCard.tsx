@@ -113,13 +113,24 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
     spacious: 'text-[12px]',
   }[uiScale] || 'text-[10.5px]';
 
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isActive && cardRef.current) {
+      cardRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [isActive]);
+
   return (
     <div
+      ref={cardRef}
+      data-note-id={note.id}
+      tabIndex={isActive ? 0 : -1}
       onClick={() => setActiveNoteId(note.id)}
-      className={`group relative p-3 rounded-xl cursor-pointer select-none transition-all duration-150 border ${
+      className={`group relative p-3 rounded-xl cursor-pointer select-none transition-all duration-150 border outline-none ${
         isActive
-          ? 'shadow-md ring-1 ring-accent/30'
-          : 'hover:border-border/80 opacity-85 hover:opacity-100'
+          ? 'shadow-md ring-2 ring-accent/40 border-accent'
+          : 'hover:border-border/80 opacity-85 hover:opacity-100 focus-visible:ring-1 focus-visible:ring-accent/40'
       }`}
       style={{
         backgroundColor: isActive

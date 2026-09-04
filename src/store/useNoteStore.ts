@@ -91,7 +91,7 @@ interface NoteState {
   setCheatsheetOpen: (open: boolean) => void;
   setPasswordModalOpen: (open: boolean, noteId?: string | null) => void;
   
-  createNote: (initialTag?: string, initialTitle?: string) => Promise<string>;
+  createNote: (initialTag?: string, initialTitle?: string, initialBody?: string) => Promise<string>;
   updateNote: (id: string, updates: Partial<Note>) => Promise<void>;
   updateNoteContent: (id: string, content: string, contentJson?: string, persistToDisk?: boolean) => Promise<void>;
   togglePin: (id: string) => Promise<void>;
@@ -485,12 +485,15 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   setPasswordModalOpen: (open, noteId = null) =>
     set({ isPasswordModalOpen: open, passwordModalNoteId: noteId }),
 
-  createNote: async (initialTag?: string, initialTitle?: string) => {
+  createNote: async (initialTag?: string, initialTitle?: string, initialBody?: string) => {
     const defaultTag = initialTag || get().selectedTag || '';
     const title = initialTitle || 'New Note';
-    const initialContent = defaultTag
-      ? `# ${title}\n\n#${defaultTag}\n\n`
-      : `# ${title}\n\n`;
+    const initialContent =
+      initialBody !== undefined
+        ? initialBody
+        : defaultTag
+        ? `# ${title}\n\n#${defaultTag}\n\n`
+        : `# ${title}\n\n`;
 
     const newNote: Note = {
       id: newNoteId(),

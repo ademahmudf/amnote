@@ -50,6 +50,9 @@ import {
   Download,
   Copy,
   Check,
+  Plus,
+  Calendar,
+  CheckSquare,
 } from 'lucide-react';
 
 // Enhanced TaskItem with extra markdown input rules (- [ ] and * [ ])
@@ -208,6 +211,17 @@ export const AmEditor: React.FC = () => {
             // Tells ProseMirror this key is handled by the open dropdown menu
             return true;
           }
+        }
+        if (event.key === 'Escape' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+          _view.dom.blur();
+          const activeCard = document.querySelector('[data-note-id][tabindex="0"]') as HTMLElement;
+          if (activeCard) {
+            activeCard.focus();
+          } else {
+            const listContainer = document.querySelector('[tabindex="0"]') as HTMLElement;
+            listContainer?.focus();
+          }
+          return true;
         }
         return false;
       },
@@ -391,22 +405,81 @@ export const AmEditor: React.FC = () => {
   }, []);
 
   if (!activeNote) {
+    const todayStr = new Date().toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    const handleCreateTemplate = (type: 'blank' | 'journal' | 'meeting' | 'tasks') => {
+      if (type === 'blank') {
+        void createNote();
+      } else if (type === 'journal') {
+        const body = `# Daily Journal — ${todayStr}\n\n#journal\n\n### Top Priorities\n- [ ] \n- [ ] \n- [ ] \n\n### Reflections & Notes\n\n`;
+        void createNote('journal', `Daily Journal — ${todayStr}`, body);
+      } else if (type === 'meeting') {
+        const body = `# Meeting Notes\n\n#work/meeting\n\n**Date:** ${todayStr}\n**Attendees:** \n\n### Agenda\n1. \n\n### Key Discussion Points\n\n### Action Items\n- [ ] \n`;
+        void createNote('work/meeting', 'Meeting Notes', body);
+      } else if (type === 'tasks') {
+        const body = `# Sprint Tasks\n\n#todo\n\n- [ ] Task 1\n- [ ] Task 2\n- [ ] Task 3\n`;
+        void createNote('todo', 'Sprint Tasks', body);
+      }
+    };
+
     return (
       <div
-        className="flex-1 flex flex-col items-center justify-center h-full p-8 select-none"
+        className="flex-1 flex flex-col items-center justify-center h-full p-8 select-none animate-in fade-in duration-200"
         style={{
           backgroundColor: 'var(--bg-editor)',
           color: 'var(--text-editor-muted)',
         }}
       >
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-black/5 dark:bg-white/5 border border-border/40">
-          <FileText size={32} className="opacity-40" />
+        <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-4 bg-black/5 dark:bg-white/5 border border-border/40 shadow-inner">
+          <FileText size={30} className="opacity-40" />
         </div>
-        <div className="text-lg font-semibold mb-1" style={{ color: 'var(--text-editor)' }}>
+
+        <h2 className="text-base font-bold mb-1" style={{ color: 'var(--text-editor)' }}>
           No Note Selected
-        </div>
-        <div className="text-xs text-center max-w-xs opacity-60">
-          Select a note from the list or press <kbd className="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-[11px]">Ctrl+N</kbd> to create a new note.
+        </h2>
+        <p className="text-xs text-center max-w-xs opacity-60 mb-6">
+          Select a note from the sidebar or pick a template below to start writing.
+        </p>
+
+        <div className="flex flex-col gap-3 w-full max-w-sm">
+          <button
+            type="button"
+            onClick={() => handleCreateTemplate('blank')}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl text-xs font-semibold text-white shadow-md transition-transform hover:scale-[1.01] active:scale-[0.98]"
+            style={{ backgroundColor: 'var(--color-accent)' }}
+          >
+            <Plus size={15} />
+            <span>New Blank Note (Ctrl+N)</span>
+          </button>
+
+          <div className="pt-2">
+            <div className="text-[10px] font-semibold uppercase tracking-wider opacity-40 mb-2 px-1 text-center">
+              Or Start With a Template
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { type: 'journal' as const, label: 'Journal', desc: 'Daily log', icon: Calendar },
+                { type: 'meeting' as const, label: 'Meeting', desc: 'Agenda & tasks', icon: Clock },
+                { type: 'tasks' as const, label: 'Tasks', desc: 'Checklist', icon: CheckSquare },
+              ].map((tmpl) => (
+                <button
+                  key={tmpl.type}
+                  type="button"
+                  onClick={() => handleCreateTemplate(tmpl.type)}
+                  className="flex flex-col items-center p-3 rounded-xl border bg-black/5 dark:bg-white/5 hover:bg-accent/10 hover:border-accent/40 transition-all text-center group"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
+                  <tmpl.icon size={16} className="mb-1.5 opacity-60 group-hover:opacity-100 text-accent transition-colors" style={{ color: 'var(--color-accent)' }} />
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-editor)' }}>{tmpl.label}</span>
+                  <span className="text-[10px] opacity-50 mt-0.5">{tmpl.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
