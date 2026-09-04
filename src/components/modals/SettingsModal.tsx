@@ -65,12 +65,12 @@ export const SettingsModal: React.FC = () => {
 
   const numericLineHeight =
     typeof lineHeight === 'number'
-      ? lineHeight
+      ? lineHeight === 1.65 ? 1.35 : lineHeight
       : lineHeight === 'normal'
-      ? 1.45
+      ? 1.35
       : lineHeight === 'loose'
-      ? 1.95
-      : 1.65;
+      ? 1.65
+      : 1.35;
 
   const [activeTab, setActiveTab] = useState<'themes' | 'typography' | 'data'>('typography');
   const [isReloading, setIsReloading] = useState(false);
@@ -492,11 +492,11 @@ export const SettingsModal: React.FC = () => {
                 />
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {[
-                    { val: 1.3, label: 'Tight', desc: '1.30x' },
-                    { val: 1.5, label: 'Standard', desc: '1.50x' },
-                    { val: 1.65, label: 'Relaxed', desc: '1.65x' },
-                    { val: 1.9, label: 'Loose', desc: '1.90x' },
-                    { val: 2.2, label: 'Spacious', desc: '2.20x' },
+                    { val: 1.15, label: 'Compact', desc: '1.15x' },
+                    { val: 1.25, label: 'Tight', desc: '1.25x' },
+                    { val: 1.35, label: 'Standard', desc: '1.35x' },
+                    { val: 1.5, label: 'Relaxed', desc: '1.50x' },
+                    { val: 1.65, label: 'Loose', desc: '1.65x' },
                   ].map((lh) => (
                     <button
                       key={lh.val}

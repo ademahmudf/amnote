@@ -246,7 +246,7 @@ export const AmEditor: React.FC = () => {
         // Handle Tag Pill clicks: clicking the icon or Ctrl/Cmd-clicking filters by tag
         const tagPill = target.closest('[data-tag]') as HTMLElement | null;
         if (tagPill) {
-          const isIcon = Boolean(target.closest('.am-tag-icon-widget'));
+          const isIcon = Boolean(target.closest('.am-tag-icon-widget') || target.closest('.am-tag-prefix'));
           const isModifier = event.ctrlKey || event.metaKey;
           if (isIcon || isModifier) {
             const tag = tagPill.getAttribute('data-tag');
@@ -432,12 +432,12 @@ export const AmEditor: React.FC = () => {
 
   const numericLineHeight =
     typeof lineHeight === 'number'
-      ? lineHeight
+      ? lineHeight === 1.65 ? 1.35 : lineHeight
       : lineHeight === 'normal'
-      ? 1.45
+      ? 1.35
       : lineHeight === 'loose'
-      ? 1.95
-      : 1.65;
+      ? 1.65
+      : 1.35;
 
   const fontStyle: React.CSSProperties = {
     fontFamily:

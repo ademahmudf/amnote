@@ -3,6 +3,7 @@ use base64::Engine as _;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
+use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::hash::{Hash, Hasher};
 use std::io::Write;
@@ -70,9 +71,42 @@ struct AppConfig {
     pub custom_vault_path: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct VaultMarker {
-    initialized: bool,
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
+pub struct TagMeta {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(rename = "updatedAt", default)]
+    pub updated_at: i64,
+}
+
+fn default_vault_version() -> u32 {
+    1
+}
+
+fn default_vault_initialized() -> bool {
+    true
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct VaultMetadata {
+    #[serde(default = "default_vault_initialized")]
+    pub initialized: bool,
+    #[serde(default = "default_vault_version")]
+    pub version: u32,
+    #[serde(default)]
+    pub tags: BTreeMap<String, TagMeta>,
+}
+
+impl Default for VaultMetadata {
+    fn default() -> Self {
+        Self {
+            initialized: true,
+            version: 1,
+            tags: BTreeMap::new(),
+        }
+    }
 }
 
 fn get_config_file_path() -> PathBuf {
@@ -228,10 +262,67 @@ fn vault_marker_path(vault: &Path) -> PathBuf {
     vault.join(".amnote.json")
 }
 
+fn write_vault_metadata(vault: &Path, meta: &VaultMetadata) -> Result<(), String> {
+    let json = serde_json::to_string_pretty(meta)
+        .map_err(|e| format!("Failed to serialize vault metadata: {}", e))?;
+    write_atomic(&vault_marker_path(vault), &json)
+}
+
+fn read_vault_metadata(vault: &Path) -> Result<VaultMetadata, String> {
+    let path = vault_marker_path(vault);
+    if !path.exists() {
+        return Ok(VaultMetadata {
+            initialized: false,
+            version: 1,
+            tags: BTreeMap::new(),
+        });
+    }
+
+    let content =
+        fs::read_to_string(&path).map_err(|e| format!("Failed to read vault metadata: {}", e))?;
+    let meta: VaultMetadata = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse vault metadata: {}", e))?;
+    Ok(meta)
+}
+
 fn write_vault_marker(vault: &Path) -> Result<(), String> {
-    let marker = serde_json::to_string_pretty(&VaultMarker { initialized: true })
-        .map_err(|e| format!("Failed to serialize vault marker: {}", e))?;
-    write_atomic(&vault_marker_path(vault), &marker)
+    let mut meta = read_vault_metadata(vault).unwrap_or_default();
+    meta.initialized = true;
+    write_vault_metadata(vault, &meta)
+}
+
+fn reconcile_syncthing_conflicts(vault: &Path, current_meta: &mut VaultMetadata) {
+    if let Ok(entries) = fs::read_dir(vault) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if file_name.contains("sync-conflict")
+                && file_name.ends_with(".json")
+                && file_name.contains("amnote")
+            {
+                if let Ok(conflict_content) = fs::read_to_string(&path) {
+                    if let Ok(conflict_meta) = serde_json::from_str::<VaultMetadata>(&conflict_content) {
+                        for (tag, meta) in conflict_meta.tags {
+                            match current_meta.tags.get(&tag) {
+                                Some(existing) => {
+                                    if meta.updated_at > existing.updated_at {
+                                        current_meta.tags.insert(tag, meta);
+                                    }
+                                }
+                                None => {
+                                    current_meta.tags.insert(tag, meta);
+                                }
+                            }
+                        }
+                    }
+                }
+                let _ = fs::remove_file(&path);
+            }
+        }
+    }
 }
 
 fn collect_vault_revision(vault: &Path) -> Result<u64, String> {
@@ -262,6 +353,18 @@ fn collect_vault_revision(vault: &Path) -> Result<u64, String> {
                 .map_err(|e| format!("Invalid vault file timestamp: {}", e))?;
 
             files.push((relative_path, modified.as_nanos() as u64, metadata.len()));
+        }
+    }
+
+    let marker_path = vault_marker_path(vault);
+    if marker_path.is_file() {
+        if let Ok(metadata) = fs::metadata(&marker_path) {
+            if let Ok(modified) = metadata
+                .modified()
+                .and_then(|t| t.duration_since(UNIX_EPOCH).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
+            {
+                files.push((".amnote.json".to_string(), modified.as_nanos() as u64, metadata.len()));
+            }
         }
     }
 
@@ -439,22 +542,50 @@ fn load_notes_from_vault() -> Result<Vec<NotePayload>, String> {
 #[tauri::command]
 fn is_vault_initialized() -> Result<bool, String> {
     let vault = ensure_vault_directories()?;
-    let path = vault_marker_path(&vault);
-    if !path.exists() {
-        return Ok(false);
-    }
-
-    let content =
-        fs::read_to_string(&path).map_err(|e| format!("Failed to read vault marker: {}", e))?;
-    let marker: VaultMarker = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse vault marker: {}", e))?;
-    Ok(marker.initialized)
+    let meta = read_vault_metadata(&vault)?;
+    Ok(meta.initialized)
 }
 
 #[tauri::command]
 fn mark_vault_initialized() -> Result<(), String> {
     let vault = ensure_vault_directories()?;
     write_vault_marker(&vault)
+}
+
+#[tauri::command]
+fn load_tag_metadata() -> Result<VaultMetadata, String> {
+    let vault = ensure_vault_directories()?;
+    let mut meta = read_vault_metadata(&vault)?;
+    let tags_before = meta.tags.clone();
+    reconcile_syncthing_conflicts(&vault, &mut meta);
+    if meta.tags != tags_before {
+        let _ = write_vault_metadata(&vault, &meta);
+    }
+    Ok(meta)
+}
+
+#[tauri::command]
+fn save_tag_metadata(tags: BTreeMap<String, TagMeta>) -> Result<VaultMetadata, String> {
+    let vault = ensure_vault_directories()?;
+    let mut current = read_vault_metadata(&vault)?;
+    current.initialized = true;
+
+    for (tag, new_meta) in tags {
+        match current.tags.get(&tag) {
+            Some(existing) => {
+                if new_meta.updated_at >= existing.updated_at {
+                    current.tags.insert(tag, new_meta);
+                }
+            }
+            None => {
+                current.tags.insert(tag, new_meta);
+            }
+        }
+    }
+
+    reconcile_syncthing_conflicts(&vault, &mut current);
+    write_vault_metadata(&vault, &current)?;
+    Ok(current)
 }
 
 #[tauri::command]
@@ -895,6 +1026,8 @@ pub fn run() {
             save_attachment,
             save_note_to_vault,
             delete_note_from_vault,
+            load_tag_metadata,
+            save_tag_metadata,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AmNote desktop application");
@@ -976,5 +1109,79 @@ mod tests {
         let png = decode_image_data_url("data:image/png;base64,iVBORw0KGgo=").unwrap();
         assert_eq!(png.0, "png");
         assert!(!png.1.is_empty());
+    }
+
+    #[test]
+    fn tag_metadata_persists_and_updates_revision() {
+        let vault = temp_vault("tag-metadata");
+        let initial_rev = collect_vault_revision(&vault).unwrap();
+
+        let mut meta = read_vault_metadata(&vault).unwrap();
+        assert!(!meta.initialized);
+
+        meta.initialized = true;
+        meta.tags.insert(
+            "work".to_string(),
+            TagMeta {
+                icon: Some("Briefcase".to_string()),
+                color: Some("#3b82f6".to_string()),
+                updated_at: 1000,
+            },
+        );
+        write_vault_metadata(&vault, &meta).unwrap();
+
+        let updated_rev = collect_vault_revision(&vault).unwrap();
+        assert_ne!(initial_rev, updated_rev, "Revision must change when .amnote.json is written");
+
+        let loaded = read_vault_metadata(&vault).unwrap();
+        assert!(loaded.initialized);
+        assert_eq!(loaded.tags.get("work").unwrap().icon.as_deref(), Some("Briefcase"));
+
+        fs::remove_dir_all(&vault).ok();
+    }
+
+    #[test]
+    fn tag_metadata_heals_syncthing_conflicts() {
+        let vault = temp_vault("syncthing-heal");
+        let mut main_meta = VaultMetadata::default();
+        main_meta.tags.insert(
+            "work".to_string(),
+            TagMeta {
+                icon: Some("Briefcase".to_string()),
+                color: None,
+                updated_at: 100,
+            },
+        );
+        write_vault_metadata(&vault, &main_meta).unwrap();
+
+        let mut conflict_meta = VaultMetadata::default();
+        conflict_meta.tags.insert(
+            "work".to_string(),
+            TagMeta {
+                icon: Some("Rocket".to_string()),
+                color: Some("#ff0000".to_string()),
+                updated_at: 200,
+            },
+        );
+        conflict_meta.tags.insert(
+            "ideas".to_string(),
+            TagMeta {
+                icon: Some("Lightbulb".to_string()),
+                color: None,
+                updated_at: 150,
+            },
+        );
+
+        let conflict_path = vault.join(".amnote.sync-conflict-20260904-123456-XYZ.json");
+        fs::write(&conflict_path, serde_json::to_string(&conflict_meta).unwrap()).unwrap();
+        assert!(conflict_path.exists());
+
+        reconcile_syncthing_conflicts(&vault, &mut main_meta);
+
+        assert_eq!(main_meta.tags.get("work").unwrap().icon.as_deref(), Some("Rocket"));
+        assert_eq!(main_meta.tags.get("ideas").unwrap().icon.as_deref(), Some("Lightbulb"));
+        assert!(!conflict_path.exists());
+
+        fs::remove_dir_all(&vault).ok();
     }
 }

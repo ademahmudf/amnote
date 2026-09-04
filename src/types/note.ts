@@ -40,6 +40,20 @@ export interface TagNodeItem {
   children: Record<string, TagNodeItem>;
 }
 
+export interface TagMetadataItem {
+  icon?: string | null;
+  color?: string | null;
+  updatedAt: number;
+}
+
+export type TagMetadataMap = Record<string, TagMetadataItem>;
+
+export interface VaultMetadataPayload {
+  initialized: boolean;
+  version?: number;
+  tags?: TagMetadataMap;
+}
+
 export interface NoteStats {
   words: number;
   characters: number;

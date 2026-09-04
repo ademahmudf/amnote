@@ -1,5 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { vaultAdapter } from '../db/vaultAdapter';
+import type { TagMetadataMap } from '../types/note';
+import {
+  buildTagMetadataUpdate,
+  extractFlatTagColors,
+  extractFlatTagIcons,
+  mergeTagMetadataMaps,
+  seedTagMetadataFromFlat,
+} from '../domain/tagMetadata';
 
 export type FontFamily = 'bear-sans' | 'clarika' | 'sans' | 'serif' | 'mono' | 'system';
 export type EditorWidth = 'narrow' | 'comfort' | 'wide' | 'full';
@@ -22,9 +31,10 @@ interface SettingsState {
   showWordCount: boolean;
   autoSaveDelayMs: number;
   
-  // Custom Tag Icons & Colors
+  // Custom Tag Icons & Colors & Sync Metadata
   tagIcons: Record<string, string>;
   tagColors: Record<string, string>;
+  tagMetadata: TagMetadataMap;
   
   setFontFamily: (font: FontFamily) => void;
   setFontSize: (size: number) => void;
@@ -42,6 +52,8 @@ interface SettingsState {
   setShowWordCount: (show: boolean) => void;
   setTagIcon: (tag: string, iconName: string | null) => void;
   setTagColor: (tag: string, color: string | null) => void;
+  applyRemoteTagMetadata: (remoteTags: TagMetadataMap) => Promise<void>;
+  initTagSync: (remoteTags: TagMetadataMap) => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -49,7 +61,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       fontFamily: 'bear-sans',
       fontSize: 16,
-      lineHeight: 1.65,
+      lineHeight: 1.35,
       editorWidth: 'comfort',
       paragraphSpacing: 8,
       paragraphIndent: 0,
@@ -64,6 +76,7 @@ export const useSettingsStore = create<SettingsState>()(
       autoSaveDelayMs: 300,
       tagIcons: {},
       tagColors: {},
+      tagMetadata: {},
 
       setFontFamily: (fontFamily) => set({ fontFamily }),
       setFontSize: (fontSize) => set({ fontSize }),
@@ -79,29 +92,101 @@ export const useSettingsStore = create<SettingsState>()(
       setRevealMarkdownOnFocus: (revealMarkdownOnFocus) => set({ revealMarkdownOnFocus }),
       setSpellCheck: (spellCheck) => set({ spellCheck }),
       setShowWordCount: (showWordCount) => set({ showWordCount }),
-      setTagIcon: (tag, iconName) =>
+      setTagIcon: (tag, iconName) => {
+        let nextMetadata: TagMetadataMap = {};
         set((state) => {
-          const next = { ...state.tagIcons };
-          if (iconName) {
-            next[tag] = iconName;
-          } else {
-            delete next[tag];
-          }
-          return { tagIcons: next };
-        }),
-      setTagColor: (tag, color) =>
+          const currentMeta = Object.keys(state.tagMetadata).length > 0
+            ? state.tagMetadata
+            : seedTagMetadataFromFlat(state.tagIcons, state.tagColors);
+          nextMetadata = buildTagMetadataUpdate(tag, currentMeta, { icon: iconName });
+          const nextIcons = extractFlatTagIcons(nextMetadata);
+          return {
+            tagMetadata: nextMetadata,
+            tagIcons: nextIcons,
+          };
+        });
+        void vaultAdapter.saveTagMetadata(nextMetadata).catch((err) => {
+          console.warn('Failed to sync tag icon to vault:', err);
+        });
+      },
+      setTagColor: (tag, color) => {
+        let nextMetadata: TagMetadataMap = {};
         set((state) => {
-          const next = { ...state.tagColors };
-          if (color) {
-            next[tag] = color;
+          const currentMeta = Object.keys(state.tagMetadata).length > 0
+            ? state.tagMetadata
+            : seedTagMetadataFromFlat(state.tagIcons, state.tagColors);
+          nextMetadata = buildTagMetadataUpdate(tag, currentMeta, { color });
+          const nextColors = extractFlatTagColors(nextMetadata);
+          return {
+            tagMetadata: nextMetadata,
+            tagColors: nextColors,
+          };
+        });
+        void vaultAdapter.saveTagMetadata(nextMetadata).catch((err) => {
+          console.warn('Failed to sync tag color to vault:', err);
+        });
+      },
+      applyRemoteTagMetadata: async (remoteTags) => {
+        set((state) => {
+          const localMeta = Object.keys(state.tagMetadata).length > 0
+            ? state.tagMetadata
+            : seedTagMetadataFromFlat(state.tagIcons, state.tagColors);
+          const mergedMetadata = mergeTagMetadataMaps(localMeta, remoteTags);
+          return {
+            tagMetadata: mergedMetadata,
+            tagIcons: extractFlatTagIcons(mergedMetadata),
+            tagColors: extractFlatTagColors(mergedMetadata),
+          };
+        });
+      },
+      initTagSync: async (remoteTags) => {
+        const hasRemoteTags = Object.keys(remoteTags).length > 0;
+        let mergedMetadata: TagMetadataMap = {};
+        let needsSave = false;
+
+        set((state) => {
+          const localMeta = Object.keys(state.tagMetadata).length > 0
+            ? state.tagMetadata
+            : seedTagMetadataFromFlat(state.tagIcons, state.tagColors);
+          const hasLocalTags = Object.keys(localMeta).length > 0;
+
+          if (!hasRemoteTags && hasLocalTags) {
+            // First run on fresh vault: seed vault from legacy localStorage
+            mergedMetadata = localMeta;
+            needsSave = true;
           } else {
-            delete next[tag];
+            mergedMetadata = mergeTagMetadataMaps(localMeta, remoteTags);
+            if (JSON.stringify(mergedMetadata) !== JSON.stringify(remoteTags)) {
+              needsSave = true;
+            }
           }
-          return { tagColors: next };
-        }),
+
+          return {
+            tagMetadata: mergedMetadata,
+            tagIcons: extractFlatTagIcons(mergedMetadata),
+            tagColors: extractFlatTagColors(mergedMetadata),
+          };
+        });
+
+        if (needsSave) {
+          await vaultAdapter.saveTagMetadata(mergedMetadata).catch((err) => {
+            console.warn('Failed to seed tag metadata to vault:', err);
+          });
+        }
+      },
     }),
     {
       name: 'amnote-settings-storage',
+      version: 2,
+      migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as Partial<SettingsState> | undefined;
+        if (version < 2 && state) {
+          if (state.lineHeight === 1.65) {
+            state.lineHeight = 1.35;
+          }
+        }
+        return state as SettingsState;
+      },
     }
   )
 );

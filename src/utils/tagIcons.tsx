@@ -168,6 +168,7 @@ export function getAutoTagIcon(tag: string): LucideIcon {
   if (/(code|dev|program|rust|ts|js|react|python|css|html|git|bug|api)/.test(clean)) return Code;
   if (/(terminal|linux|omarchy|server|bash|shell|hyprland|arch)/.test(clean)) return Terminal;
   if (/(todo|task|tasks|check|list|goal|roadmap|plan)/.test(clean)) return CheckSquare;
+  if (/(tag|tags|label|badge|mark)/.test(clean)) return TagIcon;
   if (/(money|finance|budget|cost|crypto|salary|invoice|bank|tax)/.test(clean)) return DollarSign;
   if (/(home|house|family|personal|life|apartment)/.test(clean)) return Home;
   if (/(travel|trip|flight|vacation|hotel|explore|tour)/.test(clean)) return Plane;
@@ -187,7 +188,7 @@ export function getAutoTagIcon(tag: string): LucideIcon {
   if (/(book|novel|reading|read)/.test(clean)) return Book;
   if (/(write|author|blog|post|draft)/.test(clean)) return PenTool;
 
-  return Hash;
+  return TagIcon;
 }
 
 /**
@@ -198,6 +199,17 @@ export function resolveTagIcon(tag: string, customIconName?: string): LucideIcon
     return TAG_ICON_REGISTRY[customIconName];
   }
   return getAutoTagIcon(tag);
+}
+
+/**
+ * Returns true if the tag has a distinctive icon, and is not explicitly set to '#' Hash.
+ */
+export function hasSpecificTagIcon(tag: string, customIconName?: string): boolean {
+  if (customIconName === 'Hash') {
+    return false;
+  }
+  const icon = resolveTagIcon(tag, customIconName);
+  return icon !== Hash;
 }
 
 /**

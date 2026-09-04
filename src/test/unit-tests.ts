@@ -261,7 +261,7 @@ assert(md5.includes('| AST Serializer | Production Ready |'), 'AST Serializer cr
 // ============================================================================
 // Test 14: Tag Auto-Capitalization in Sidebar and UI
 // ============================================================================
-import { formatTagDisplay, formatTagSegment, getTagIconSvgString, getTagIconDataUrl, clearTagIconSvgCache } from '../utils/tagIcons';
+import { formatTagDisplay, formatTagSegment, getTagIconSvgString, getTagIconDataUrl, clearTagIconSvgCache, hasSpecificTagIcon } from '../utils/tagIcons';
 
 assert(formatTagSegment('welcome') === 'Welcome', 'Capitalizes simple segment "welcome" -> "Welcome"');
 assert(formatTagSegment('omarchy-linux') === 'Omarchy Linux', 'Capitalizes hyphenated segment "omarchy-linux" -> "Omarchy Linux"');
@@ -293,6 +293,14 @@ assert(postClearDataUrl === workDataUrl, 'Regenerates identical data URL after c
 
 const coloredSvg = getTagIconSvgString('travel', undefined, '0.9em', '#3b82f6');
 assert(coloredSvg.includes('color:#3b82f6') || coloredSvg.includes('color: #3b82f6'), 'Applies custom color to tag SVG');
+
+// Test hasSpecificTagIcon differentiation between distinctive icons and fallback Hash
+assert(hasSpecificTagIcon('work') === true, 'Recognizes auto-matched icon for "work"');
+assert(hasSpecificTagIcon('ideas') === true, 'Recognizes auto-matched icon for "ideas"');
+assert(hasSpecificTagIcon('tag/tags') === true, 'Recognizes auto-matched Tag icon for "tag/tags"');
+assert(hasSpecificTagIcon('randomtag') === true, 'Provides Tag icon for generic tags');
+assert(hasSpecificTagIcon('randomtag', 'Rocket') === true, 'Recognizes custom configured icon "Rocket"');
+assert(hasSpecificTagIcon('work', 'Hash') === false, 'Recognizes explicitly set Hash as non-specific');
 
 // ============================================================================
 // Test 15: Conflict-safe vault reconciliation
@@ -358,4 +366,59 @@ assert(searchIndex.search([searchableNote, otherNote], '@pinned').length === 0, 
 searchIndex.add(makeConflictNote('searchable', 'Replaced note content', 3));
 assert(searchIndex.search([searchableNote, otherNote], 'quantum').length === 0, 'Search index replaces changed documents');
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, and Tag Capitalization tests passed successfully!');
+// ============================================================================
+// Test 16: Tag Icon & Color Sync and Conflict Reconciliation
+// ============================================================================
+import {
+  normalizeTagKey,
+  mergeTagMetadataMaps,
+  extractFlatTagIcons,
+  extractFlatTagColors,
+  buildTagMetadataUpdate,
+  seedTagMetadataFromFlat,
+} from '../domain/tagMetadata';
+
+assert(normalizeTagKey('#work/sprint') === 'work/sprint', 'Normalizes tag with hash');
+assert(normalizeTagKey('###Ideas') === 'ideas', 'Normalizes multiple hashes and uppercase');
+
+// Test disjoint sets merge cleanly (e.g. Mac configured #work, Linux configured #code)
+const macTags = {
+  work: { icon: 'Briefcase', color: '#3b82f6', updatedAt: 100 },
+};
+const linuxTags = {
+  code: { icon: 'Code', color: '#10b981', updatedAt: 120 },
+};
+const mergedTags = mergeTagMetadataMaps(macTags, linuxTags);
+assert(mergedTags.work?.icon === 'Briefcase', 'Merged tags contain Mac tag');
+assert(mergedTags.code?.icon === 'Code', 'Merged tags contain Linux tag');
+
+// Test timestamp conflict resolution (Mac edits #work at t=200, Linux had it at t=100)
+const olderLinuxWork = {
+  work: { icon: 'Folder', color: '#999999', updatedAt: 100 },
+};
+const newerMacWork = {
+  work: { icon: 'Briefcase', color: '#3b82f6', updatedAt: 200 },
+};
+const reconciledNewer = mergeTagMetadataMaps(olderLinuxWork, newerMacWork);
+assert(reconciledNewer.work?.icon === 'Briefcase', 'Newer timestamp wins in conflict resolution');
+assert(reconciledNewer.work?.color === '#3b82f6', 'Newer color wins in conflict resolution');
+
+// Test tombstone propagation (Mac deleted icon with t=300, Linux had icon with t=200)
+const deletedMacWork = {
+  work: { icon: null, color: '#3b82f6', updatedAt: 300 },
+};
+const reconciledDeletion = mergeTagMetadataMaps(reconciledNewer, deletedMacWork);
+assert(reconciledDeletion.work?.icon === null, 'Tombstone correctly removes icon when newer');
+const flatIcons = extractFlatTagIcons(reconciledDeletion);
+assert(flatIcons.work === undefined, 'Tombstone icon is omitted from flat icon dictionary');
+const flatColors = extractFlatTagColors(reconciledDeletion);
+assert(flatColors.work === '#3b82f6', 'Preserves color when only icon was removed');
+
+// Test building updates and legacy seed
+const built = buildTagMetadataUpdate('projects', {}, { icon: 'Rocket', color: '#ec4899', updatedAt: 500 });
+assert(built.projects.icon === 'Rocket' && built.projects.color === '#ec4899', 'buildTagMetadataUpdate builds valid tag item');
+
+const seeded = seedTagMetadataFromFlat({ travel: 'Plane' }, { travel: '#f59e0b' }, 1000);
+assert(seeded.travel.icon === 'Plane' && seeded.travel.color === '#f59e0b' && seeded.travel.updatedAt === 1000, 'seedTagMetadataFromFlat correctly seeds metadata map');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, and Tag Sync tests passed successfully!');

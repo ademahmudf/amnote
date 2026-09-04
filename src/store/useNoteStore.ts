@@ -23,6 +23,7 @@ import {
   getTagTree as selectTagTree,
 } from '../domain/noteSelectors';
 import { vaultAdapter } from '../db/vaultAdapter';
+import { useSettingsStore } from './useSettingsStore';
 import type { Note, SortOption, SystemFilter, TagNodeItem } from '../types/note';
 import type { BacklinkItem, HeadingItem, NoteStats } from '../types/note';
 
@@ -153,8 +154,12 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   init: async () => {
     try {
       const vaultPath = await vaultAdapter.getVaultPath();
-      const allNotes = await vaultAdapter.loadAllNotes();
+      const [allNotes, remoteTags] = await Promise.all([
+        vaultAdapter.loadAllNotes(),
+        vaultAdapter.loadTagMetadata(),
+      ]);
       allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
+      await useSettingsStore.getState().initTagSync(remoteTags);
 
       set({
         vaultPath,
@@ -194,8 +199,12 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   },
 
   reloadFromDisk: async () => {
-    const allNotes = await vaultAdapter.loadAllNotes();
+    const [allNotes, remoteTags] = await Promise.all([
+      vaultAdapter.loadAllNotes(),
+      vaultAdapter.loadTagMetadata(),
+    ]);
     allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
+    await useSettingsStore.getState().applyRemoteTagMetadata(remoteTags);
     const merged = mergeVaultNotes({
       localNotes: get().notes,
       diskNotes: allNotes,
@@ -220,8 +229,13 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         return false;
       }
 
-      const allNotes = await vaultAdapter.loadAllNotes();
+      const [allNotes, remoteTags] = await Promise.all([
+        vaultAdapter.loadAllNotes(),
+        vaultAdapter.loadTagMetadata(),
+      ]);
       allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
+      await useSettingsStore.getState().applyRemoteTagMetadata(remoteTags);
+
       const merged = mergeVaultNotes({
         localNotes: get().notes,
         diskNotes: allNotes,
@@ -385,13 +399,18 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     set({ isLoading: true });
     try {
       const activePath = await vaultAdapter.setVaultPath(newPath);
-      const allNotes = await vaultAdapter.loadAllNotes();
+      const [allNotes, remoteTags] = await Promise.all([
+        vaultAdapter.loadAllNotes(),
+        vaultAdapter.loadTagMetadata(),
+      ]);
       allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
+      await useSettingsStore.getState().initTagSync(remoteTags);
       set({
         vaultPath: activePath,
         notes: allNotes,
         activeNoteId: allNotes.length > 0 ? allNotes[0].id : null,
         isLoading: false,
+        vaultRevision: await vaultAdapter.getVaultRevision(),
       });
     } catch (err) {
       console.error('Failed to change vault path:', err);
@@ -406,13 +425,18 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     set({ isLoading: true });
     try {
       const defaultPath = await vaultAdapter.resetVaultPath();
-      const allNotes = await vaultAdapter.loadAllNotes();
+      const [allNotes, remoteTags] = await Promise.all([
+        vaultAdapter.loadAllNotes(),
+        vaultAdapter.loadTagMetadata(),
+      ]);
       allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
+      await useSettingsStore.getState().initTagSync(remoteTags);
       set({
         vaultPath: defaultPath,
         notes: allNotes,
         activeNoteId: allNotes.length > 0 ? allNotes[0].id : null,
         isLoading: false,
+        vaultRevision: await vaultAdapter.getVaultRevision(),
       });
     } catch (err) {
       console.error('Failed to reset vault path:', err);

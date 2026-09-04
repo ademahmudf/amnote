@@ -1,4 +1,4 @@
-import type { Note } from '../types/note';
+import type { Note, TagMetadataMap, VaultMetadataPayload } from '../types/note';
 
 // Initial default seed notes for AmNote on fresh start
 export const initialAmNoteSeed: Note[] = [
@@ -226,5 +226,29 @@ export const vaultAdapter = {
     }
 
     throw new Error('Failed to delete note: Vault persistence requires the AmNote desktop runtime.');
+  },
+
+  loadTagMetadata: async (): Promise<TagMetadataMap> => {
+    if (isTauriEnvironment()) {
+      try {
+        const meta = await invokeTauri<VaultMetadataPayload>('load_tag_metadata');
+        return meta?.tags || {};
+      } catch (err) {
+        console.warn('Failed to load tag metadata from vault:', err);
+        return {};
+      }
+    }
+    return {};
+  },
+
+  saveTagMetadata: async (tags: TagMetadataMap): Promise<void> => {
+    if (isTauriEnvironment()) {
+      try {
+        await invokeTauri<VaultMetadataPayload>('save_tag_metadata', { tags });
+      } catch (err) {
+        console.error('Failed to save tag metadata to vault:', err);
+        throw err;
+      }
+    }
   },
 };
