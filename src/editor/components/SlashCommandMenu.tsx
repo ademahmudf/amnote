@@ -21,8 +21,10 @@ import {
   Strikethrough,
   FileText,
   Image as ImageIcon,
+  Calendar,
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { markdownToHtml } from '../utils/markdownConverter';
 
 interface SlashCommandMenuProps {
   editor: Editor;
@@ -34,7 +36,7 @@ interface SlashCommandMenuProps {
 interface CommandItem {
   title: string;
   description: string;
-  category: 'Structure' | 'Lists & Tasks' | 'Formatting' | 'Cards & Blocks';
+  category: 'Structure' | 'Lists & Tasks' | 'Formatting' | 'Cards & Blocks' | 'Templates';
   keywords?: string[];
   icon: React.ComponentType<{ size?: number; className?: string }>;
   colorIndicator?: string;
@@ -237,6 +239,53 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
       keywords: ['divider', 'line', 'hr', 'rule', 'separator'],
       icon: Minus,
       command: (ed) => ed.chain().focus().setHorizontalRule().run(),
+    },
+
+    // 5. Templates
+    {
+      title: 'Daily Journal Template',
+      description: 'Insert daily journal with date & priorities',
+      category: 'Templates',
+      keywords: ['template', 'journal', 'daily', 'log', 'today'],
+      icon: Calendar,
+      command: (ed) => {
+        const todayStr = new Date().toLocaleDateString(undefined, {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        });
+        const md = `### Daily Journal — ${todayStr}\n\n#journal\n\n**Top Priorities**\n- [ ] \n- [ ] \n- [ ] \n\n**Reflections & Notes**\n\n`;
+        ed.chain().focus().insertContent(markdownToHtml(md)).run();
+      },
+    },
+    {
+      title: 'Meeting Notes Template',
+      description: 'Insert meeting notes with agenda & action items',
+      category: 'Templates',
+      keywords: ['template', 'meeting', 'minutes', 'agenda', 'work'],
+      icon: FileText,
+      command: (ed) => {
+        const todayStr = new Date().toLocaleDateString(undefined, {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        });
+        const md = `### Meeting Notes\n\n#work/meeting\n\n**Date:** ${todayStr}  \n**Attendees:** \n\n**Agenda**\n1. \n\n**Key Discussion Points**\n\n**Action Items**\n- [ ] \n`;
+        ed.chain().focus().insertContent(markdownToHtml(md)).run();
+      },
+    },
+    {
+      title: 'Sprint Tasks Template',
+      description: 'Insert checklist for sprint tasks',
+      category: 'Templates',
+      keywords: ['template', 'tasks', 'todo', 'sprint', 'checklist'],
+      icon: CheckSquare,
+      command: (ed) => {
+        const md = `### Sprint Tasks\n\n#todo\n\n- [ ] Task 1\n- [ ] Task 2\n- [ ] Task 3\n`;
+        ed.chain().focus().insertContent(markdownToHtml(md)).run();
+      },
     },
   ];
 

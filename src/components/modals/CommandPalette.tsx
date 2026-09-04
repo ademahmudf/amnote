@@ -9,6 +9,8 @@ import {
   Minimize2,
   Download,
   Settings,
+  Calendar,
+  CheckSquare,
 } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useThemeStore } from '../../store/useThemeStore';
@@ -35,6 +37,13 @@ export const CommandPalette: React.FC = () => {
 
   const allTags = Array.from(new Set(notes.flatMap((n) => n.tags)));
 
+  const todayStr = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+
   const actions = [
     {
       id: 'action-new-note',
@@ -42,6 +51,36 @@ export const CommandPalette: React.FC = () => {
       title: 'Create New Note',
       icon: Plus,
       run: () => createNote(),
+    },
+    {
+      id: 'template-journal',
+      category: 'Templates',
+      title: 'New Note from Template: Daily Journal',
+      icon: Calendar,
+      run: () => {
+        const body = `# Daily Journal — ${todayStr}\n\n#journal\n\n### Top Priorities\n- [ ] \n- [ ] \n- [ ] \n\n### Reflections & Notes\n\n`;
+        void createNote('journal', `Daily Journal — ${todayStr}`, body);
+      },
+    },
+    {
+      id: 'template-meeting',
+      category: 'Templates',
+      title: 'New Note from Template: Meeting Notes',
+      icon: FileText,
+      run: () => {
+        const body = `# Meeting Notes\n\n#work/meeting\n\n**Date:** ${todayStr}\n**Attendees:** \n\n### Agenda\n1. \n\n### Key Discussion Points\n\n### Action Items\n- [ ] \n`;
+        void createNote('work/meeting', 'Meeting Notes', body);
+      },
+    },
+    {
+      id: 'template-tasks',
+      category: 'Templates',
+      title: 'New Note from Template: Sprint Tasks',
+      icon: CheckSquare,
+      run: () => {
+        const body = `# Sprint Tasks\n\n#todo\n\n- [ ] Task 1\n- [ ] Task 2\n- [ ] Task 3\n`;
+        void createNote('todo', 'Sprint Tasks', body);
+      },
     },
     {
       id: 'action-toggle-zen',
@@ -65,6 +104,13 @@ export const CommandPalette: React.FC = () => {
       run: () => setSettingsOpen(true),
     },
   ];
+
+  const matchedActions = actions.filter(
+    (a) =>
+      !query.trim() ||
+      a.title.toLowerCase().includes(query.toLowerCase()) ||
+      a.category.toLowerCase().includes(query.toLowerCase())
+  );
 
   const matchedNotes = notes
     .filter((n) => !n.isTrashed)
@@ -104,7 +150,7 @@ export const CommandPalette: React.FC = () => {
       run: () => setTheme(th.id as ThemeId),
     }));
 
-  const allItems = [...actions, ...matchedNotes, ...matchedTags, ...matchedThemes];
+  const allItems = [...matchedActions, ...matchedNotes, ...matchedTags, ...matchedThemes];
 
   useEffect(() => {
     if (isCommandPaletteOpen) {
