@@ -13,7 +13,12 @@ export interface NotificationPayload {
   durationMs?: number;
   action?: {
     label: string;
+    variant?: 'primary' | 'danger';
     onClick: () => void;
+  };
+  cancelAction?: {
+    label: string;
+    onClick?: () => void;
   };
 }
 

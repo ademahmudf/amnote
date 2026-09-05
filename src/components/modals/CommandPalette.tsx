@@ -11,12 +11,14 @@ import {
   Settings,
   Calendar,
   CheckSquare,
+  Trash2,
 } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { THEMES } from '../../themes/themeDefinitions';
 import type { ThemeId } from '../../types/note';
 import { notify } from '../../store/useNotificationStore';
+import { promptEmptyTrashConfirmation } from '../../utils/trashConfirmation';
 
 export const CommandPalette: React.FC = () => {
   const isCommandPaletteOpen = useNoteStore((state) => state.isCommandPaletteOpen);
@@ -122,6 +124,17 @@ export const CommandPalette: React.FC = () => {
       icon: Settings,
       run: () => setSettingsOpen(true),
     },
+    ...(notes.some((n) => n.isTrashed)
+      ? [
+          {
+            id: 'action-empty-trash',
+            category: 'Actions',
+            title: 'Empty Trash',
+            icon: Trash2,
+            run: () => promptEmptyTrashConfirmation(),
+          },
+        ]
+      : []),
   ];
 
   const matchedActions = actions.filter(

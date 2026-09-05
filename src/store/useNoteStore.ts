@@ -52,6 +52,7 @@ interface NoteState {
   isCheatsheetOpen: boolean;
   isPasswordModalOpen: boolean;
   passwordModalNoteId: string | null;
+  isEmptyTrashModalOpen: boolean;
   
   // Session unlock tracking
   unlockedNotes: Record<string, boolean>;
@@ -91,6 +92,7 @@ interface NoteState {
   setExportModalOpen: (open: boolean) => void;
   setCheatsheetOpen: (open: boolean) => void;
   setPasswordModalOpen: (open: boolean, noteId?: string | null) => void;
+  setEmptyTrashModalOpen: (open: boolean) => void;
   
   createNote: (initialTag?: string, initialTitle?: string, initialBody?: string) => Promise<string>;
   updateNote: (id: string, updates: Partial<Note>) => Promise<void>;
@@ -143,6 +145,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   isCheatsheetOpen: false,
   isPasswordModalOpen: false,
   passwordModalNoteId: null,
+  isEmptyTrashModalOpen: false,
   
   unlockedNotes: {},
   dirtyNoteIds: {},
@@ -522,6 +525,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   setCheatsheetOpen: (open) => set({ isCheatsheetOpen: open }),
   setPasswordModalOpen: (open, noteId = null) =>
     set({ isPasswordModalOpen: open, passwordModalNoteId: noteId }),
+  setEmptyTrashModalOpen: (open) => set({ isEmptyTrashModalOpen: open }),
 
   createNote: async (initialTag?: string, initialTitle?: string, initialBody?: string) => {
     const defaultTag = initialTag || get().selectedTag || '';
@@ -742,6 +746,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
   emptyTrash: async () => {
     const trashedNotes = get().notes.filter((n) => n.isTrashed);
+    if (trashedNotes.length === 0) return;
+
     let latestRevision = get().vaultRevision;
     for (const note of trashedNotes) {
       try {
@@ -755,7 +761,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     const trashedIds = new Set(trashedNotes.map((n) => n.id));
     set((state) => ({
       notes: state.notes.filter((n) => !n.isTrashed),
-      activeNoteId: null,
+      activeNoteId: state.activeNoteId && trashedIds.has(state.activeNoteId) ? null : state.activeNoteId,
       dirtyNoteIds: Object.fromEntries(
         Object.entries(state.dirtyNoteIds).filter(([dirtyId]) => !trashedIds.has(dirtyId))
       ),

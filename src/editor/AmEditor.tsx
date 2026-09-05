@@ -40,6 +40,7 @@ import { useEditorMenuState } from './hooks/useEditorMenuState';
 import { useImageAttachments } from './hooks/useImageAttachments';
 import { AnnotatedText } from '../components/ui/AnnotatedText';
 import { notify } from '../store/useNotificationStore';
+import { promptDeletePermanentlyConfirmation } from '../utils/trashConfirmation';
 import {
   Trash2,
   RotateCcw,
@@ -81,7 +82,6 @@ export const AmEditor: React.FC = () => {
   const activeNote = useNoteStore((state) => state.getActiveNote());
   const updateNoteContent = useNoteStore((state) => state.updateNoteContent);
   const restoreNote = useNoteStore((state) => state.restoreNote);
-  const deletePermanently = useNoteStore((state) => state.deletePermanently);
   const setPasswordModalOpen = useNoteStore((state) => state.setPasswordModalOpen);
   const unlockNote = useNoteStore((state) => state.unlockNote);
   const isNoteUnlocked = useNoteStore((state) => state.isNoteUnlocked);
@@ -601,8 +601,8 @@ export const AmEditor: React.FC = () => {
               Restore Note
             </button>
             <button
-              onClick={() => deletePermanently(activeNote.id)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors"
+              onClick={() => promptDeletePermanentlyConfirmation(activeNote)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors cursor-pointer"
             >
               Delete Permanently
             </button>

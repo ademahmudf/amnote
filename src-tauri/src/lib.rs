@@ -196,6 +196,34 @@ fn note_file_path(vault: &Path, id: &str, trashed: bool) -> Result<PathBuf, Stri
     Ok(path)
 }
 
+fn resolve_note_file_path(vault: &Path, id: &str, trashed: bool) -> Result<PathBuf, String> {
+    let standard = note_file_path(vault, id, trashed)?;
+    if standard.exists() {
+        return Ok(standard);
+    }
+
+    let directory = if trashed {
+        vault.join(".trash")
+    } else {
+        vault.to_path_buf()
+    };
+
+    if let Ok(entries) = fs::read_dir(&directory) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("md") {
+                if let Some(parsed) = parse_markdown_file(&path) {
+                    if parsed.id == id {
+                        return Ok(path);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(standard)
+}
+
 fn sync_directory(path: &Path) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         let directory =
@@ -681,8 +709,8 @@ fn write_note_to_vault(
 ) -> Result<(), String> {
     validate_note_id(&note.id)?;
     let file_content = serialize_note(note)?;
-    let active_path = note_file_path(vault, &note.id, false)?;
-    let trash_path = note_file_path(vault, &note.id, true)?;
+    let active_path = resolve_note_file_path(vault, &note.id, false)?;
+    let trash_path = resolve_note_file_path(vault, &note.id, true)?;
 
     let existing_path = if active_path.exists() {
         Some(&active_path)
@@ -756,8 +784,8 @@ fn backup_note_to_vault(vault: &Path, note: &NotePayload, label: &str) -> Result
 #[tauri::command]
 fn delete_note_from_vault(id: String, permanent: bool) -> Result<String, String> {
     let vault = ensure_vault_directories()?;
-    let active_path = note_file_path(&vault, &id, false)?;
-    let trash_path = note_file_path(&vault, &id, true)?;
+    let active_path = resolve_note_file_path(&vault, &id, false)?;
+    let trash_path = resolve_note_file_path(&vault, &id, true)?;
 
     if permanent {
         if active_path.exists() {
@@ -770,10 +798,20 @@ fn delete_note_from_vault(id: String, permanent: bool) -> Result<String, String>
         }
         sync_directory(&active_path)?;
     } else if active_path.exists() {
-        if trash_path.exists() {
-            let _ = fs::remove_file(&trash_path);
+        let target_trash_path = if trash_path.exists() {
+            trash_path
+        } else {
+            let file_name = active_path
+                .file_name()
+                .map(PathBuf::from)
+                .unwrap_or_else(|| PathBuf::from(format!("{id}.md")));
+            vault.join(".trash").join(file_name)
+        };
+
+        if target_trash_path.exists() {
+            let _ = fs::remove_file(&target_trash_path);
         }
-        fs::rename(&active_path, &trash_path)
+        fs::rename(&active_path, &target_trash_path)
             .map_err(|e| format!("Failed to move note to trash: {}", e))?;
         sync_directory(&active_path)?;
     }
@@ -1295,6 +1333,11 @@ mod tests {
         assert!(parsed.id.contains("conflict"));
         assert!(parsed.title.contains("(Conflicted Copy)"));
         assert_eq!(parsed.content, "Dropbox conflicting changes here");
+
+        // resolve_note_file_path should find the actual file on disk despite synthesized ID
+        let resolved = resolve_note_file_path(&vault, &parsed.id, false).unwrap();
+        assert_eq!(resolved, conflict_file);
+        assert!(resolved.exists());
 
         fs::remove_dir_all(&vault).ok();
     }

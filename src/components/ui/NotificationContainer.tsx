@@ -82,8 +82,20 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({ on
               notification.action
                 ? {
                     label: notification.action.label,
+                    variant: notification.action.variant,
                     onClick: () => {
                       notification.action?.onClick();
+                      dismissNotification();
+                    },
+                  }
+                : undefined
+            }
+            cancelAction={
+              notification.cancelAction
+                ? {
+                    label: notification.cancelAction.label,
+                    onClick: () => {
+                      notification.cancelAction?.onClick?.();
                       dismissNotification();
                     },
                   }

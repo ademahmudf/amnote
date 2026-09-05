@@ -3,6 +3,7 @@ import type { Note } from '../../types/note';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
+import { promptDeletePermanentlyConfirmation } from '../../utils/trashConfirmation';
 import {
   Pin,
   MoreVertical,
@@ -58,7 +59,6 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
   const toggleArchive = useNoteStore((state) => state.toggleArchive);
   const trashNote = useNoteStore((state) => state.trashNote);
   const restoreNote = useNoteStore((state) => state.restoreNote);
-  const deletePermanently = useNoteStore((state) => state.deletePermanently);
   const setPasswordModalOpen = useNoteStore((state) => state.setPasswordModalOpen);
   const isNoteUnlocked = useNoteStore((state) => state.isNoteUnlocked);
 
@@ -340,7 +340,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
               <button
                 type="button"
                 onClick={() => {
-                  deletePermanently(note.id);
+                  promptDeletePermanentlyConfirmation(note);
                   setIsMenuOpen(false);
                 }}
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-rose-600 text-rose-400 hover:text-white text-left"

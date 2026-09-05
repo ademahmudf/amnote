@@ -12,6 +12,7 @@ import { CommandPalette } from '../modals/CommandPalette';
 import { SettingsModal } from '../modals/SettingsModal';
 import { ExportModal } from '../modals/ExportModal';
 import { PasswordModal } from '../modals/PasswordModal';
+import { EmptyTrashModal } from '../modals/EmptyTrashModal';
 import { CheatsheetModal } from '../modals/CheatsheetModal';
 import { ConflictDiffModal } from '../modals/ConflictDiffModal';
 import { NotificationContainer } from '../ui/NotificationContainer';
@@ -228,6 +229,7 @@ export const AppLayout: React.FC = () => {
       <SettingsModal />
       <ExportModal />
       <PasswordModal />
+      <EmptyTrashModal />
       <CheatsheetModal />
       <NotificationContainer onReviewConflict={setActiveConflictId} />
       <RoughFilters />

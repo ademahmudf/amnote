@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, Plus, FileText, Pin, CheckSquare, Lock, Calendar } from 'lucide-react';
+import { Search, X, Plus, FileText, Pin, CheckSquare, Lock, Calendar, Trash2 } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
 import { NoteCard } from './NoteCard';
 import { SortDropdown } from './SortDropdown';
+import { promptEmptyTrashConfirmation } from '../../utils/trashConfirmation';
 
 export const NoteList: React.FC = () => {
   // Subscribe to notes array so NoteList re-renders on EVERY keystroke!
@@ -267,14 +268,28 @@ export const NoteList: React.FC = () => {
 
           <div className="flex items-center gap-1">
             <SortDropdown />
-            <button
-              type="button"
-              onClick={() => createNote(selectedTag || undefined)}
-              title="Create note in this view"
-              className="p-1.5 rounded-lg opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5 transition-all text-xs"
-            >
-              <Plus size={14} />
-            </button>
+            {activeFilter === 'trash' ? (
+              filteredNotes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => promptEmptyTrashConfirmation()}
+                  title="Empty Trash"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 transition-all cursor-pointer"
+                >
+                  <Trash2 size={12} />
+                  <span>Empty</span>
+                </button>
+              )
+            ) : (
+              <button
+                type="button"
+                onClick={() => createNote(selectedTag || undefined)}
+                title="Create note in this view"
+                className="p-1.5 rounded-lg opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5 transition-all text-xs"
+              >
+                <Plus size={14} />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -301,33 +316,39 @@ export const NoteList: React.FC = () => {
                 ? 'No matching notes'
                 : selectedTag
                 ? `No notes in #${formatTagDisplay(selectedTag)}`
+                : activeFilter === 'trash'
+                ? 'Trash is empty'
                 : 'No notes in this view'}
             </div>
             <p className="text-[11px] opacity-60 mb-4 max-w-[200px] leading-relaxed">
               {searchQuery
                 ? `No notes match "${searchQuery}". Clear query or start a new note.`
+                : activeFilter === 'trash'
+                ? 'Notes moved to trash will appear here until permanently deleted.'
                 : `Capture thoughts, tasks, or reference material in this section.`}
             </p>
-            <div className="flex flex-col gap-1.5 w-full max-w-[190px]">
-              <button
-                type="button"
-                onClick={() => createNote(selectedTag || undefined)}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold text-white shadow-sm transition-transform active:scale-[0.98]"
-                style={{ backgroundColor: 'var(--color-accent)' }}
-              >
-                <Plus size={13} />
-                <span>Create Note</span>
-              </button>
-              {searchQuery && (
+            {activeFilter !== 'trash' && (
+              <div className="flex flex-col gap-1.5 w-full max-w-[190px]">
                 <button
                   type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="w-full py-1 text-[11px] opacity-60 hover:opacity-100 transition-opacity"
+                  onClick={() => createNote(selectedTag || undefined)}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold text-white shadow-sm transition-transform active:scale-[0.98]"
+                  style={{ backgroundColor: 'var(--color-accent)' }}
                 >
-                  Clear search query
+                  <Plus size={13} />
+                  <span>Create Note</span>
                 </button>
-              )}
-            </div>
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="w-full py-1 text-[11px] opacity-60 hover:opacity-100 transition-opacity"
+                  >
+                    Clear search query
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <>

@@ -17,7 +17,12 @@ export interface AppleNotificationBannerProps extends ComponentPropsWithoutRef<'
   avatarAlt?: string;
   action?: {
     label: string;
+    variant?: 'primary' | 'danger';
     onClick: () => void;
+  };
+  cancelAction?: {
+    label: string;
+    onClick?: () => void;
   };
   showTriggerLabel?: string;
   onDismiss?: () => void;
@@ -38,6 +43,7 @@ export const AppleNotificationBanner = forwardRef<HTMLOutputElement, AppleNotifi
       avatarSrc,
       avatarAlt = 'AmNote',
       action,
+      cancelAction,
       showTriggerLabel = 'Show notification',
       onDismiss,
       onShow,
@@ -167,22 +173,43 @@ export const AppleNotificationBanner = forwardRef<HTMLOutputElement, AppleNotifi
             {message}
           </p>
 
-          {action && (
+          {(action || cancelAction) && (
             <div className="col-start-2 mt-2 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  action.onClick();
-                }}
-                className="px-3 py-1 rounded-lg text-xs font-semibold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer"
-                style={{
-                  backgroundColor: 'var(--color-accent)',
-                  color: 'var(--color-accent-text)',
-                }}
-              >
-                {action.label}
-              </button>
+              {action && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    action.onClick();
+                  }}
+                  className={cn(
+                    "px-3 py-1 rounded-lg text-xs font-semibold shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer",
+                    action.variant === 'danger'
+                      ? "bg-rose-600 hover:bg-rose-700 text-white"
+                      : "text-white"
+                  )}
+                  style={action.variant === 'danger' ? undefined : {
+                    backgroundColor: 'var(--color-accent)',
+                    color: 'var(--color-accent-text)',
+                  }}
+                >
+                  {action.label}
+                </button>
+              )}
+              {cancelAction && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    cancelAction.onClick?.();
+                    handleDismiss();
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer"
+                  style={{ color: 'var(--text-editor)' }}
+                >
+                  {cancelAction.label}
+                </button>
+              )}
             </div>
           )}
         </div>

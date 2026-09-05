@@ -545,6 +545,44 @@ useNoteStore.setState({ activeNoteId: 'note-sample' });
 useNoteStore.getState().setSelectedTag('work');
 assert(useNoteStore.getState().activeNoteId === null, 'Changing selectedTag leaves note unselected until user chooses a note');
 
+// Trash notification popup confirmation tests
+import { promptEmptyTrashConfirmation, promptDeletePermanentlyConfirmation } from '../utils/trashConfirmation';
+
+useNotificationStore.setState({ notification: null });
+useNoteStore.setState({
+  notes: [
+    {
+      id: 'note-trash-1',
+      title: 'Trashed Note',
+      content: '# Trashed Note',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      tags: [],
+      isPinned: false,
+      isArchived: false,
+      isTrashed: true,
+    },
+  ],
+});
+
+assert(useNoteStore.getState().isEmptyTrashModalOpen === false, 'isEmptyTrashModalOpen defaults to false');
+promptEmptyTrashConfirmation();
+assert(useNoteStore.getState().isEmptyTrashModalOpen === true, 'Empty trash opens center confirmation modal');
+useNoteStore.getState().setEmptyTrashModalOpen(false);
+assert(useNoteStore.getState().isEmptyTrashModalOpen === false, 'setEmptyTrashModalOpen closes modal');
+
+// Test single note delete permanently notification popup
+useNotificationStore.getState().dismissNotification();
+promptDeletePermanentlyConfirmation({ id: 'note-trash-1', title: 'Trashed Note' });
+const notif2 = useNotificationStore.getState().notification;
+assert(Boolean(notif2), 'Delete permanently notification popup is shown');
+assert(notif2?.title === 'Delete Permanently', 'Notification title is Delete Permanently');
+assert(notif2?.sender === 'Trashed Note', 'Notification sender matches note title');
+assert(notif2?.action?.variant === 'danger', 'Delete Forever action has danger variant');
+assert(Boolean(notif2?.cancelAction), 'Delete permanently notification has Cancel action');
+useNotificationStore.getState().dismissNotification();
+
+
 // Test 21: Typography registry & 5 new typefaces
 import { FONT_OPTIONS, getFontFamilyCss } from '../domain/fontFamilies';
 import { useSettingsStore } from '../store/useSettingsStore';

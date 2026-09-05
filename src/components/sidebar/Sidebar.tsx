@@ -18,6 +18,7 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { TagTree } from './TagTree';
 import { AmNoteLogo } from '../icons/AmNoteLogo';
+import { promptEmptyTrashConfirmation } from '../../utils/trashConfirmation';
 import type { SystemFilter } from '../../types/note';
 
 export const Sidebar: React.FC = () => {
@@ -28,7 +29,6 @@ export const Sidebar: React.FC = () => {
   const getSystemCounts = useNoteStore((state) => state.getSystemCounts);
   const setSettingsOpen = useNoteStore((state) => state.setSettingsOpen);
   const setCommandPaletteOpen = useNoteStore((state) => state.setCommandPaletteOpen);
-  const emptyTrash = useNoteStore((state) => state.emptyTrash);
 
   const { toggleDarkLight, getThemeColors } = useThemeStore();
   const currentTheme = getThemeColors();
@@ -141,17 +141,17 @@ export const Sidebar: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1">
-                  {item.id === 'trash' && counts.trash > 0 && isSelected && (
+                  {item.id === 'trash' && counts.trash > 0 && (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm('Empty all notes in Trash permanently?')) {
-                          emptyTrash();
-                        }
+                        promptEmptyTrashConfirmation();
                       }}
                       title="Empty Trash"
-                      className="text-[9px] px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 transition-colors"
+                      className={`text-[9px] px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 transition-all ${
+                        isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
                     >
                       Empty
                     </button>
