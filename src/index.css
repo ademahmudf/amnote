@@ -860,41 +860,49 @@ li[data-type="taskItem"] > div,
    Focus Mode (iA Writer Style: Sentence & Paragraph Focus)
    ========================================================================== */
 
-/* 1. Paragraph Focus: Inactive blocks dimmed to 28% */
+/* 1. Paragraph Focus: Inactive blocks dimmed to 25% */
+.am-focus-mode-paragraph .ProseMirror > *,
 .ProseMirror.am-focus-mode.am-focus-mode-paragraph > * {
-  opacity: 0.28;
+  opacity: 0.25;
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: opacity;
 }
 
+.am-focus-mode-paragraph .ProseMirror > .am-focus-active-root,
 .ProseMirror.am-focus-mode.am-focus-mode-paragraph > .am-focus-active-root {
   opacity: 1 !important;
 }
 
+.am-focus-mode-paragraph .ProseMirror > .am-focus-active-root li:not(.am-focus-active-node),
 .ProseMirror.am-focus-mode.am-focus-mode-paragraph > .am-focus-active-root li:not(.am-focus-active-node) {
-  opacity: 0.28;
+  opacity: 0.25;
 }
 
+.am-focus-mode-paragraph .ProseMirror > .am-focus-active-root li.am-focus-active-node,
 .ProseMirror.am-focus-mode.am-focus-mode-paragraph > .am-focus-active-root li.am-focus-active-node {
   opacity: 1 !important;
 }
 
 /* 2. Sentence Focus (iA Writer Default): Inactive blocks & non-active sentences dimmed */
+.am-focus-mode-sentence .ProseMirror > *,
 .ProseMirror.am-focus-mode.am-focus-mode-sentence > * {
-  opacity: 0.28;
+  opacity: 0.25;
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: opacity;
 }
 
+.am-focus-mode-sentence .ProseMirror > .am-focus-active-root,
 .ProseMirror.am-focus-mode.am-focus-mode-sentence > .am-focus-active-root {
   opacity: 1 !important;
 }
 
+.am-focus-mode-sentence .am-focus-dimmed,
 .ProseMirror.am-focus-mode.am-focus-mode-sentence .am-focus-dimmed {
-  opacity: 0.28;
+  opacity: 0.22 !important;
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.am-focus-mode-sentence .am-focus-active-sentence,
 .ProseMirror.am-focus-mode.am-focus-mode-sentence .am-focus-active-sentence {
   opacity: 1 !important;
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);

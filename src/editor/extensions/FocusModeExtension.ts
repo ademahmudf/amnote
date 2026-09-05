@@ -10,28 +10,44 @@ export const focusModePluginKey = new PluginKey('focusMode');
  * Avoids splitting on abbreviations or decimal numbers without trailing spaces.
  */
 export function findSentenceRange(text: string, offset: number): { start: number; end: number } {
-  if (!text || text.trim().length === 0) {
+  if (!text || !text.trim()) {
     return { start: 0, end: 0 };
   }
 
-  const pos = Math.max(0, Math.min(offset, text.length));
-  let start = 0;
-  const beforeText = text.slice(0, pos);
-  const endingRegex = /(?:[.!?…]+["'\u201D\u2019)\]]*\s+)/g;
+  // Sentence terminators: [.!?…] optionally followed by quotes/brackets, followed by space(s)
+  // Lookbehind ensures we split right after punctuation+quotes, avoiding decimal numbers like 2.0
+  const termRegex = /(?<=[.!?…]["'\u201D\u2019)\]]*)(?<!\d\.\d)\s+/g;
+  const sentences: Array<{ start: number; end: number }> = [];
+  let curStart = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = endingRegex.exec(beforeText)) !== null) {
-    start = match.index + match[0].length;
+  while ((match = termRegex.exec(text)) !== null) {
+    const end = match.index;
+    if (end > curStart) {
+      sentences.push({ start: curStart, end });
+    }
+    curStart = match.index + match[0].length;
   }
 
-  let end = text.length;
-  endingRegex.lastIndex = pos;
-  const afterMatch = endingRegex.exec(text);
-  if (afterMatch) {
-    end = afterMatch.index + afterMatch[0].replace(/\s+$/, '').length;
+  if (curStart < text.length) {
+    sentences.push({ start: curStart, end: text.length });
   }
 
-  return { start, end };
+  if (sentences.length === 0) {
+    return { start: 0, end: text.length };
+  }
+
+  const pos = Math.max(0, Math.min(offset, text.length));
+
+  for (let i = 0; i < sentences.length; i++) {
+    const s = sentences[i];
+    const nextStart = i < sentences.length - 1 ? sentences[i + 1].start : text.length;
+    if (pos >= s.start && pos < nextStart) {
+      return s;
+    }
+  }
+
+  return sentences[sentences.length - 1];
 }
 
 function computeDecorations(state: EditorState): DecorationSet {

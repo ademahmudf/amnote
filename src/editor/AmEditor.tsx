@@ -657,7 +657,12 @@ export const AmEditor: React.FC = () => {
             }
           }}
         >
-          <div className={`w-full ${widthClasses} pb-[50vh] transition-all`} style={fontStyle}>
+          <div
+            className={`w-full ${widthClasses} pb-[50vh] transition-all ${
+              focusMode ? `am-focus-mode am-focus-mode-${focusModeType}` : ''
+            }`}
+            style={fontStyle}
+          >
             <EditorContent editor={editor} />
           </div>
         </div>
@@ -739,14 +744,18 @@ export const AmEditor: React.FC = () => {
           {/* Focus Mode Button */}
           <button
             type="button"
-            onClick={() => setFocusMode(!focusMode)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setFocusModeType(focusModeType === 'sentence' ? 'paragraph' : 'sentence');
+            onClick={() => {
+              if (!focusMode) {
+                setFocusMode(true);
+                setFocusModeType('sentence');
+              } else if (focusModeType === 'sentence') {
+                setFocusModeType('paragraph');
+              } else {
+                setFocusMode(false);
+                setFocusModeType('sentence');
+              }
             }}
-            title={`Toggle Focus Mode (Ctrl+Shift+F) • Right-click to switch to ${
-              focusModeType === 'sentence' ? 'Paragraph' : 'Sentence'
-            } focus`}
+            title="Click to cycle: Sentence Focus → Paragraph Focus → Off (Ctrl+Shift+F)"
             className={`px-1.5 py-0.5 rounded transition-all flex items-center gap-1 text-[10px] font-medium ${
               focusMode
                 ? 'bg-accent text-white'
@@ -757,7 +766,7 @@ export const AmEditor: React.FC = () => {
               color: focusMode ? 'var(--color-accent-text)' : undefined,
             }}
           >
-            <span>🎯 Focus{focusMode ? ` (${focusModeType === 'sentence' ? 'Sentence' : 'Paragraph'})` : ''}</span>
+            <span>🎯 Focus{focusMode ? `: ${focusModeType === 'sentence' ? 'Sentence' : 'Paragraph'}` : ''}</span>
           </button>
 
           {/* Typewriter Mode Button */}
