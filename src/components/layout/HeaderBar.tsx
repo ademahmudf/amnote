@@ -156,7 +156,7 @@ export const HeaderBar: React.FC = () => {
             aria-pressed={isFocusMode}
             className={`p-1.5 rounded-lg text-xs transition-all ${
               isFocusMode
-                ? 'bg-accent text-white'
+                ? 'bg-(--color-accent) text-white'
                 : 'opacity-50 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
             }`}
             style={{
@@ -179,7 +179,7 @@ export const HeaderBar: React.FC = () => {
           {activeNote ? (
             <div className="flex items-center gap-1.5 min-w-0 overflow-hidden text-left">
               {activeNote.isPinned && (
-                <Pin size={11} className="text-accent fill-current shrink-0" style={{ color: 'var(--color-accent)' }} />
+                <Pin size={11} className="text-(--color-accent) fill-current shrink-0" style={{ color: 'var(--color-accent)' }} />
               )}
               {activeNote.isLocked && (
                 <Lock size={12} className="text-amber-400 shrink-0" />
@@ -243,7 +243,7 @@ export const HeaderBar: React.FC = () => {
           title="Note Stats & Info (Ctrl+Shift+I)"
           className={`p-1.5 rounded-lg text-xs transition-all ${
             isInfoDrawerOpen
-              ? 'bg-accent text-white'
+              ? 'bg-(--color-accent) text-white'
               : 'opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
           }`}
           style={{

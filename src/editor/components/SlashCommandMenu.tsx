@@ -413,13 +413,13 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
               onMouseEnter={() => setSelectedIndex(index)}
               className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-xl text-left text-xs transition-all ${
                 isSelected
-                  ? 'bg-accent/15 text-accent font-medium shadow-xs'
+                  ? 'bg-(--color-accent)/15 text-(--color-accent) font-medium shadow-xs'
                   : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80 hover:opacity-100'
               }`}
             >
               <div
                 className={`p-1.5 rounded-lg shrink-0 flex items-center justify-center relative ${
-                  isSelected ? 'bg-accent text-white' : 'bg-black/5 dark:bg-white/5'
+                  isSelected ? 'bg-(--color-accent) text-white' : 'bg-black/5 dark:bg-white/5'
                 }`}
                 style={{
                   backgroundColor: isSelected ? 'var(--color-accent)' : undefined,

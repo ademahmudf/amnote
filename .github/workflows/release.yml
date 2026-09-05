@@ -67,12 +67,13 @@ jobs:
 
             ### ✨ Key Features:
             - **Native Markdown Vault**: Direct read/write to `~/Documents/AmNotes` as pure `.md` files with YAML frontmatter.
-            - **Smart Note Cards**: Grouped Pinned Notes header, task checklist badges (`☑ 2/5`), and relative timestamps.
+            - **Smart Note Cards**: Grouped Pinned Notes header, task checklist badges (`☑ 2/5`), relative timestamps, and Cozy/Compact density.
+            - **Calendar & Due Dates**: Daily notes, `@due()` task dates, and `@date:` / `@due` / `@overdue` search.
             - **Interactive Outline & Backlinks**: Click-to-jump Table of Contents and interconnected `[[Note Title]]` wiki backlinks.
-            - **Typewriter Mode (`Ctrl+Shift+T`)**: Keeps active typing line vertically centered.
-            - **Typographies**: Clarika, Bear Sans, Inter, Editorial Serif, JetBrains Mono.
-            - **Themes**: Omarchy Sync, Red Graphite, Nord, Dracula, Solarized, Ayu, Sepia.
-            - **Fast Cheatsheet HUD (`Ctrl+/` or `?`)**: Quick Markdown & shortcut guide.
+            - **Typewriter & Focus Modes**: Vertically centered typing line and distraction-free dimming.
+            - **Typography & Scale**: 14 font families with 4 configurable UI scales.
+            - **Themes**: 24 dark/light themes including Omarchy Sync, Red Graphite, Nord, Dracula, Solarized, Ayu, and Sepia.
+            - **Fast Cheatsheet HUD (`Ctrl+/` or `?`)**: Searchable Markdown & shortcut guide.
 
             ### 📦 Downloads:
             - **Linux**: `.AppImage` and `.deb`

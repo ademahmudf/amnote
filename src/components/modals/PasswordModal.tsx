@@ -103,7 +103,7 @@ export const PasswordModal: React.FC = () => {
                   setError('');
                 }}
                 placeholder="Leave blank for simple session lock"
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border bg-black/5 dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border bg-black/5 dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-(--color-accent)"
                 style={{ borderColor: 'var(--color-border)' }}
               />
             </div>
@@ -122,7 +122,7 @@ export const PasswordModal: React.FC = () => {
                   setError('');
                 }}
                 placeholder="Confirm password"
-                className="w-full px-3 py-2 text-sm rounded-xl border bg-black/5 dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full px-3 py-2 text-sm rounded-xl border bg-black/5 dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-(--color-accent)"
                 style={{ borderColor: 'var(--color-border)' }}
               />
             </div>

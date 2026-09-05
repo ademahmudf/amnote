@@ -249,7 +249,7 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({
             title={`Highlight text (Current: ${defaultHighlightColor})`}
             className={`p-1.5 rounded-l-lg text-xs flex items-center justify-center transition-all ${
               isHighlightActive
-                ? 'bg-accent text-white font-bold shadow-sm'
+                ? 'bg-(--color-accent) text-white font-bold shadow-sm'
                 : 'hover:bg-black/10 dark:hover:bg-white/10 opacity-80 hover:opacity-100'
             }`}
             style={{
@@ -266,7 +266,7 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({
             title="Choose custom highlight color"
             className={`px-1 py-1.5 rounded-r-lg text-xs flex items-center justify-center transition-all border-l ${
               showColorPicker
-                ? 'bg-accent/20 text-accent font-bold'
+                ? 'bg-(--color-accent)/20 text-(--color-accent) font-bold'
                 : 'hover:bg-black/10 dark:hover:bg-white/10 opacity-70 hover:opacity-100'
             }`}
             style={{ borderColor: 'rgba(128, 128, 128, 0.2)' }}
@@ -291,7 +291,7 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({
             title="Hand-Drawn Text Annotation (Wavy, Circle, Box, etc.)"
             className={`px-2 py-1.5 rounded-lg text-xs flex items-center gap-1 transition-all ${
               isAnnotationActive || showAnnotationPicker
-                ? 'bg-accent text-white font-bold shadow-sm'
+                ? 'bg-(--color-accent) text-white font-bold shadow-sm'
                 : 'hover:bg-black/10 dark:hover:bg-white/10 opacity-80 hover:opacity-100'
             }`}
             style={{
@@ -328,7 +328,7 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({
               aria-pressed={btn.isActive}
               className={`p-1.5 rounded-lg text-xs flex items-center justify-center transition-all ${
                 btn.isActive
-                  ? 'bg-accent text-white font-bold shadow-sm'
+                  ? 'bg-(--color-accent) text-white font-bold shadow-sm'
                   : 'hover:bg-black/10 dark:hover:bg-white/10 opacity-80 hover:opacity-100'
               }`}
               style={{
@@ -494,7 +494,7 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({
             placeholder="https://example.com"
             aria-label="Link URL"
             aria-invalid={linkError !== null}
-            className="w-full px-2.5 py-1.5 rounded-xl border text-xs bg-transparent outline-none focus:border-accent"
+            className="w-full px-2.5 py-1.5 rounded-xl border text-xs bg-transparent outline-none focus:border-(--color-accent)"
             style={{ borderColor: linkError ? '#f87171' : 'var(--color-border)' }}
           />
           {linkError && (

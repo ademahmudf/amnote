@@ -137,7 +137,7 @@ export const TagIconModal: React.FC<TagIconModalProps> = ({ tag, isOpen, onClose
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-2.5 py-1 rounded-lg whitespace-nowrap font-medium transition-all ${
                   selectedCategory === cat
-                    ? 'bg-accent text-white shadow-xs'
+                    ? 'bg-(--color-accent) text-white shadow-xs'
                     : 'opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
                 style={{
@@ -158,7 +158,7 @@ export const TagIconModal: React.FC<TagIconModalProps> = ({ tag, isOpen, onClose
               onClick={() => setTagColor(tag, null)}
               title="Default Theme Accent"
               className={`w-5 h-5 rounded-full border border-black/20 flex items-center justify-center ${
-                !currentColor ? 'ring-2 ring-accent' : ''
+                !currentColor ? 'ring-2 ring-(--color-accent)' : ''
               }`}
               style={{ backgroundColor: 'var(--color-accent)' }}
             >
@@ -193,7 +193,7 @@ export const TagIconModal: React.FC<TagIconModalProps> = ({ tag, isOpen, onClose
                 title={item.name}
                 className={`p-3 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center group ${
                   isSelected
-                    ? 'border-accent bg-accent/15 ring-2 ring-accent'
+                    ? 'border-(--color-accent) bg-(--color-accent)/15 ring-2 ring-(--color-accent)'
                     : 'hover:border-border/80 hover:bg-black/5 dark:hover:bg-white/5 opacity-75 hover:opacity-100'
                 }`}
                 style={{

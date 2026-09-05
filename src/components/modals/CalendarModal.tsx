@@ -139,7 +139,7 @@ export const CalendarModal: React.FC = () => {
           style={{ borderColor: 'var(--color-divider)' }}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <CalendarDays size={16} className="text-accent shrink-0" style={{ color: 'var(--color-accent)' }} />
+            <CalendarDays size={16} className="text-(--color-accent) shrink-0" style={{ color: 'var(--color-accent)' }} />
             <span className="font-semibold text-sm truncate">{monthLabel}</span>
           </div>
 
@@ -215,7 +215,7 @@ export const CalendarModal: React.FC = () => {
                     }}
                     className={`relative h-14 rounded-xl border p-1 text-left transition-all ${
                       isSelected
-                        ? 'border-accent bg-accent/10'
+                        ? 'border-(--color-accent) bg-(--color-accent)/10'
                         : 'border-transparent hover:bg-black/5 dark:hover:bg-white/5'
                     } ${cell.isCurrentMonth ? '' : 'opacity-35'}`}
                     style={{
@@ -225,7 +225,7 @@ export const CalendarModal: React.FC = () => {
                   >
                     <span
                       className={`inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-md text-[11px] font-semibold ${
-                        isToday ? 'bg-accent text-white' : ''
+                        isToday ? 'bg-(--color-accent) text-white' : ''
                       }`}
                       style={{
                         backgroundColor: isToday ? 'var(--color-accent)' : undefined,
@@ -238,7 +238,7 @@ export const CalendarModal: React.FC = () => {
                     {total > 0 && (
                       <span className="absolute bottom-1 left-1 flex items-center gap-1">
                         {entries.dailyNotes.length > 0 && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-accent" style={{ backgroundColor: 'var(--color-accent)' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-(--color-accent)" style={{ backgroundColor: 'var(--color-accent)' }} />
                         )}
                         {entries.mentions.length > 0 && (
                           <span className="font-mono text-[8.5px] opacity-55">{entries.mentions.length}</span>
@@ -246,7 +246,7 @@ export const CalendarModal: React.FC = () => {
                         {entries.dueTasks.length > 0 && (
                           <span
                             className={`px-1 rounded-full font-mono text-[8.5px] font-semibold ${
-                              hasOverdueTasks ? 'bg-rose-500/15 text-rose-500' : 'bg-accent/10 text-accent'
+                              hasOverdueTasks ? 'bg-rose-500/15 text-rose-500' : 'bg-(--color-accent)/10 text-(--color-accent)'
                             }`}
                             style={{
                               backgroundColor: hasOverdueTasks ? undefined : 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
@@ -304,7 +304,7 @@ export const CalendarModal: React.FC = () => {
                       >
                         <CheckSquare
                           size={13}
-                          className={`shrink-0 ${task.checked ? 'text-emerald-500' : overdue ? 'text-rose-500' : 'text-accent'}`}
+                          className={`shrink-0 ${task.checked ? 'text-emerald-500' : overdue ? 'text-rose-500' : 'text-(--color-accent)'}`}
                           style={{ color: task.checked ? undefined : overdue ? undefined : 'var(--color-accent)' }}
                         />
                         <span className="min-w-0 flex-1">

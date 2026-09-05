@@ -377,7 +377,7 @@ export const ExportModal: React.FC = () => {
           style={{ borderColor: 'var(--color-divider)' }}
         >
           <div className="flex items-center gap-2">
-            <Share2 size={16} className="text-accent" style={{ color: 'var(--color-accent)' }} />
+            <Share2 size={16} className="text-(--color-accent)" style={{ color: 'var(--color-accent)' }} />
             <div>
               <h3 className="font-bold text-xs">Export & Share Note</h3>
               <p className="text-[10px] opacity-60 truncate max-w-xs">{activeNote.title || 'Untitled'}</p>
@@ -410,9 +410,9 @@ export const ExportModal: React.FC = () => {
                 {isExportingPdf ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
               </div>
               <div>
-                <div className="text-xs font-bold group-hover:text-accent transition-colors flex items-center gap-1.5">
+                <div className="text-xs font-bold group-hover:text-(--color-accent) transition-colors flex items-center gap-1.5">
                   <span>Export PDF Document (.pdf)</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-accent/15 text-accent font-semibold">Direct</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-(--color-accent)/15 text-(--color-accent) font-semibold">Direct</span>
                 </div>
                 <div className="text-[11px] opacity-60">High-resolution multi-page PDF saved directly to ~/Downloads</div>
               </div>
@@ -422,7 +422,7 @@ export const ExportModal: React.FC = () => {
                 <Check size={13} /> Saved to Downloads
               </span>
             ) : isExportingPdf ? (
-              <span className="text-[11px] text-accent font-semibold">Generating...</span>
+              <span className="text-[11px] text-(--color-accent) font-semibold">Generating...</span>
             ) : (
               <Download size={15} className="opacity-40 group-hover:opacity-100 shrink-0" />
             )}
@@ -446,7 +446,7 @@ export const ExportModal: React.FC = () => {
                 <Sparkles size={16} />
               </div>
               <div>
-                <div className="text-xs font-semibold group-hover:text-accent transition-colors">
+                <div className="text-xs font-semibold group-hover:text-(--color-accent) transition-colors">
                   Copy Formatted Rich Text
                 </div>
                 <div className="text-[11px] opacity-60">Paste into Google Docs, Mail, Slack, Notion with full formatting</div>
@@ -479,7 +479,7 @@ export const ExportModal: React.FC = () => {
                 <Code size={16} />
               </div>
               <div>
-                <div className="text-xs font-semibold group-hover:text-accent transition-colors">
+                <div className="text-xs font-semibold group-hover:text-(--color-accent) transition-colors">
                   Web Page Document (.html)
                 </div>
                 <div className="text-[11px] opacity-60">Self-contained HTML file with embedded styling & tags</div>
@@ -512,7 +512,7 @@ export const ExportModal: React.FC = () => {
                 MD
               </div>
               <div>
-                <div className="text-xs font-semibold group-hover:text-accent transition-colors">
+                <div className="text-xs font-semibold group-hover:text-(--color-accent) transition-colors">
                   Markdown File (.md)
                 </div>
                 <div className="text-[11px] opacity-60">Standard Markdown with YAML frontmatter tags and links</div>
@@ -545,7 +545,7 @@ export const ExportModal: React.FC = () => {
                 <FileText size={16} />
               </div>
               <div>
-                <div className="text-xs font-semibold group-hover:text-accent transition-colors">
+                <div className="text-xs font-semibold group-hover:text-(--color-accent) transition-colors">
                   Plain Text (.txt)
                 </div>
                 <div className="text-[11px] opacity-60">Unformatted clean text without markdown symbols</div>

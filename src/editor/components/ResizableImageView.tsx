@@ -155,7 +155,7 @@ export const ResizableImageView: React.FC<NodeViewProps> = ({
             onDoubleClick={handleOpenLightbox}
             className={`w-full h-auto block rounded-xl border object-contain cursor-default transition-all duration-150 shadow-sm ${
               showToolbar
-                ? 'ring-2 ring-accent border-accent shadow-md'
+                ? 'ring-2 ring-(--color-accent) border-(--color-accent) shadow-md'
                 : 'hover:shadow-md border-border/40'
             }`}
             style={{
@@ -198,7 +198,7 @@ export const ResizableImageView: React.FC<NodeViewProps> = ({
                   onClick={() => handlePresetWidth(preset.val)}
                   className={`px-1.5 py-0.5 rounded text-[10.5px] font-semibold transition-all ${
                     currentWidth === preset.val
-                      ? 'bg-accent text-white shadow-xs'
+                      ? 'bg-(--color-accent) text-white shadow-xs'
                       : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-70 hover:opacity-100'
                   }`}
                   style={{
@@ -219,7 +219,7 @@ export const ResizableImageView: React.FC<NodeViewProps> = ({
                 title="Align Left"
                 className={`p-1 rounded text-xs transition-all ${
                   alignment === 'left'
-                    ? 'bg-accent text-white font-bold'
+                    ? 'bg-(--color-accent) text-white font-bold'
                     : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-70 hover:opacity-100'
                 }`}
                 style={{
@@ -235,7 +235,7 @@ export const ResizableImageView: React.FC<NodeViewProps> = ({
                 title="Align Center"
                 className={`p-1 rounded text-xs transition-all ${
                   alignment === 'center'
-                    ? 'bg-accent text-white font-bold'
+                    ? 'bg-(--color-accent) text-white font-bold'
                     : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-70 hover:opacity-100'
                 }`}
                 style={{
@@ -251,7 +251,7 @@ export const ResizableImageView: React.FC<NodeViewProps> = ({
                 title="Align Right"
                 className={`p-1 rounded text-xs transition-all ${
                   alignment === 'right'
-                    ? 'bg-accent text-white font-bold'
+                    ? 'bg-(--color-accent) text-white font-bold'
                     : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-70 hover:opacity-100'
                 }`}
                 style={{
@@ -299,7 +299,7 @@ export const ResizableImageView: React.FC<NodeViewProps> = ({
         {showToolbar && (
           <div
             onMouseDown={(e) => handleMouseDown(e, 'left')}
-            className="absolute left-1 top-1/2 -translate-y-1/2 w-3.5 h-10 bg-accent text-white rounded-full flex items-center justify-center cursor-ew-resize shadow-xl z-20 transition-transform hover:scale-125 active:scale-95 border border-white/20"
+            className="absolute left-1 top-1/2 -translate-y-1/2 w-3.5 h-10 bg-(--color-accent) text-white rounded-full flex items-center justify-center cursor-ew-resize shadow-xl z-20 transition-transform hover:scale-125 active:scale-95 border border-white/20"
             title="Drag left to resize"
             style={{ backgroundColor: 'var(--color-accent)' }}
           >
@@ -311,7 +311,7 @@ export const ResizableImageView: React.FC<NodeViewProps> = ({
         {showToolbar && (
           <div
             onMouseDown={(e) => handleMouseDown(e, 'right')}
-            className="absolute right-1 top-1/2 -translate-y-1/2 w-3.5 h-10 bg-accent text-white rounded-full flex items-center justify-center cursor-ew-resize shadow-xl z-20 transition-transform hover:scale-125 active:scale-95 border border-white/20"
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-3.5 h-10 bg-(--color-accent) text-white rounded-full flex items-center justify-center cursor-ew-resize shadow-xl z-20 transition-transform hover:scale-125 active:scale-95 border border-white/20"
             title="Drag right to resize"
             style={{ backgroundColor: 'var(--color-accent)' }}
           >

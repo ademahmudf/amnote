@@ -59,7 +59,7 @@ export const WikiLinkMark = Mark.create<WikiLinkOptions>({
       'span',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         class:
-          `am-wiki-link bear-wiki-link inline-flex items-center gap-0.5 text-accent underline underline-offset-4 decoration-accent/60 cursor-pointer font-medium hover:brightness-110 transition-all${dateClass}`,
+          `am-wiki-link bear-wiki-link inline-flex items-center gap-0.5 text-(--color-accent) underline underline-offset-4 decoration-(--color-accent)/60 cursor-pointer font-medium hover:brightness-110 transition-all${dateClass}`,
       }),
       0,
     ];
@@ -115,7 +115,7 @@ export const WikiLinkMark = Mark.create<WikiLinkOptions>({
                   decorations.push(
                     Decoration.inline(from, to, {
                       class:
-                        `am-wiki-link bear-wiki-link cursor-pointer text-accent underline underline-offset-4 decoration-accent/60 font-medium hover:brightness-125 transition-all${isDateLink ? ' am-date-link bear-date-link' : ''}`,
+                        `am-wiki-link bear-wiki-link cursor-pointer text-(--color-accent) underline underline-offset-4 decoration-(--color-accent)/60 font-medium hover:brightness-125 transition-all${isDateLink ? ' am-date-link bear-date-link' : ''}`,
                       'data-wiki-target': targetTitle,
                       title: isDateLink
                         ? `Open daily note: ${targetTitle}`

@@ -224,7 +224,7 @@ export const SettingsModal: React.FC = () => {
         >
           <div className="flex items-center gap-2.5">
             <GripHorizontal size={16} className="opacity-40 hover:opacity-100 transition-opacity" />
-            <Sliders size={17} className="text-accent" style={{ color: 'var(--color-accent)' }} />
+            <Sliders size={17} className="text-(--color-accent)" style={{ color: 'var(--color-accent)' }} />
             <h2 className="font-bold text-sm">AmNote Preferences</h2>
           </div>
           <div className="flex items-center gap-2">
@@ -248,7 +248,7 @@ export const SettingsModal: React.FC = () => {
             onClick={() => setActiveTab('typography')}
             className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
               activeTab === 'typography'
-                ? 'border-accent text-accent'
+                ? 'border-(--color-accent) text-(--color-accent)'
                 : 'border-transparent opacity-60 hover:opacity-100'
             }`}
             style={{
@@ -265,7 +265,7 @@ export const SettingsModal: React.FC = () => {
             onClick={() => setActiveTab('themes')}
             className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
               activeTab === 'themes'
-                ? 'border-accent text-accent'
+                ? 'border-(--color-accent) text-(--color-accent)'
                 : 'border-transparent opacity-60 hover:opacity-100'
             }`}
             style={{
@@ -282,7 +282,7 @@ export const SettingsModal: React.FC = () => {
             onClick={() => setActiveTab('data')}
             className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
               activeTab === 'data'
-                ? 'border-accent text-accent'
+                ? 'border-(--color-accent) text-(--color-accent)'
                 : 'border-transparent opacity-60 hover:opacity-100'
             }`}
             style={{
@@ -304,7 +304,7 @@ export const SettingsModal: React.FC = () => {
               <div className="space-y-3 p-4 rounded-2xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--color-border)' }}>
                 <div>
                   <div className="flex items-center gap-2">
-                    <LayoutGrid size={15} className="text-accent" style={{ color: 'var(--color-accent)' }} />
+                    <LayoutGrid size={15} className="text-(--color-accent)" style={{ color: 'var(--color-accent)' }} />
                     <h3 className="font-bold text-xs">Menu & Preview Font Scale</h3>
                   </div>
                   <p className="text-[11px] opacity-60 mt-0.5">Adjust font size for the sidebar menu, note titles, and note list snippet previews.</p>
@@ -317,7 +317,7 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => setUiScale(s.id)}
                       className={`p-2.5 rounded-xl border text-center transition-all ${
                         uiScale === s.id
-                          ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                          ? 'border-(--color-accent) bg-(--color-accent)/10 text-(--color-accent) font-semibold ring-1 ring-(--color-accent)'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                       }`}
                       style={{
@@ -345,7 +345,7 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => setPreviewLines(p.count)}
                       className={`p-2.5 rounded-xl border text-center transition-all ${
                         previewLines === p.count
-                          ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                          ? 'border-(--color-accent) bg-(--color-accent)/10 text-(--color-accent) font-semibold ring-1 ring-(--color-accent)'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                       }`}
                       style={{
@@ -376,7 +376,7 @@ export const SettingsModal: React.FC = () => {
                         onClick={() => setSelectedFontCategory(cat)}
                         className={`px-2 py-0.5 rounded-lg text-[10.5px] font-medium transition-all ${
                           selectedFontCategory === cat
-                            ? 'bg-accent text-white shadow-2xs font-semibold'
+                            ? 'bg-(--color-accent) text-white shadow-2xs font-semibold'
                             : 'bg-black/5 dark:bg-white/5 opacity-60 hover:opacity-100'
                         }`}
                         style={{
@@ -398,7 +398,7 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => setFontFamily(f.id)}
                       className={`p-3 rounded-2xl border text-left transition-all ${
                         fontFamily === f.id
-                          ? 'border-accent bg-accent/5 ring-1 ring-accent'
+                          ? 'border-(--color-accent) bg-(--color-accent)/5 ring-1 ring-(--color-accent)'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                       }`}
                       style={{
@@ -412,7 +412,7 @@ export const SettingsModal: React.FC = () => {
                             {f.category}
                           </span>
                         </div>
-                        {fontFamily === f.id && <Check size={12} className="text-accent shrink-0" style={{ color: 'var(--color-accent)' }} />}
+                        {fontFamily === f.id && <Check size={12} className="text-(--color-accent) shrink-0" style={{ color: 'var(--color-accent)' }} />}
                       </div>
                       <div className="text-[10px] opacity-40 mb-1">{f.desc}</div>
                       <div
@@ -433,7 +433,7 @@ export const SettingsModal: React.FC = () => {
                     <h3 className="font-semibold text-xs">Font Size</h3>
                     <p className="text-[11px] opacity-60">Adjust editor font size scale.</p>
                   </div>
-                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold border border-accent/20">
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-(--color-accent)/10 text-(--color-accent) font-bold border border-(--color-accent)/20">
                     {fontSize}px
                   </span>
                 </div>
@@ -443,7 +443,7 @@ export const SettingsModal: React.FC = () => {
                   max={32}
                   value={fontSize}
                   onChange={(e) => setFontSize(Number(e.target.value))}
-                  className="w-full accent-accent cursor-pointer"
+                  className="w-full accent-(--color-accent) cursor-pointer"
                 />
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {[13, 14, 16, 18, 20, 24, 28].map((size) => (
@@ -453,7 +453,7 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => setFontSize(size)}
                       className={`px-2.5 py-1 rounded-lg border text-xs font-mono font-medium transition-all ${
                         fontSize === size
-                          ? 'border-accent bg-accent text-white font-bold'
+                          ? 'border-(--color-accent) bg-(--color-accent) text-white font-bold'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-70'
                       }`}
                       style={{
@@ -473,7 +473,7 @@ export const SettingsModal: React.FC = () => {
                     <h3 className="font-semibold text-xs">Line Height</h3>
                     <p className="text-[11px] opacity-60">Vertical line height multiplier for editor text.</p>
                   </div>
-                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold border border-accent/20">
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-(--color-accent)/10 text-(--color-accent) font-bold border border-(--color-accent)/20">
                     {numericLineHeight.toFixed(2)}x
                   </span>
                 </div>
@@ -484,7 +484,7 @@ export const SettingsModal: React.FC = () => {
                   step={0.05}
                   value={numericLineHeight}
                   onChange={(e) => setLineHeight(parseFloat(e.target.value))}
-                  className="w-full accent-accent cursor-pointer"
+                  className="w-full accent-(--color-accent) cursor-pointer"
                 />
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {[
@@ -500,7 +500,7 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => setLineHeight(lh.val)}
                       className={`p-2 rounded-xl border text-center transition-all ${
                         Math.abs(numericLineHeight - lh.val) < 0.03
-                          ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                          ? 'border-(--color-accent) bg-(--color-accent)/10 text-(--color-accent) font-semibold ring-1 ring-(--color-accent)'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                       }`}
                       style={{
@@ -528,7 +528,7 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => setEditorWidth(w.id)}
                       className={`p-2.5 rounded-xl border text-center transition-all ${
                         editorWidth === w.id
-                          ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                          ? 'border-(--color-accent) bg-(--color-accent)/10 text-(--color-accent) font-semibold ring-1 ring-(--color-accent)'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                       }`}
                       style={{
@@ -549,7 +549,7 @@ export const SettingsModal: React.FC = () => {
                     <h3 className="font-semibold text-xs">Paragraph Spacing</h3>
                     <p className="text-[11px] opacity-60">Vertical gap between paragraphs.</p>
                   </div>
-                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold border border-accent/20">
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-(--color-accent)/10 text-(--color-accent) font-bold border border-(--color-accent)/20">
                     {paragraphSpacing ?? 8}px
                   </span>
                 </div>
@@ -560,7 +560,7 @@ export const SettingsModal: React.FC = () => {
                   step={1}
                   value={paragraphSpacing ?? 8}
                   onChange={(e) => setParagraphSpacing(Number(e.target.value))}
-                  className="w-full accent-accent cursor-pointer"
+                  className="w-full accent-(--color-accent) cursor-pointer"
                 />
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
@@ -575,7 +575,7 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => setParagraphSpacing(ps.val)}
                       className={`p-2 rounded-xl border text-center transition-all ${
                         (paragraphSpacing ?? 8) === ps.val
-                          ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                          ? 'border-(--color-accent) bg-(--color-accent)/10 text-(--color-accent) font-semibold ring-1 ring-(--color-accent)'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                       }`}
                       style={{
@@ -596,7 +596,7 @@ export const SettingsModal: React.FC = () => {
                     <h3 className="font-semibold text-xs">Paragraph First-Line Indent</h3>
                     <p className="text-[11px] opacity-60">Indentation offset for the first line of each paragraph.</p>
                   </div>
-                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold border border-accent/20">
+                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-(--color-accent)/10 text-(--color-accent) font-bold border border-(--color-accent)/20">
                     {paragraphIndent ?? 0}px
                   </span>
                 </div>
@@ -607,7 +607,7 @@ export const SettingsModal: React.FC = () => {
                   step={2}
                   value={paragraphIndent ?? 0}
                   onChange={(e) => setParagraphIndent(Number(e.target.value))}
-                  className="w-full accent-accent cursor-pointer"
+                  className="w-full accent-(--color-accent) cursor-pointer"
                 />
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
@@ -622,7 +622,7 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => setParagraphIndent(pi.val)}
                       className={`p-2 rounded-xl border text-center transition-all ${
                         (paragraphIndent ?? 0) === pi.val
-                          ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                          ? 'border-(--color-accent) bg-(--color-accent)/10 text-(--color-accent) font-semibold ring-1 ring-(--color-accent)'
                           : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                       }`}
                       style={{
@@ -687,7 +687,7 @@ export const SettingsModal: React.FC = () => {
                       type="button"
                       onClick={() => setFocusMode(!focusMode)}
                       className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                        focusMode ? 'bg-accent' : 'bg-black/20 dark:bg-white/20'
+                        focusMode ? 'bg-(--color-accent)' : 'bg-black/20 dark:bg-white/20'
                       }`}
                       style={{
                         backgroundColor: focusMode ? 'var(--color-accent)' : undefined,
@@ -702,7 +702,7 @@ export const SettingsModal: React.FC = () => {
                   </div>
 
                   {focusMode && (
-                    <div className="flex items-center gap-2 pl-2 border-l-2 border-accent/40 mt-1">
+                    <div className="flex items-center gap-2 pl-2 border-l-2 border-(--color-accent)/40 mt-1">
                       <span className="text-[11px] font-medium opacity-70">Focus Scope:</span>
                       <div className="flex gap-1.5 p-0.5 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[11px]">
                         <button
@@ -710,7 +710,7 @@ export const SettingsModal: React.FC = () => {
                           onClick={() => setFocusModeType('sentence')}
                           className={`px-2.5 py-1 rounded-md transition-all font-medium ${
                             focusModeType === 'sentence'
-                              ? 'bg-white dark:bg-neutral-800 text-accent shadow-xs font-semibold'
+                              ? 'bg-white dark:bg-neutral-800 text-(--color-accent) shadow-xs font-semibold'
                               : 'opacity-60 hover:opacity-100'
                           }`}
                         >
@@ -721,7 +721,7 @@ export const SettingsModal: React.FC = () => {
                           onClick={() => setFocusModeType('paragraph')}
                           className={`px-2.5 py-1 rounded-md transition-all font-medium ${
                             focusModeType === 'paragraph'
-                              ? 'bg-white dark:bg-neutral-800 text-accent shadow-xs font-semibold'
+                              ? 'bg-white dark:bg-neutral-800 text-(--color-accent) shadow-xs font-semibold'
                               : 'opacity-60 hover:opacity-100'
                           }`}
                         >
@@ -742,7 +742,7 @@ export const SettingsModal: React.FC = () => {
                     type="button"
                     onClick={() => setTypewriterMode(!typewriterMode)}
                     className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                      typewriterMode ? 'bg-accent' : 'bg-black/20 dark:bg-white/20'
+                      typewriterMode ? 'bg-(--color-accent)' : 'bg-black/20 dark:bg-white/20'
                     }`}
                     style={{
                       backgroundColor: typewriterMode ? 'var(--color-accent)' : undefined,
@@ -770,7 +770,7 @@ export const SettingsModal: React.FC = () => {
                         onClick={() => setWordGoal(goal)}
                         className={`p-2 rounded-xl border text-center transition-all text-xs font-semibold ${
                           wordGoal === goal
-                            ? 'border-accent bg-accent/10 text-accent ring-1 ring-accent'
+                            ? 'border-(--color-accent) bg-(--color-accent)/10 text-(--color-accent) ring-1 ring-(--color-accent)'
                             : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                         }`}
                         style={{
@@ -805,7 +805,7 @@ export const SettingsModal: React.FC = () => {
                         title={preset.name}
                         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-all ${
                           defaultHighlightColor.toLowerCase() === preset.color.toLowerCase()
-                            ? 'border-accent bg-accent/10 text-accent font-semibold ring-1 ring-accent'
+                            ? 'border-(--color-accent) bg-(--color-accent)/10 text-(--color-accent) font-semibold ring-1 ring-(--color-accent)'
                             : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                         }`}
                         style={{
@@ -883,7 +883,7 @@ export const SettingsModal: React.FC = () => {
                         onClick={() => setThemeFilter(filter)}
                         className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-all ${
                           isSelected
-                            ? 'bg-accent text-white shadow-xs'
+                            ? 'bg-(--color-accent) text-white shadow-xs'
                             : 'opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
                         }`}
                         style={{ backgroundColor: isSelected ? 'var(--color-accent)' : undefined }}
@@ -911,7 +911,7 @@ export const SettingsModal: React.FC = () => {
                           onClick={() => setTheme(theme.id)}
                           className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group select-none ${
                             isSelected
-                              ? 'ring-2 ring-accent shadow-md'
+                              ? 'ring-2 ring-(--color-accent) shadow-md'
                               : 'hover:border-border/80 opacity-85 hover:opacity-100 hover:scale-[1.01]'
                           }`}
                           style={{
@@ -984,7 +984,7 @@ export const SettingsModal: React.FC = () => {
               <div className="p-4 rounded-2xl border space-y-3" style={{ borderColor: 'var(--color-border)' }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FolderOpen size={16} className="text-accent" style={{ color: 'var(--color-accent)' }} />
+                    <FolderOpen size={16} className="text-(--color-accent)" style={{ color: 'var(--color-accent)' }} />
                     <h3 className="font-bold text-xs">AmNote Native Vault</h3>
                   </div>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-semibold font-mono">
@@ -1002,7 +1002,7 @@ export const SettingsModal: React.FC = () => {
                       type="button"
                       onClick={handlePickVault}
                       disabled={isChangingVault}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-semibold hover:bg-accent/10 hover:text-accent hover:border-accent transition-all disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-semibold hover:bg-(--color-accent)/10 hover:text-(--color-accent) hover:border-(--color-accent) transition-all disabled:opacity-50"
                       style={{ borderColor: 'var(--color-border)' }}
                     >
                       <FolderInput size={14} />

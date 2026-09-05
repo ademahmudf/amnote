@@ -71,7 +71,7 @@ export const InfoDrawer: React.FC = () => {
         style={{ borderColor: 'var(--color-divider)' }}
       >
         <div className="flex items-center gap-2">
-          <FileText size={15} className="text-accent" style={{ color: 'var(--color-accent)' }} />
+          <FileText size={15} className="text-(--color-accent)" style={{ color: 'var(--color-accent)' }} />
           <span className="font-semibold text-xs">Note Inspector</span>
         </div>
         <button
@@ -176,10 +176,10 @@ export const InfoDrawer: React.FC = () => {
                   }}
                   title={`Jump to: ${h.text}`}
                 >
-                  <span className="font-mono opacity-40 group-hover:text-accent group-hover:opacity-100 text-[10px]">
+                  <span className="font-mono opacity-40 group-hover:text-(--color-accent) group-hover:opacity-100 text-[10px]">
                     H{h.level}
                   </span>
-                  <span className="truncate group-hover:text-accent font-medium">{h.text}</span>
+                  <span className="truncate group-hover:text-(--color-accent) font-medium">{h.text}</span>
                 </button>
               ))}
             </div>
@@ -215,7 +215,7 @@ export const InfoDrawer: React.FC = () => {
                   onClick={() => setActiveNoteId(link.noteId)}
                   className="w-full px-2.5 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-xs flex items-center justify-between group transition-colors text-left"
                 >
-                  <span className="truncate font-medium group-hover:text-accent transition-colors">
+                  <span className="truncate font-medium group-hover:text-(--color-accent) transition-colors">
                     {link.title}
                   </span>
                   <ExternalLink size={11} className="opacity-40 group-hover:opacity-100 shrink-0 ml-2" />

@@ -141,7 +141,7 @@ export const WikiLinkMenu: React.FC<WikiLinkMenuProps> = ({
               onClick={() => handleSelectNote(note.title || 'Untitled')}
               className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left transition-all ${
                 isSelected
-                  ? 'bg-accent/15 text-accent font-semibold'
+                  ? 'bg-(--color-accent)/15 text-(--color-accent) font-semibold'
                   : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
               }`}
               style={{
@@ -169,7 +169,7 @@ export const WikiLinkMenu: React.FC<WikiLinkMenuProps> = ({
             onClick={handleCreateNewNote}
             className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left border-t transition-all ${
               selectedIndex === filteredNotes.length
-                ? 'bg-accent/15 text-accent font-semibold'
+                ? 'bg-(--color-accent)/15 text-(--color-accent) font-semibold'
                 : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
             }`}
             style={{
@@ -177,7 +177,7 @@ export const WikiLinkMenu: React.FC<WikiLinkMenuProps> = ({
               color: selectedIndex === filteredNotes.length ? 'var(--color-accent)' : undefined,
             }}
           >
-            <Plus size={14} className="shrink-0 text-accent" style={{ color: 'var(--color-accent)' }} />
+            <Plus size={14} className="shrink-0 text-(--color-accent)" style={{ color: 'var(--color-accent)' }} />
             <div className="text-xs truncate">
               Create Note: <span className="font-semibold italic">"{query.trim()}"</span>
             </div>

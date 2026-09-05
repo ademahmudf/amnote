@@ -62,7 +62,7 @@ export const SortDropdown: React.FC = () => {
               className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs hover:bg-black/5 dark:hover:bg-white/5 text-left transition-colors"
             >
               <span>{opt.label}</span>
-              {sortOption === opt.id && <Check size={12} className="text-accent" />}
+              {sortOption === opt.id && <Check size={12} className="text-(--color-accent)" />}
             </button>
           ))}
         </div>

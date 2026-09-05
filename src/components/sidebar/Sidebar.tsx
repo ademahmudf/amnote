@@ -132,7 +132,7 @@ export const Sidebar: React.FC = () => {
               >
                 <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
                   <div className="flex items-center justify-center shrink-0">
-                    <Icon size={iconSize} className={isSelected ? 'text-accent' : 'opacity-70'} />
+                    <Icon size={iconSize} className={isSelected ? 'text-(--color-accent)' : 'opacity-70'} />
                   </div>
                   <span className="truncate">{item.label}</span>
                 </div>

@@ -288,7 +288,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
         {/* Modal Header */}
         <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--color-divider)' }}>
           <div className="flex items-center gap-2">
-            <CropIcon size={16} className="text-accent" style={{ color: 'var(--color-accent)' }} />
+            <CropIcon size={16} className="text-(--color-accent)" style={{ color: 'var(--color-accent)' }} />
             <h2 className="font-semibold text-xs">Crop & Transform Image</h2>
           </div>
           <button
@@ -365,44 +365,44 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
                 {/* 4 Corner Resize Handles */}
                 <div
                   onMouseDown={(e) => handleMouseDown(e, 'nw')}
-                  className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-accent border-2 border-white rounded-xs cursor-nwse-resize shadow-md"
+                  className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-(--color-accent) border-2 border-white rounded-xs cursor-nwse-resize shadow-md"
                   style={{ backgroundColor: 'var(--color-accent)' }}
                 />
                 <div
                   onMouseDown={(e) => handleMouseDown(e, 'ne')}
-                  className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-accent border-2 border-white rounded-xs cursor-nesw-resize shadow-md"
+                  className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-(--color-accent) border-2 border-white rounded-xs cursor-nesw-resize shadow-md"
                   style={{ backgroundColor: 'var(--color-accent)' }}
                 />
                 <div
                   onMouseDown={(e) => handleMouseDown(e, 'se')}
-                  className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-accent border-2 border-white rounded-xs cursor-nwse-resize shadow-md"
+                  className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-(--color-accent) border-2 border-white rounded-xs cursor-nwse-resize shadow-md"
                   style={{ backgroundColor: 'var(--color-accent)' }}
                 />
                 <div
                   onMouseDown={(e) => handleMouseDown(e, 'sw')}
-                  className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 bg-accent border-2 border-white rounded-xs cursor-nesw-resize shadow-md"
+                  className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 bg-(--color-accent) border-2 border-white rounded-xs cursor-nesw-resize shadow-md"
                   style={{ backgroundColor: 'var(--color-accent)' }}
                 />
 
                 {/* 4 Edge Resize Handles */}
                 <div
                   onMouseDown={(e) => handleMouseDown(e, 'n')}
-                  className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-2 bg-accent border border-white rounded-full cursor-ns-resize shadow-md"
+                  className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-2 bg-(--color-accent) border border-white rounded-full cursor-ns-resize shadow-md"
                   style={{ backgroundColor: 'var(--color-accent)' }}
                 />
                 <div
                   onMouseDown={(e) => handleMouseDown(e, 's')}
-                  className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-2 bg-accent border border-white rounded-full cursor-ns-resize shadow-md"
+                  className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-2 bg-(--color-accent) border border-white rounded-full cursor-ns-resize shadow-md"
                   style={{ backgroundColor: 'var(--color-accent)' }}
                 />
                 <div
                   onMouseDown={(e) => handleMouseDown(e, 'w')}
-                  className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-5 bg-accent border border-white rounded-full cursor-ew-resize shadow-md"
+                  className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-5 bg-(--color-accent) border border-white rounded-full cursor-ew-resize shadow-md"
                   style={{ backgroundColor: 'var(--color-accent)' }}
                 />
                 <div
                   onMouseDown={(e) => handleMouseDown(e, 'e')}
-                  className="absolute top-1/2 -right-1 -translate-y-1/2 w-2 h-5 bg-accent border border-white rounded-full cursor-ew-resize shadow-md"
+                  className="absolute top-1/2 -right-1 -translate-y-1/2 w-2 h-5 bg-(--color-accent) border border-white rounded-full cursor-ew-resize shadow-md"
                   style={{ backgroundColor: 'var(--color-accent)' }}
                 />
 
@@ -435,7 +435,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
                 onClick={() => handleRatioChange(ratio.id as AspectRatio)}
                 className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                   aspectRatio === ratio.id
-                    ? 'bg-accent text-white shadow-xs'
+                    ? 'bg-(--color-accent) text-white shadow-xs'
                     : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-70 hover:opacity-100 border border-border/40'
                 }`}
                 style={{
@@ -473,7 +473,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
               onClick={() => setFlipH((prev) => !prev)}
               title="Flip Horizontal"
               className={`p-1.5 rounded-lg border transition-all ${
-                flipH ? 'bg-accent text-white' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
+                flipH ? 'bg-(--color-accent) text-white' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
               }`}
               style={{
                 borderColor: 'var(--color-border)',
@@ -487,7 +487,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
               onClick={() => setFlipV((prev) => !prev)}
               title="Flip Vertical"
               className={`p-1.5 rounded-lg border transition-all ${
-                flipV ? 'bg-accent text-white' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
+                flipV ? 'bg-(--color-accent) text-white' : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
               }`}
               style={{
                 borderColor: 'var(--color-border)',
@@ -520,7 +520,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
             <button
               type="button"
               onClick={handleApplyCrop}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-accent text-white shadow-sm hover:opacity-90 active:scale-95 transition-all text-xs font-semibold"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-(--color-accent) text-white shadow-sm hover:opacity-90 active:scale-95 transition-all text-xs font-semibold"
               style={{
                 backgroundColor: 'var(--color-accent)',
                 color: 'var(--color-accent-text)',

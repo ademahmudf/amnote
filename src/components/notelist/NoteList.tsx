@@ -177,7 +177,7 @@ export const NoteList: React.FC = () => {
       {/* Search Header */}
       <div className="p-3 pb-2 border-b space-y-2 relative" style={{ borderColor: 'var(--color-divider)' }} data-tauri-drag-region>
         <div
-          className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition-all focus-within:ring-2 focus-within:ring-accent/40"
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition-all focus-within:ring-2 focus-within:ring-(--color-accent)/40"
           style={{
             backgroundColor: 'var(--card-notelist-bg)',
             borderColor: 'var(--card-notelist-border)',
@@ -249,7 +249,7 @@ export const NoteList: React.FC = () => {
                 }}
                 className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium transition-all ${
                   isSelected
-                    ? 'bg-accent text-white shadow-2xs font-semibold'
+                    ? 'bg-(--color-accent) text-white shadow-2xs font-semibold'
                     : 'bg-black/5 dark:bg-white/5 opacity-65 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10'
                 }`}
                 style={{
@@ -293,8 +293,8 @@ export const NoteList: React.FC = () => {
                 className="w-full flex items-center justify-between p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-left transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <item.icon size={13} className="text-accent shrink-0" style={{ color: 'var(--color-accent)' }} />
-                  <span className="font-mono text-xs font-semibold text-accent" style={{ color: 'var(--color-accent)' }}>
+                  <item.icon size={13} className="text-(--color-accent) shrink-0" style={{ color: 'var(--color-accent)' }} />
+                  <span className="font-mono text-xs font-semibold text-(--color-accent)" style={{ color: 'var(--color-accent)' }}>
                     {item.token}
                   </span>
                   <span className="text-[11px] opacity-60 truncate">{item.desc}</span>
@@ -435,7 +435,7 @@ export const NoteList: React.FC = () => {
             {/* Pinned Section */}
             {pinnedNotes.length > 0 && (
               <div className="space-y-1 pb-1">
-                <div className="flex items-center gap-1.5 px-2 pt-1 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-accent opacity-80 select-none">
+                <div className="flex items-center gap-1.5 px-2 pt-1 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-(--color-accent) opacity-80 select-none">
                   <Pin size={10} className="fill-current" />
                   <span>Pinned ({pinnedNotes.length})</span>
                 </div>

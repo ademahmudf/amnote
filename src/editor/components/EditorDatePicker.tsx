@@ -186,7 +186,7 @@ export const EditorDatePicker: React.FC<EditorDatePickerProps> = ({
                     : day.isCurrentMonth
                       ? 'opacity-80 hover:bg-black/10 dark:hover:bg-white/10'
                       : 'opacity-30 hover:bg-black/5 dark:hover:bg-white/5'
-                } ${!isSelected && isToday ? 'ring-1 ring-accent/50' : ''}`}
+                } ${!isSelected && isToday ? 'ring-1 ring-(--color-accent)/50' : ''}`}
                 style={{
                   backgroundColor: isSelected ? 'var(--color-accent)' : undefined,
                   color: isSelected ? 'var(--color-accent-text)' : undefined,

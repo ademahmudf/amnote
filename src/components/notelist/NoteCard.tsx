@@ -130,8 +130,8 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
       }}
       className={`group relative ${isCompact ? 'p-2' : 'p-3'} rounded-xl cursor-pointer select-none transition-all duration-150 border outline-none ${
         isActive
-          ? 'shadow-md border-accent'
-          : 'hover:border-border/80 opacity-85 hover:opacity-100 focus-visible:ring-1 focus-visible:ring-accent/40'
+          ? 'shadow-md border-(--color-accent)'
+          : 'hover:border-border/80 opacity-85 hover:opacity-100 focus-visible:ring-1 focus-visible:ring-(--color-accent)/40'
       }`}
       style={{
         backgroundColor: isActive
@@ -147,7 +147,7 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
           {note.isPinned && (
             <Pin
               size={13}
-              className="text-accent fill-current shrink-0"
+              className="text-(--color-accent) fill-current shrink-0"
               style={{ color: 'var(--color-accent)' }}
             />
           )}

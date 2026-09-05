@@ -82,13 +82,13 @@ export const TagTree: React.FC = () => {
           className="px-1.5 py-1 mb-1"
         >
           <div
-            className="flex items-center gap-1 px-2 py-1 rounded-lg border shadow-xs transition-all ring-1 ring-accent/30"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border shadow-xs transition-all ring-1 ring-(--color-accent)/30"
             style={{
               backgroundColor: 'var(--card-notelist-bg)',
               borderColor: 'var(--color-accent)',
             }}
           >
-            <Hash size={12} className="text-accent shrink-0" style={{ color: 'var(--color-accent)' }} />
+            <Hash size={12} className="text-(--color-accent) shrink-0" style={{ color: 'var(--color-accent)' }} />
             <input
               ref={inputRef}
               type="text"
@@ -108,7 +108,7 @@ export const TagTree: React.FC = () => {
               type="submit"
               disabled={!tagName.trim()}
               title="Save Tag"
-              className="p-0.5 rounded text-accent hover:opacity-80 disabled:opacity-30 transition-opacity shrink-0"
+              className="p-0.5 rounded text-(--color-accent) hover:opacity-80 disabled:opacity-30 transition-opacity shrink-0"
               style={{ color: 'var(--color-accent)' }}
             >
               <Check size={12} />

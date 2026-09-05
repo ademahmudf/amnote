@@ -228,7 +228,7 @@ export const AmEditor: React.FC = () => {
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'underline text-accent hover:opacity-80 transition-opacity',
+          class: 'underline text-(--color-accent) hover:opacity-80 transition-opacity',
         },
       }),
       ResizableImageExtension,
@@ -524,7 +524,7 @@ export const AmEditor: React.FC = () => {
         </h2>
         <p className="text-xs text-center max-w-xs opacity-60 mb-6">
           Select a note from the sidebar or{' '}
-          <AnnotatedText variant="wavy" className="font-semibold" color="text-accent">
+          <AnnotatedText variant="wavy" className="font-semibold" color="text-(--color-accent)">
             pick a template
           </AnnotatedText>{' '}
           below to start writing.
@@ -555,10 +555,10 @@ export const AmEditor: React.FC = () => {
                   key={tmpl.type}
                   type="button"
                   onClick={() => handleCreateTemplate(tmpl.type)}
-                  className="flex flex-col items-center p-3 rounded-xl border bg-black/5 dark:bg-white/5 hover:bg-accent/10 hover:border-accent/40 transition-all text-center group"
+                  className="flex flex-col items-center p-3 rounded-xl border bg-black/5 dark:bg-white/5 hover:bg-(--color-accent)/10 hover:border-(--color-accent)/40 transition-all text-center group"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
-                  <tmpl.icon size={16} className="mb-1.5 opacity-60 group-hover:opacity-100 text-accent transition-colors" style={{ color: 'var(--color-accent)' }} />
+                  <tmpl.icon size={16} className="mb-1.5 opacity-60 group-hover:opacity-100 text-(--color-accent) transition-colors" style={{ color: 'var(--color-accent)' }} />
                   <span className="text-xs font-semibold" style={{ color: 'var(--text-editor)' }}>{tmpl.label}</span>
                   <span className="text-[10px] opacity-50 mt-0.5">{tmpl.desc}</span>
                 </button>
@@ -704,7 +704,7 @@ export const AmEditor: React.FC = () => {
                       setUnlockError(false);
                     }}
                     placeholder="Enter password..."
-                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border bg-black/10 dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-accent"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border bg-black/10 dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-(--color-accent)"
                     style={{ borderColor: 'var(--color-border)' }}
                   />
                 </div>
@@ -862,7 +862,7 @@ export const AmEditor: React.FC = () => {
             title="Click to cycle: Sentence Focus → Paragraph Focus → Off (Ctrl+Shift+F)"
             className={`px-1.5 py-0.5 rounded transition-all flex items-center gap-1 text-[10px] font-medium ${
               focusMode
-                ? 'bg-accent text-white'
+                ? 'bg-(--color-accent) text-white'
                 : 'opacity-50 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
             }`}
             style={{
@@ -880,7 +880,7 @@ export const AmEditor: React.FC = () => {
             title="Toggle Typewriter Centering Mode (Ctrl+Shift+T)"
             className={`px-1.5 py-0.5 rounded transition-all flex items-center gap-1 text-[10px] font-medium ${
               typewriterMode
-                ? 'bg-accent text-white'
+                ? 'bg-(--color-accent) text-white'
                 : 'opacity-50 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
             }`}
             style={{

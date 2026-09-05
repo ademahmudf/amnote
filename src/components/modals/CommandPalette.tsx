@@ -269,7 +269,7 @@ export const CommandPalette: React.FC = () => {
           className="flex items-center gap-3 px-4 py-3.5 border-b"
           style={{ borderColor: 'var(--color-divider)' }}
         >
-          <Search size={18} className="opacity-60 text-accent" style={{ color: 'var(--color-accent)' }} />
+          <Search size={18} className="opacity-60 text-(--color-accent)" style={{ color: 'var(--color-accent)' }} />
           <input
             ref={inputRef}
             type="text"
@@ -302,7 +302,7 @@ export const CommandPalette: React.FC = () => {
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-all ${
                     isSelected
-                      ? 'bg-accent/15 text-accent font-semibold'
+                      ? 'bg-(--color-accent)/15 text-(--color-accent) font-semibold'
                       : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-80'
                   }`}
                   style={{
@@ -310,7 +310,7 @@ export const CommandPalette: React.FC = () => {
                   }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon size={14} className={isSelected ? 'text-accent' : 'opacity-60'} />
+                    <Icon size={14} className={isSelected ? 'text-(--color-accent)' : 'opacity-60'} />
                     <span>{item.title}</span>
                   </div>
                   <span className="text-[10px] opacity-40 uppercase tracking-wider font-mono">

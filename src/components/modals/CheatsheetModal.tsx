@@ -123,7 +123,7 @@ export const CheatsheetModal: React.FC = () => {
           style={{ borderColor: 'var(--color-divider)' }}
         >
           <div className="flex items-center gap-2.5">
-            <BookOpen size={18} className="text-accent" style={{ color: 'var(--color-accent)' }} />
+            <BookOpen size={18} className="text-(--color-accent)" style={{ color: 'var(--color-accent)' }} />
             <h2 className="font-bold text-sm">
               <AnnotatedText variant="underline">AmNote Cheatsheet & Guide</AnnotatedText>
             </h2>
@@ -147,7 +147,7 @@ export const CheatsheetModal: React.FC = () => {
             onClick={() => setActiveTab('markdown')}
             className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
               activeTab === 'markdown'
-                ? 'border-accent text-accent'
+                ? 'border-(--color-accent) text-(--color-accent)'
                 : 'border-transparent opacity-60 hover:opacity-100'
             }`}
             style={{
@@ -164,7 +164,7 @@ export const CheatsheetModal: React.FC = () => {
             onClick={() => setActiveTab('shortcuts')}
             className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
               activeTab === 'shortcuts'
-                ? 'border-accent text-accent'
+                ? 'border-(--color-accent) text-(--color-accent)'
                 : 'border-transparent opacity-60 hover:opacity-100'
             }`}
             style={{
@@ -190,7 +190,7 @@ export const CheatsheetModal: React.FC = () => {
                     style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--bg-editor)' }}
                   >
                     <div className="flex items-center justify-between">
-                      <code className="font-mono text-xs text-accent font-semibold px-1.5 py-0.5 rounded bg-accent/10">
+                      <code className="font-mono text-xs text-(--color-accent) font-semibold px-1.5 py-0.5 rounded bg-(--color-accent)/10">
                         {item.syntax}
                       </code>
                       <Icon size={13} className="opacity-40" />
