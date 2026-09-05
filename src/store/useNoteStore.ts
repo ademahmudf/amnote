@@ -189,6 +189,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       localNotes: get().notes,
       diskNotes: allNotes,
       dirtyNoteIds: get().dirtyNoteIds,
+      baseContentByNoteId: get().diskContentByNoteId,
     });
 
     set({
@@ -210,6 +211,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       localNotes: get().notes,
       diskNotes: allNotes,
       dirtyNoteIds: get().dirtyNoteIds,
+      baseContentByNoteId: get().diskContentByNoteId,
     });
 
     set({
@@ -250,9 +252,13 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         dirtyNoteIds: Object.fromEntries(
           Object.keys(get().dirtyNoteIds).map((id) => [id, true as const])
         ),
+        baseContentByNoteId: get().diskContentByNoteId,
       });
       const activeNoteExists = merged.notes.some((note) => note.id === get().activeNoteId);
       const hadPriorRevision = get().vaultRevision !== null;
+
+      const existingConflictIds = new Set(get().vaultConflicts.map((c) => c.noteId));
+      const newConflicts = merged.conflicts.filter((c) => !existingConflictIds.has(c.noteId));
 
       set({
         notes: merged.notes,
@@ -266,22 +272,13 @@ export const useNoteStore = create<NoteState>((set, get) => ({
             : null,
       });
 
-      if (hadPriorRevision) {
-        if (merged.conflicts.length > 0) {
-          notify({
-            title: 'Sync Conflict',
-            sender: 'Vault',
-            message: `${merged.conflicts.length} note${merged.conflicts.length > 1 ? 's have' : ' has'} conflicting disk changes.`,
-            type: 'warning',
-          });
-        } else {
-          notify({
-            title: 'Notes Synchronized',
-            sender: 'Disk',
-            message: 'External note changes were merged successfully.',
-            type: 'info',
-          });
-        }
+      if (hadPriorRevision && newConflicts.length > 0) {
+        notify({
+          title: 'Sync Conflict',
+          sender: 'Vault',
+          message: `${newConflicts.length} note${newConflicts.length > 1 ? 's have' : ' has'} conflicting disk changes.`,
+          type: 'warning',
+        });
       }
 
       return true;
@@ -549,8 +546,9 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       updatedAt: Date.now(),
     };
 
+    let newRevision: string | null = null;
     try {
-      await vaultAdapter.saveNote(newNote);
+      newRevision = await vaultAdapter.saveNote(newNote);
     } catch (err) {
       console.error('Failed to create note:', err);
       set({ persistenceError: persistenceMessage(err, 'Unable to create the note on disk.') });
@@ -561,6 +559,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       notes: [newNote, ...state.notes],
       activeNoteId: newNote.id,
       diskContentByNoteId: { ...state.diskContentByNoteId, [newNote.id]: newNote.content },
+      vaultRevision: newRevision || state.vaultRevision,
     }));
 
     return newNote.id;
@@ -570,13 +569,10 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     const current = get().notes.find((n) => n.id === id);
     if (!current) return;
 
-    if (get().vaultConflicts.some((conflict) => conflict.noteId === id)) {
-      return;
-    }
-
     const merged = { ...current, ...updates, updatedAt: updates.updatedAt || Date.now() };
+    let newRevision: string | null = null;
     try {
-      await vaultAdapter.saveNote(merged, get().diskContentByNoteId[id]);
+      newRevision = await vaultAdapter.saveNote(merged, get().diskContentByNoteId[id]);
     } catch (err) {
       console.error('Failed to update note:', err);
       set({ persistenceError: persistenceMessage(err, 'Unable to save your change.') });
@@ -592,6 +588,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       dirtyNoteIds: Object.fromEntries(
         Object.entries(state.dirtyNoteIds).filter(([dirtyId]) => dirtyId !== id)
       ),
+      vaultConflicts: state.vaultConflicts.filter((c) => c.noteId !== id),
+      vaultRevision: newRevision || state.vaultRevision,
     }));
   },
 
@@ -625,8 +623,9 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     }));
 
     if (persistToDisk) {
+      let newRevision: string | null = null;
       try {
-        await vaultAdapter.saveNote(updatedNote, get().diskContentByNoteId[id]);
+        newRevision = await vaultAdapter.saveNote(updatedNote, get().diskContentByNoteId[id]);
       } catch (err) {
         console.error('Failed to persist note content:', err);
         set({ persistenceError: persistenceMessage(err, 'Unable to save your change.') });
@@ -643,6 +642,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         dirtyNoteIds: Object.fromEntries(
           Object.entries(state.dirtyNoteIds).filter(([dirtyId]) => dirtyId !== id)
         ),
+        vaultConflicts: state.vaultConflicts.filter((c) => c.noteId !== id),
+        vaultRevision: newRevision || state.vaultRevision,
       }));
     }
   },
@@ -661,6 +662,12 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
   trashNote: async (id) => {
     await get().updateNote(id, { isTrashed: true, trashedAt: Date.now() });
+    set((state) => ({
+      dirtyNoteIds: Object.fromEntries(
+        Object.entries(state.dirtyNoteIds).filter(([dirtyId]) => dirtyId !== id)
+      ),
+      vaultConflicts: state.vaultConflicts.filter((c) => c.noteId !== id),
+    }));
     const filtered = get().getFilteredNotes();
     if (filtered.length > 0) {
       set({ activeNoteId: filtered[0].id });
@@ -674,8 +681,9 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   },
 
   deletePermanently: async (id) => {
+    let newRevision: string | null = null;
     try {
-      await vaultAdapter.deleteNote(id, true);
+      newRevision = await vaultAdapter.deleteNote(id, true);
     } catch (err) {
       console.error('Failed to delete note permanently:', err);
       set({ persistenceError: persistenceMessage(err, 'Unable to delete the note permanently.') });
@@ -686,11 +694,16 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       const remaining = state.notes.filter((n) => n.id !== id);
       const filtered = remaining.filter((n) => n.isTrashed);
       return {
-      notes: remaining,
-      activeNoteId: filtered.length > 0 ? filtered[0].id : null,
-      diskContentByNoteId: Object.fromEntries(
-        Object.entries(state.diskContentByNoteId).filter(([savedId]) => savedId !== id)
-      ),
+        notes: remaining,
+        activeNoteId: filtered.length > 0 ? filtered[0].id : null,
+        diskContentByNoteId: Object.fromEntries(
+          Object.entries(state.diskContentByNoteId).filter(([savedId]) => savedId !== id)
+        ),
+        dirtyNoteIds: Object.fromEntries(
+          Object.entries(state.dirtyNoteIds).filter(([dirtyId]) => dirtyId !== id)
+        ),
+        vaultConflicts: state.vaultConflicts.filter((c) => c.noteId !== id),
+        vaultRevision: newRevision || state.vaultRevision,
       };
     });
   },
@@ -708,8 +721,9 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       updatedAt: Date.now(),
     };
 
+    let newRevision: string | null = null;
     try {
-      await vaultAdapter.saveNote(newNote);
+      newRevision = await vaultAdapter.saveNote(newNote);
     } catch (err) {
       console.error('Failed to duplicate note:', err);
       set({ persistenceError: persistenceMessage(err, 'Unable to duplicate the note.') });
@@ -720,6 +734,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       notes: [newNote, ...state.notes],
       activeNoteId: newNote.id,
       diskContentByNoteId: { ...state.diskContentByNoteId, [newNote.id]: newNote.content },
+      vaultRevision: newRevision || state.vaultRevision,
     }));
 
     return newNote.id;
@@ -727,18 +742,28 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
   emptyTrash: async () => {
     const trashedNotes = get().notes.filter((n) => n.isTrashed);
+    let latestRevision = get().vaultRevision;
     for (const note of trashedNotes) {
       try {
-        await vaultAdapter.deleteNote(note.id, true);
+        latestRevision = await vaultAdapter.deleteNote(note.id, true);
       } catch (err) {
         console.error('Failed to empty trash:', err);
         set({ persistenceError: persistenceMessage(err, 'Unable to empty the trash.') });
         return;
       }
     }
+    const trashedIds = new Set(trashedNotes.map((n) => n.id));
     set((state) => ({
       notes: state.notes.filter((n) => !n.isTrashed),
       activeNoteId: null,
+      dirtyNoteIds: Object.fromEntries(
+        Object.entries(state.dirtyNoteIds).filter(([dirtyId]) => !trashedIds.has(dirtyId))
+      ),
+      vaultConflicts: state.vaultConflicts.filter((c) => !trashedIds.has(c.noteId)),
+      diskContentByNoteId: Object.fromEntries(
+        Object.entries(state.diskContentByNoteId).filter(([id]) => !trashedIds.has(id))
+      ),
+      vaultRevision: latestRevision,
     }));
   },
 

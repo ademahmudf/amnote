@@ -57,11 +57,11 @@ struct NoteFrontmatter {
     pub is_locked: Option<bool>,
     #[serde(rename = "lockHash", skip_serializing_if = "Option::is_none")]
     pub lock_hash: Option<String>,
-    #[serde(rename = "createdAt")]
+    #[serde(rename = "createdAt", alias = "created_at", default)]
     pub created_at: i64,
-    #[serde(rename = "updatedAt")]
+    #[serde(rename = "updatedAt", alias = "updated_at", default)]
     pub updated_at: i64,
-    #[serde(rename = "trashedAt", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "trashedAt", alias = "trashed_at", skip_serializing_if = "Option::is_none")]
     pub trashed_at: Option<i64>,
 }
 
@@ -330,12 +330,18 @@ fn collect_vault_revision(vault: &Path) -> Result<u64, String> {
     let directories = [vault.to_path_buf(), vault.join(".trash")];
 
     for directory in directories {
-        let entries = fs::read_dir(&directory)
-            .map_err(|e| format!("Failed to read vault directory: {}", e))?;
+        if !directory.exists() {
+            continue;
+        }
+        let entries = match fs::read_dir(&directory) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if !path.is_file() || path.extension().map_or(true, |ext| ext != "md") {
+            let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if file_name.starts_with('.') || !path.is_file() || path.extension().map_or(true, |ext| ext != "md") {
                 continue;
             }
 
@@ -447,7 +453,15 @@ fn open_vault_in_file_manager() -> Result<(), String> {
     Ok(())
 }
 
+fn is_conflict_filename(stem: &str) -> bool {
+    let lower = stem.to_lowercase();
+    lower.contains("conflicted copy") || lower.contains("sync-conflict")
+}
+
 fn parse_markdown_file(path: &Path) -> Option<NotePayload> {
+    let file_stem = path.file_stem()?.to_string_lossy().to_string();
+    let is_conflict = is_conflict_filename(&file_stem);
+
     let raw = fs::read_to_string(path).ok()?;
     let trimmed = raw.trim_start();
 
@@ -457,9 +471,25 @@ fn parse_markdown_file(path: &Path) -> Option<NotePayload> {
             let body_str = &trimmed[3 + end_idx + 4..];
 
             if let Ok(meta) = serde_yaml::from_str::<NoteFrontmatter>(frontmatter_str) {
+                let note_id = if is_conflict {
+                    let suffix: String = file_stem
+                        .chars()
+                        .filter(|c| c.is_alphanumeric() || *c == '-')
+                        .take(60)
+                        .collect();
+                    format!("{}-conflict-{}", meta.id, suffix)
+                } else {
+                    meta.id
+                };
+                let note_title = if is_conflict && !meta.title.contains("(Conflicted Copy)") {
+                    format!("{} (Conflicted Copy)", meta.title)
+                } else {
+                    meta.title
+                };
+
                 return Some(NotePayload {
-                    id: meta.id,
-                    title: meta.title,
+                    id: note_id,
+                    title: note_title,
                     content: body_str.trim_start_matches('\n').to_string(),
                     tags: meta.tags,
                     is_pinned: meta.is_pinned,
@@ -476,7 +506,6 @@ fn parse_markdown_file(path: &Path) -> Option<NotePayload> {
     }
 
     // Fallback: parse raw markdown file with no frontmatter
-    let file_stem = path.file_stem()?.to_string_lossy().to_string();
     let title = file_stem.clone();
     let modified = fs::metadata(path)
         .and_then(|m| m.modified())
@@ -510,7 +539,8 @@ fn load_notes_from_vault() -> Result<Vec<NotePayload>, String> {
     if let Ok(entries) = fs::read_dir(&vault) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
+            let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if !name.starts_with('.') && path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
                 if let Some(note) = parse_markdown_file(&path) {
                     notes.push(note);
                 }
@@ -523,7 +553,8 @@ fn load_notes_from_vault() -> Result<Vec<NotePayload>, String> {
     if let Ok(entries) = fs::read_dir(&trash_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
+            let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if !name.starts_with('.') && path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
                 if let Some(mut note) = parse_markdown_file(&path) {
                     note.is_trashed = true;
                     notes.push(note);
@@ -616,6 +647,10 @@ fn serialize_note(note: &NotePayload) -> Result<String, String> {
     Ok(format!("---\n{}---\n\n{}", frontmatter_yaml, note.content))
 }
 
+fn normalize_content(s: &str) -> String {
+    s.replace("\r\n", "\n").trim_end().to_string()
+}
+
 fn ensure_note_unchanged(path: &Path, expected_content: &str) -> Result<(), String> {
     if !path.exists() {
         return Err("CONFLICT: Note was deleted in the vault.".to_string());
@@ -623,7 +658,7 @@ fn ensure_note_unchanged(path: &Path, expected_content: &str) -> Result<(), Stri
 
     let disk_note = parse_markdown_file(path)
         .ok_or_else(|| "CONFLICT: Note on disk could not be parsed.".to_string())?;
-    if disk_note.content != expected_content {
+    if normalize_content(&disk_note.content) != normalize_content(expected_content) {
         return Err("CONFLICT: Note changed in the vault before this save.".to_string());
     }
 
@@ -631,11 +666,12 @@ fn ensure_note_unchanged(path: &Path, expected_content: &str) -> Result<(), Stri
 }
 
 #[tauri::command]
-fn save_note_to_vault(note: NotePayload, expected_content: Option<String>) -> Result<(), String> {
+fn save_note_to_vault(note: NotePayload, expected_content: Option<String>) -> Result<String, String> {
     let vault = ensure_vault_directories()?;
     write_note_to_vault(&vault, &note, expected_content.as_deref())?;
     cleanup_unused_attachments(&note)?;
-    Ok(())
+    let revision = collect_vault_revision(&vault)?;
+    Ok(revision.to_string())
 }
 
 fn write_note_to_vault(
@@ -645,15 +681,26 @@ fn write_note_to_vault(
 ) -> Result<(), String> {
     validate_note_id(&note.id)?;
     let file_content = serialize_note(note)?;
-    let active_path = note_file_path(&vault, &note.id, false)?;
-    let trash_path = note_file_path(&vault, &note.id, true)?;
-    let target_path = if note.is_trashed {
-        &trash_path
+    let active_path = note_file_path(vault, &note.id, false)?;
+    let trash_path = note_file_path(vault, &note.id, true)?;
+
+    let existing_path = if active_path.exists() {
+        Some(&active_path)
+    } else if trash_path.exists() {
+        Some(&trash_path)
     } else {
-        &active_path
+        None
     };
+
     if let Some(expected_content) = expected_content {
-        ensure_note_unchanged(target_path, expected_content)?;
+        match existing_path {
+            Some(path) => {
+                ensure_note_unchanged(path, expected_content)?;
+            }
+            None => {
+                return Err("CONFLICT: Note was deleted in the vault.".to_string());
+            }
+        }
     }
 
     if note.is_trashed {
@@ -707,7 +754,7 @@ fn backup_note_to_vault(vault: &Path, note: &NotePayload, label: &str) -> Result
 }
 
 #[tauri::command]
-fn delete_note_from_vault(id: String, permanent: bool) -> Result<(), String> {
+fn delete_note_from_vault(id: String, permanent: bool) -> Result<String, String> {
     let vault = ensure_vault_directories()?;
     let active_path = note_file_path(&vault, &id, false)?;
     let trash_path = note_file_path(&vault, &id, true)?;
@@ -724,14 +771,15 @@ fn delete_note_from_vault(id: String, permanent: bool) -> Result<(), String> {
         sync_directory(&active_path)?;
     } else if active_path.exists() {
         if trash_path.exists() {
-            return Err(format!("A trashed note already exists for id {id:?}"));
+            let _ = fs::remove_file(&trash_path);
         }
         fs::rename(&active_path, &trash_path)
             .map_err(|e| format!("Failed to move note to trash: {}", e))?;
         sync_directory(&active_path)?;
     }
 
-    Ok(())
+    let revision = collect_vault_revision(&vault)?;
+    Ok(revision.to_string())
 }
 
 #[tauri::command]
@@ -1181,6 +1229,72 @@ mod tests {
         assert_eq!(main_meta.tags.get("work").unwrap().icon.as_deref(), Some("Rocket"));
         assert_eq!(main_meta.tags.get("ideas").unwrap().icon.as_deref(), Some("Lightbulb"));
         assert!(!conflict_path.exists());
+
+        fs::remove_dir_all(&vault).ok();
+    }
+
+    #[test]
+    fn note_trashing_and_restoring_with_expected_content() {
+        let vault = temp_vault("trash-restore");
+        let note = test_note("note-trash-test", "active note body");
+
+        // 1. Initial save to active
+        write_note_to_vault(&vault, &note, None).unwrap();
+        let active_path = note_file_path(&vault, &note.id, false).unwrap();
+        let trash_path = note_file_path(&vault, &note.id, true).unwrap();
+        assert!(active_path.exists());
+        assert!(!trash_path.exists());
+
+        // 2. Move to trash with expected_content matching active note
+        let mut trashed_note = note.clone();
+        trashed_note.is_trashed = true;
+        trashed_note.trashed_at = Some(123456);
+        write_note_to_vault(&vault, &trashed_note, Some("active note body")).unwrap();
+        assert!(!active_path.exists());
+        assert!(trash_path.exists());
+
+        // 3. Restore from trash with expected_content matching trashed note
+        let mut restored_note = note.clone();
+        restored_note.is_trashed = false;
+        restored_note.trashed_at = None;
+        write_note_to_vault(&vault, &restored_note, Some("active note body")).unwrap();
+        assert!(active_path.exists());
+        assert!(!trash_path.exists());
+
+        fs::remove_dir_all(&vault).ok();
+    }
+
+    #[test]
+    fn content_normalization_crlf_vs_lf() {
+        let vault = temp_vault("crlf-norm");
+        let note = test_note("crlf-test", "line one\r\nline two\r\n");
+
+        write_note_to_vault(&vault, &note, None).unwrap();
+
+        // Expected content with Unix newlines should match CRLF content on disk
+        let mut updated = note.clone();
+        updated.content = "line one\nline two\nline three".to_string();
+        write_note_to_vault(&vault, &updated, Some("line one\nline two")).unwrap();
+
+        let active_path = note_file_path(&vault, &note.id, false).unwrap();
+        let disk = parse_markdown_file(&active_path).unwrap();
+        assert_eq!(disk.content, "line one\nline two\nline three");
+
+        fs::remove_dir_all(&vault).ok();
+    }
+
+    #[test]
+    fn dropbox_conflicted_copy_parsing() {
+        let vault = temp_vault("dropbox-conflict");
+        let conflict_file = vault.join("Project Plan (Ade's conflicted copy 2026-09-05).md");
+        let content = "---\nid: note-proj-123\ntitle: Project Plan\ncreated_at: 100\nupdated_at: 200\n---\n\nDropbox conflicting changes here";
+        fs::write(&conflict_file, content).unwrap();
+
+        let parsed = parse_markdown_file(&conflict_file).unwrap();
+        assert_ne!(parsed.id, "note-proj-123", "Conflicted copy gets a distinct non-colliding ID");
+        assert!(parsed.id.contains("conflict"));
+        assert!(parsed.title.contains("(Conflicted Copy)"));
+        assert_eq!(parsed.content, "Dropbox conflicting changes here");
 
         fs::remove_dir_all(&vault).ok();
     }

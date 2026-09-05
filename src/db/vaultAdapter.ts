@@ -207,22 +207,20 @@ export const vaultAdapter = {
     throw new Error('Vault persistence requires the AmNote desktop runtime.');
   },
 
-  saveNote: async (note: Note, expectedContent?: string): Promise<void> => {
+  saveNote: async (note: Note, expectedContent?: string): Promise<string> => {
     if (isTauriEnvironment()) {
-      await invokeTauri<void>('save_note_to_vault', {
+      return invokeTauri<string>('save_note_to_vault', {
         note,
         expectedContent,
       });
-      return;
     }
 
     throw new Error(`Failed to save "${note.title}": Vault persistence requires the AmNote desktop runtime.`);
   },
 
-  deleteNote: async (id: string, permanent = false): Promise<void> => {
+  deleteNote: async (id: string, permanent = false): Promise<string> => {
     if (isTauriEnvironment()) {
-      await invokeTauri<void>('delete_note_from_vault', { id, permanent });
-      return;
+      return invokeTauri<string>('delete_note_from_vault', { id, permanent });
     }
 
     throw new Error('Failed to delete note: Vault persistence requires the AmNote desktop runtime.');

@@ -539,4 +539,63 @@ assert(useSettingsStore.getState().fontFamily === 'instrument-serif', 'Updates s
 useSettingsStore.getState().setFontFamily('clarika');
 assert(useSettingsStore.getState().fontFamily === 'clarika', 'Restores settings store font family to clarika');
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, and Typography tests passed successfully!');
+// ============================================================================
+// Test 22: 3-Way Vault Sync Merge & Conflict Prevention
+// ============================================================================
+const localTypingNotes = [
+  makeConflictNote('typing-note', 'user typing locally...', 10),
+  makeConflictNote('external-note', 'local unchanged', 10),
+  makeConflictNote('new-note', 'brand new note content', 10),
+  makeConflictNote('true-conflict', 'local concurrent change', 10),
+];
+
+const diskSyncedNotes = [
+  makeConflictNote('typing-note', 'base text on disk', 8), // Disk unchanged from base
+  makeConflictNote('external-note', 'external change from Dropbox', 12), // External update
+  makeConflictNote('new-note', 'brand new note content', 10), // Disk just wrote same content
+  makeConflictNote('true-conflict', 'dropbox concurrent change', 12), // Diverged from base
+];
+
+const threeWayMerge = mergeVaultNotes({
+  localNotes: localTypingNotes,
+  diskNotes: diskSyncedNotes,
+  dirtyNoteIds: {
+    'typing-note': true,
+    'new-note': true,
+    'true-conflict': true,
+  },
+  baseContentByNoteId: {
+    'typing-note': 'base text on disk',
+    'external-note': 'local unchanged',
+    'true-conflict': 'original base text',
+  },
+});
+
+assert(threeWayMerge.conflicts.length === 1, '3-way merge flags ONLY true conflicts, not routine typing');
+assert(threeWayMerge.conflicts[0].noteId === 'true-conflict', 'Identifies the true conflict note');
+assert(
+  threeWayMerge.notes.find((n) => n.id === 'typing-note')?.content === 'user typing locally...',
+  '3-way merge seamlessly preserves user in-memory typing without conflict'
+);
+assert(
+  threeWayMerge.notes.find((n) => n.id === 'external-note')?.content === 'external change from Dropbox',
+  '3-way merge accepts clean external Dropbox changes'
+);
+assert(
+  threeWayMerge.notes.find((n) => n.id === 'new-note')?.content === 'brand new note content',
+  '3-way merge preserves newly created note'
+);
+
+// CRLF vs LF 3-way merge normalization
+const crlfLocalNotes = [makeConflictNote('crlf-note', 'line one\nline two\nlocal add', 10)];
+const crlfDiskNotes = [makeConflictNote('crlf-note', 'line one\r\nline two\r\n', 8)];
+const crlfMerge = mergeVaultNotes({
+  localNotes: crlfLocalNotes,
+  diskNotes: crlfDiskNotes,
+  dirtyNoteIds: { 'crlf-note': true },
+  baseContentByNoteId: { 'crlf-note': 'line one\nline two\n' },
+});
+assert(crlfMerge.conflicts.length === 0, 'CRLF vs LF line endings do not trigger false conflicts');
+assert(crlfMerge.notes.find((n) => n.id === 'crlf-note')?.content === 'line one\nline two\nlocal add', 'Preserves local content across CRLF disk format');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, and 3-Way Sync tests passed successfully!');
