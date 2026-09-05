@@ -24,6 +24,7 @@ import {
 } from '../domain/noteSelectors';
 import { vaultAdapter } from '../db/vaultAdapter';
 import { useSettingsStore } from './useSettingsStore';
+import { notify } from './useNotificationStore';
 import type { Note, SortOption, SystemFilter, TagNodeItem } from '../types/note';
 import type { BacklinkItem, HeadingItem, NoteStats } from '../types/note';
 
@@ -217,6 +218,13 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       diskContentByNoteId: Object.fromEntries(allNotes.map((note) => [note.id, note.content])),
       vaultRevision: await vaultAdapter.getVaultRevision(),
     });
+
+    notify({
+      title: 'Vault Reloaded',
+      sender: 'Disk',
+      message: 'Refreshed notes and tags from disk.',
+      type: 'info',
+    });
   },
 
   syncIfVaultChanged: async () => {
@@ -244,6 +252,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         ),
       });
       const activeNoteExists = merged.notes.some((note) => note.id === get().activeNoteId);
+      const hadPriorRevision = get().vaultRevision !== null;
 
       set({
         notes: merged.notes,
@@ -256,6 +265,25 @@ export const useNoteStore = create<NoteState>((set, get) => ({
             ? allNotes[0].id
             : null,
       });
+
+      if (hadPriorRevision) {
+        if (merged.conflicts.length > 0) {
+          notify({
+            title: 'Sync Conflict',
+            sender: 'Vault',
+            message: `${merged.conflicts.length} note${merged.conflicts.length > 1 ? 's have' : ' has'} conflicting disk changes.`,
+            type: 'warning',
+          });
+        } else {
+          notify({
+            title: 'Notes Synchronized',
+            sender: 'Disk',
+            message: 'External note changes were merged successfully.',
+            type: 'info',
+          });
+        }
+      }
+
       return true;
     } catch (err) {
       console.error('Failed to sync vault:', err);
@@ -320,6 +348,13 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         },
         vaultRevision,
       }));
+
+      notify({
+        title: 'Conflict Resolved',
+        sender: localNote.title || 'Untitled',
+        message: 'Kept local version.',
+        type: 'success',
+      });
       return;
     }
 
@@ -337,6 +372,13 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         },
         editorReloadToken: state.editorReloadToken + 1,
       }));
+
+      notify({
+        title: 'Conflict Resolved',
+        sender: localNote.title || 'Untitled',
+        message: 'Kept disk version.',
+        type: 'success',
+      });
       return;
     }
 
@@ -380,6 +422,13 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       editorReloadToken: state.editorReloadToken + 1,
       vaultRevision,
     }));
+
+    notify({
+      title: 'Conflict Resolved',
+      sender: localNote.title || 'Untitled',
+      message: 'Preserved both versions with a local copy.',
+      type: 'success',
+    });
   },
 
   openVaultInFileManager: async () => {

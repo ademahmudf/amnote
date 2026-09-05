@@ -15,6 +15,10 @@ export interface AppleNotificationBannerProps extends ComponentPropsWithoutRef<'
   icon?: React.ReactNode;
   avatarSrc?: string;
   avatarAlt?: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
   showTriggerLabel?: string;
   onDismiss?: () => void;
   onShow?: () => void;
@@ -33,6 +37,7 @@ export const AppleNotificationBanner = forwardRef<HTMLOutputElement, AppleNotifi
       icon,
       avatarSrc,
       avatarAlt = 'AmNote',
+      action,
       showTriggerLabel = 'Show notification',
       onDismiss,
       onShow,
@@ -161,6 +166,25 @@ export const AppleNotificationBanner = forwardRef<HTMLOutputElement, AppleNotifi
             )}
             {message}
           </p>
+
+          {action && (
+            <div className="col-start-2 mt-2 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  action.onClick();
+                }}
+                className="px-3 py-1 rounded-lg text-xs font-semibold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+                style={{
+                  backgroundColor: 'var(--color-accent)',
+                  color: 'var(--color-accent-text)',
+                }}
+              >
+                {action.label}
+              </button>
+            </div>
+          )}
         </div>
       </output>
     );

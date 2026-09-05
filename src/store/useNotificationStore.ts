@@ -11,6 +11,10 @@ export interface NotificationPayload {
   type?: NotificationType;
   icon?: React.ReactNode;
   durationMs?: number;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 interface NotificationStore {

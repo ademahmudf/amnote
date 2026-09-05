@@ -34,8 +34,6 @@ export const AppLayout: React.FC = () => {
   const createNote = useNoteStore((state) => state.createNote);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
   const activeNoteId = useNoteStore((state) => state.activeNoteId);
-  const persistenceError = useNoteStore((state) => state.persistenceError);
-  const clearPersistenceError = useNoteStore((state) => state.clearPersistenceError);
   const vaultConflicts = useNoteStore((state) => state.vaultConflicts);
   const resolveVaultConflict = useNoteStore((state) => state.resolveVaultConflict);
   const [activeConflictId, setActiveConflictId] = useState<string | null>(null);
@@ -202,41 +200,6 @@ export const AppLayout: React.FC = () => {
       {/* Top Window Titlebar */}
       <HeaderBar />
 
-      {persistenceError && (
-        <div
-          role="alert"
-          className="flex items-center justify-between gap-3 px-4 py-2 text-sm"
-          style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
-        >
-          <span className="truncate">{persistenceError}</span>
-          <button type="button" onClick={clearPersistenceError} className="shrink-0 underline">
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {vaultConflicts.map((conflict) => (
-        <div
-          key={conflict.noteId}
-          role="alert"
-          className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 text-sm"
-          style={{ backgroundColor: '#d97706', color: '#ffffff' }}
-        >
-          <span className="min-w-0 flex-1 truncate">
-            <strong className="font-semibold">{conflict.title}</strong> changed in AmNote and on disk. Choose which version to keep.
-          </span>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              className="rounded px-2 py-1 underline hover:opacity-90"
-              onClick={() => setActiveConflictId(conflict.noteId)}
-            >
-              Review changes
-            </button>
-          </div>
-        </div>
-      ))}
-
       {/* Main 3-Pane Body */}
       <div className="flex-1 flex overflow-hidden">
         {/* Pane 1: Sidebar */}
@@ -258,7 +221,7 @@ export const AppLayout: React.FC = () => {
       <ExportModal />
       <PasswordModal />
       <CheatsheetModal />
-      <NotificationContainer />
+      <NotificationContainer onReviewConflict={setActiveConflictId} />
       <RoughFilters />
       {(() => {
         const activeConflict = vaultConflicts.find(

@@ -460,6 +460,25 @@ assert(notifState?.type === 'success', 'Notification type matches');
 useNotificationStore.getState().dismissNotification();
 assert(useNotificationStore.getState().notification === null, 'Notification store clears on dismiss');
 
+let actionClicked: boolean = false;
+notify({
+  title: 'Action Notification',
+  message: 'Testing action button',
+  type: 'warning',
+  action: {
+    label: 'Review',
+    onClick: () => {
+      actionClicked = true;
+    },
+  },
+  durationMs: 0,
+});
+const actionNotif = useNotificationStore.getState().notification;
+assert(actionNotif?.action?.label === 'Review', 'Notification records action button label');
+actionNotif?.action?.onClick();
+assert(Boolean(actionClicked), 'Notification action onClick triggers correctly');
+useNotificationStore.getState().dismissNotification();
+
 // Test Hand-Drawn Annotation Markdown <-> HTML
 const mdAnnotationWavy = 'This has ~wavy:hand-drawn text~ in it.';
 const htmlAnnotationWavy = markdownToHtml(mdAnnotationWavy);
