@@ -18,7 +18,6 @@ import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
-import { AnnotatedText } from '../ui/AnnotatedText';
 
 export const HeaderBar: React.FC = () => {
   const isSidebarOpen = useNoteStore((state) => state.isSidebarOpen);
@@ -179,10 +178,8 @@ export const HeaderBar: React.FC = () => {
                 {primaryTag ? formatTagDisplay(primaryTag) : activeFilter ? activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1) : 'Notes'}
               </span>
               <span className="opacity-40 shrink-0">/</span>
-              <span className="font-semibold truncate text-[12px] min-w-0" style={{ color: 'var(--text-sidebar-active)' }}>
-                <AnnotatedText variant="doubleUnderline" color="text-accent" className="max-w-[200px] truncate inline-block">
-                  {activeNote.title || 'Untitled'}
-                </AnnotatedText>
+              <span className="font-semibold truncate text-[12px]" style={{ color: 'var(--text-sidebar-active)' }}>
+                {activeNote.title || 'Untitled'}
               </span>
             </div>
           ) : (

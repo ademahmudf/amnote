@@ -3,7 +3,6 @@ import type { Note } from '../../types/note';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
-import { AnnotatedText } from '../ui/AnnotatedText';
 import {
   Pin,
   MoreVertical,
@@ -157,15 +156,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
               className={`shrink-0 ${isUnlocked ? 'text-emerald-400' : 'text-amber-400'}`}
             />
           )}
-          <h3 className={`font-semibold ${titleSize} truncate leading-snug flex-1`}>
-            {isActive ? (
-              <AnnotatedText variant="doubleUnderline" color="text-accent" className="max-w-full">
-                {note.title || 'Untitled'}
-              </AnnotatedText>
-            ) : (
-              note.title || 'Untitled'
-            )}
-          </h3>
+          <h3 className={`font-semibold ${titleSize} truncate leading-snug`}>{note.title || 'Untitled'}</h3>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
