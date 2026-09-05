@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useThemeStore } from '../../store/useThemeStore';
-import { useSettingsStore, type FontFamily, type EditorWidth, type UiScale } from '../../store/useSettingsStore';
+import { useSettingsStore, type EditorWidth, type UiScale } from '../../store/useSettingsStore';
+import { FONT_OPTIONS, getFontFamilyCss, type FontCategory } from '../../domain/fontFamilies';
 import { THEMES } from '../../themes/themeDefinitions';
 import { AmNoteLogo } from '../icons/AmNoteLogo';
 
@@ -73,6 +74,7 @@ export const SettingsModal: React.FC = () => {
       : 1.35;
 
   const [activeTab, setActiveTab] = useState<'themes' | 'typography' | 'data'>('typography');
+  const [selectedFontCategory, setSelectedFontCategory] = useState<FontCategory>('All');
   const [isReloading, setIsReloading] = useState(false);
   const [isChangingVault, setIsChangingVault] = useState(false);
 
@@ -145,50 +147,10 @@ export const SettingsModal: React.FC = () => {
 
   if (!isSettingsOpen) return null;
 
-  const fontOptions: { id: FontFamily; label: string; desc: string; preview: string; fontFamily: string }[] = [
-    {
-      id: 'clarika',
-      label: 'Clarika',
-      desc: 'Geometric & Humanist Grotesque',
-      preview: 'The quick brown fox jumps over the lazy dog',
-      fontFamily: '"Clarika", "Outfit", "Plus Jakarta Sans", sans-serif',
-    },
-    {
-      id: 'bear-sans',
-      label: 'Bear Sans',
-      desc: 'Bear 2 Signature Geometric',
-      preview: 'The quick brown fox jumps over the lazy dog',
-      fontFamily: '"Plus Jakarta Sans", "Bear Sans UI", sans-serif',
-    },
-    {
-      id: 'sans',
-      label: 'Inter Sans',
-      desc: 'Clean & Technical',
-      preview: 'The quick brown fox jumps over the lazy dog',
-      fontFamily: 'Inter, sans-serif',
-    },
-    {
-      id: 'serif',
-      label: 'Editorial Serif',
-      desc: 'Warm Literary Book',
-      preview: 'The quick brown fox jumps over the lazy dog',
-      fontFamily: '"Newsreader", Georgia, serif',
-    },
-    {
-      id: 'mono',
-      label: 'JetBrains Mono',
-      desc: 'Developer Monospace',
-      preview: 'The quick brown fox jumps over the lazy dog',
-      fontFamily: '"JetBrains Mono", monospace',
-    },
-    {
-      id: 'system',
-      label: 'System Native',
-      desc: 'OS Default Typeface',
-      preview: 'The quick brown fox jumps over the lazy dog',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    },
-  ];
+  const displayedFontOptions =
+    selectedFontCategory === 'All'
+      ? FONT_OPTIONS
+      : FONT_OPTIONS.filter((f) => f.category === selectedFontCategory);
 
   const widthOptions: { id: EditorWidth; label: string; desc: string }[] = [
     { id: 'narrow', label: 'Narrow', desc: '576px (Compact writing)' },
@@ -395,12 +357,37 @@ export const SettingsModal: React.FC = () => {
 
               {/* Editor Font Family */}
               <div className="space-y-3">
-                <div>
-                  <h3 className="font-semibold text-xs">Editor Writing Typeface</h3>
-                  <p className="text-[11px] opacity-60">Select your preferred writing font (Clarika, Bear Sans, Serif, Mono, etc.).</p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold text-xs">Editor Writing Typeface</h3>
+                    <p className="text-[11px] opacity-60">11 curated typefaces across Sans, Serif, Mono, and Handwritten.</p>
+                  </div>
+
+                  {/* Category Filter Pills */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {(['All', 'Sans', 'Serif', 'Monospace', 'Handwritten', 'System'] as const).map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setSelectedFontCategory(cat)}
+                        className={`px-2 py-0.5 rounded-lg text-[10.5px] font-medium transition-all ${
+                          selectedFontCategory === cat
+                            ? 'bg-accent text-white shadow-2xs font-semibold'
+                            : 'bg-black/5 dark:bg-white/5 opacity-60 hover:opacity-100'
+                        }`}
+                        style={{
+                          backgroundColor: selectedFontCategory === cat ? 'var(--color-accent)' : undefined,
+                          color: selectedFontCategory === cat ? 'var(--color-accent-text)' : undefined,
+                        }}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {fontOptions.map((f) => (
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-1">
+                  {displayedFontOptions.map((f) => (
                     <button
                       key={f.id}
                       type="button"
@@ -415,12 +402,17 @@ export const SettingsModal: React.FC = () => {
                       }}
                     >
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-semibold text-xs">{f.label}</span>
-                        {fontFamily === f.id && <Check size={12} className="text-accent" style={{ color: 'var(--color-accent)' }} />}
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-xs">{f.label}</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-md bg-black/5 dark:bg-white/10 opacity-60 uppercase">
+                            {f.category}
+                          </span>
+                        </div>
+                        {fontFamily === f.id && <Check size={12} className="text-accent shrink-0" style={{ color: 'var(--color-accent)' }} />}
                       </div>
                       <div className="text-[10px] opacity-40 mb-1">{f.desc}</div>
                       <div
-                        className="text-xs opacity-75 truncate"
+                        className="text-xs opacity-85 truncate"
                         style={{ fontFamily: f.fontFamily }}
                       >
                         {f.preview}
@@ -652,18 +644,7 @@ export const SettingsModal: React.FC = () => {
                     backgroundColor: 'var(--bg-editor)',
                     borderColor: 'var(--color-border)',
                     color: 'var(--text-editor)',
-                    fontFamily:
-                      fontFamily === 'clarika'
-                        ? '"Clarika", "Outfit", "Plus Jakarta Sans", sans-serif'
-                        : fontFamily === 'bear-sans'
-                        ? '"Plus Jakarta Sans", "Bear Sans UI", sans-serif'
-                        : fontFamily === 'serif'
-                        ? '"Newsreader", Georgia, serif'
-                        : fontFamily === 'mono'
-                        ? '"JetBrains Mono", monospace'
-                        : fontFamily === 'system'
-                        ? '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-                        : 'Inter, sans-serif',
+                    fontFamily: getFontFamilyCss(fontFamily),
                     fontSize: `${fontSize}px`,
                     lineHeight: numericLineHeight,
                   }}

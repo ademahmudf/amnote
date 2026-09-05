@@ -30,6 +30,7 @@ import { markdownToHtml } from './utils/markdownConverter';
 import { serializeProseMirrorToMarkdown } from './utils/proseMirrorMarkdownSerializer';
 import { useNoteStore } from '../store/useNoteStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { getFontFamilyCss } from '../domain/fontFamilies';
 import { clearTagIconSvgCache } from '../utils/tagIcons';
 import { useEditorContentLifecycle } from './hooks/useEditorContentLifecycle';
 import { useEditorLockFocus } from './hooks/useEditorLockFocus';
@@ -521,18 +522,7 @@ export const AmEditor: React.FC = () => {
       : 1.35;
 
   const fontStyle: React.CSSProperties = {
-    fontFamily:
-      fontFamily === 'clarika'
-        ? '"Clarika", "Clarika Pro", "Outfit", "Plus Jakarta Sans", sans-serif'
-        : fontFamily === 'bear-sans'
-        ? '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        : fontFamily === 'serif'
-        ? '"Newsreader", "Charter", Georgia, Cambria, "Times New Roman", Times, serif'
-        : fontFamily === 'mono'
-        ? '"JetBrains Mono", "Fira Code", monospace'
-        : fontFamily === 'system'
-        ? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamily: getFontFamilyCss(fontFamily),
     fontSize: `${fontSize}px`,
     lineHeight: numericLineHeight,
     ['--line-height' as unknown as string]: `${numericLineHeight}`,

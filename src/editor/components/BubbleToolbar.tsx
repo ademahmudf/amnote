@@ -39,6 +39,7 @@ const HIGHLIGHT_PRESETS = [
 
 export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showAnnotationPicker, setShowAnnotationPicker] = useState(false);
   const colorInputRef = useRef<HTMLInputElement>(null);
   const defaultHighlightColor = useSettingsStore((state) => state.defaultHighlightColor);
   const setDefaultHighlightColor = useSettingsStore((state) => state.setDefaultHighlightColor);
@@ -68,7 +69,6 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor }) => {
   };
 
   const isHighlightActive = editor.isActive('highlight');
-  const [showAnnotationPicker, setShowAnnotationPicker] = useState(false);
 
   const applyAnnotation = (variant: string) => {
     if (variant === 'none') {

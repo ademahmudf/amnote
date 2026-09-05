@@ -520,4 +520,23 @@ useNoteStore.setState({ activeNoteId: 'note-sample' });
 useNoteStore.getState().setSelectedTag('work');
 assert(useNoteStore.getState().activeNoteId === null, 'Changing selectedTag leaves note unselected until user chooses a note');
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, and Annotation tests passed successfully!');
+// Test 21: Typography registry & 5 new typefaces
+import { FONT_OPTIONS, getFontFamilyCss } from '../domain/fontFamilies';
+import { useSettingsStore } from '../store/useSettingsStore';
+
+assert(FONT_OPTIONS.length === 11, 'Registry contains exactly 11 typefaces');
+const expectedNewFonts = ['instrument-serif', 'cormorant', 'space-grotesk', 'ibm-plex-mono', 'caveat'] as const;
+for (const fontId of expectedNewFonts) {
+  const opt = FONT_OPTIONS.find((f) => f.id === fontId);
+  assert(Boolean(opt), `Font option '${fontId}' is registered in FONT_OPTIONS`);
+  const css = getFontFamilyCss(fontId);
+  assert(Boolean(css && css.length > 0), `getFontFamilyCss returns CSS stack for '${fontId}'`);
+}
+
+// Test setting font in useSettingsStore
+useSettingsStore.getState().setFontFamily('instrument-serif');
+assert(useSettingsStore.getState().fontFamily === 'instrument-serif', 'Updates settings store font family to instrument-serif');
+useSettingsStore.getState().setFontFamily('clarika');
+assert(useSettingsStore.getState().fontFamily === 'clarika', 'Restores settings store font family to clarika');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, and Typography tests passed successfully!');

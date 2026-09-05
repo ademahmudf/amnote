@@ -10,7 +10,8 @@ import {
   seedTagMetadataFromFlat,
 } from '../domain/tagMetadata';
 
-export type FontFamily = 'bear-sans' | 'clarika' | 'sans' | 'serif' | 'mono' | 'system';
+import type { FontFamily } from '../domain/fontFamilies';
+export type { FontFamily };
 export type EditorWidth = 'narrow' | 'comfort' | 'wide' | 'full';
 export type UiScale = 'compact' | 'standard' | 'comfortable' | 'spacious';
 
