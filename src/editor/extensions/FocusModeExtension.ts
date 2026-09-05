@@ -65,7 +65,36 @@ function computeDecorations(state: EditorState): DecorationSet {
 
   const decorations: Decoration[] = [];
 
-  // 1. Identify active root-level block (depth 1)
+  // When user has an active text selection (!empty):
+  // Ensure all touched blocks remain at 100% solid opacity without inline dimming,
+  // preventing fractured, jagged selection rectangles.
+  if (!empty) {
+    const fromIndex = $from.index(0);
+    let toIndex = $to.index(0);
+    if (toIndex > fromIndex && $to.parentOffset === 0) {
+      toIndex--;
+    }
+
+    let curPos = 0;
+    for (let i = 0; i < doc.childCount; i++) {
+      const child = doc.child(i);
+      const childStart = curPos;
+      const childEnd = curPos + child.nodeSize;
+
+      if (i >= fromIndex && i <= toIndex) {
+        decorations.push(
+          Decoration.node(childStart, childEnd, {
+            class: 'am-focus-active-root',
+          })
+        );
+      }
+      curPos = childEnd;
+    }
+
+    return DecorationSet.create(doc, decorations);
+  }
+
+  // 1. Identify active root-level block (depth 1) when cursor is collapsed (empty === true)
   const rootStart = $from.before(1);
   const rootNode = $from.node(1);
   const rootEnd = rootStart + rootNode.nodeSize;
@@ -100,20 +129,10 @@ function computeDecorations(state: EditorState): DecorationSet {
       const textblockStart = $from.start();
       const textblockEnd = $from.end();
       const text = textblock.textContent;
-
-      let sentenceStart: number;
-      let sentenceEnd: number;
-
-      if (!empty && $from.sameParent($to)) {
-        // When user has highlighted a specific slice, keep that range active
-        sentenceStart = $from.pos;
-        sentenceEnd = $to.pos;
-      } else {
-        const offset = $from.parentOffset;
-        const { start, end } = findSentenceRange(text, offset);
-        sentenceStart = textblockStart + start;
-        sentenceEnd = textblockStart + end;
-      }
+      const offset = $from.parentOffset;
+      const { start, end } = findSentenceRange(text, offset);
+      const sentenceStart = textblockStart + start;
+      const sentenceEnd = textblockStart + end;
 
       // Dim leading text within this textblock before the active sentence
       if (sentenceStart > textblockStart) {

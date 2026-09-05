@@ -908,3 +908,10 @@ li[data-type="taskItem"] > div,
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 3. Clean Unified Selection Styling */
+.ProseMirror ::selection,
+.ProseMirror *::selection {
+  background-color: color-mix(in srgb, var(--color-accent) 26%, transparent);
+}
+
+
