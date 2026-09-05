@@ -9,6 +9,8 @@ import {
   Crop as CropIcon,
 } from 'lucide-react';
 import { ImageCropModal } from './ImageCropModal';
+import { vaultAdapter } from '../../db/vaultAdapter';
+import { useNoteStore } from '../../store/useNoteStore';
 
 export const ResizableImageView: React.FC<NodeViewProps> = ({
   node,
@@ -31,6 +33,24 @@ export const ResizableImageView: React.FC<NodeViewProps> = ({
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
   const currentWidthRef = useRef<string>(width || '100%');
+
+  const saveCroppedImage = useCallback(async (croppedDataUrl: string) => {
+    const noteId = useNoteStore.getState().activeNoteId;
+
+    try {
+      if (!noteId) throw new Error('No active note');
+      const storedSrc = await vaultAdapter.saveAttachment(
+        noteId,
+        `cropped-image-${Date.now()}.png`,
+        croppedDataUrl
+      );
+      updateAttributes({ src: storedSrc });
+    } catch (error) {
+      // Browser previews and oversized exports remain usable as inline images.
+      console.warn('Keeping cropped image inline because attachment storage failed:', error);
+      updateAttributes({ src: croppedDataUrl });
+    }
+  }, [updateAttributes]);
 
   useEffect(() => {
     setCurrentWidth(width || '100%');
@@ -326,7 +346,7 @@ export const ResizableImageView: React.FC<NodeViewProps> = ({
           isOpen={isCropOpen}
           imageSrc={src}
           onClose={() => setIsCropOpen(false)}
-          onSave={(newSrc) => updateAttributes({ src: newSrc })}
+          onSave={saveCroppedImage}
         />
       )}
     </NodeViewWrapper>

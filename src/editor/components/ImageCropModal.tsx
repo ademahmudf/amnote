@@ -40,6 +40,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
   const [imgNaturalSize, setImgNaturalSize] = useState({ width: 0, height: 0 });
   const [displayedSize, setDisplayedSize] = useState({ width: 0, height: 0 });
   const [cropBox, setCropBox] = useState<CropBox>({ x: 0, y: 0, width: 100, height: 100 });
+  const [cropError, setCropError] = useState<string | null>(null);
 
   const [isDragging, setIsDragging] = useState(false);
   const [dragAction, setDragAction] = useState<'move' | 'nw' | 'ne' | 'se' | 'sw' | 'n' | 's' | 'e' | 'w' | null>(null);
@@ -51,6 +52,10 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const isQuarterTurn = rotation === 90 || rotation === 270;
+  const workspaceWidth = isQuarterTurn ? displayedSize.height : displayedSize.width;
+  const workspaceHeight = isQuarterTurn ? displayedSize.width : displayedSize.height;
 
   const initCropBox = useCallback((imgW: number, imgH: number, ratio: AspectRatio) => {
     let targetW = imgW * 0.85;
@@ -99,16 +104,28 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
+    setCropError(null);
     setImgNaturalSize({ width: img.naturalWidth, height: img.naturalHeight });
     setDisplayedSize({ width: img.clientWidth, height: img.clientHeight });
-    initCropBox(img.clientWidth, img.clientHeight, aspectRatio);
+    const cropWidth = rotation === 90 || rotation === 270 ? img.clientHeight : img.clientWidth;
+    const cropHeight = rotation === 90 || rotation === 270 ? img.clientWidth : img.clientHeight;
+    initCropBox(cropWidth, cropHeight, aspectRatio);
   };
 
   // Recalculate crop box when aspect ratio changes
   const handleRatioChange = (newRatio: AspectRatio) => {
     setAspectRatio(newRatio);
-    if (displayedSize.width > 0 && displayedSize.height > 0) {
-      initCropBox(displayedSize.width, displayedSize.height, newRatio);
+    if (workspaceWidth > 0 && workspaceHeight > 0) {
+      initCropBox(workspaceWidth, workspaceHeight, newRatio);
+    }
+  };
+
+  const handleRotationChange = (nextRotation: number) => {
+    setRotation(nextRotation);
+    const nextWidth = nextRotation === 90 || nextRotation === 270 ? displayedSize.height : displayedSize.width;
+    const nextHeight = nextRotation === 90 || nextRotation === 270 ? displayedSize.width : displayedSize.height;
+    if (nextWidth > 0 && nextHeight > 0) {
+      initCropBox(nextWidth, nextHeight, aspectRatio);
     }
   };
 
@@ -131,8 +148,9 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
       const deltaX = e.clientX - dragStartRef.current.clientX;
       const deltaY = e.clientY - dragStartRef.current.clientY;
       const orig = dragStartRef.current.cropBox;
-      const maxW = displayedSize.width;
-      const maxH = displayedSize.height;
+      const isQuarter = rotation === 90 || rotation === 270;
+      const maxW = isQuarter ? displayedSize.height : displayedSize.width;
+      const maxH = isQuarter ? displayedSize.width : displayedSize.height;
 
       let newX = orig.x;
       let newY = orig.y;
@@ -188,7 +206,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
         height: Math.round(newH),
       });
     },
-    [isDragging, dragAction, displayedSize, aspectRatio]
+    [isDragging, dragAction, displayedSize, aspectRatio, rotation]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -211,8 +229,8 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
   const handleApplyCrop = () => {
     if (!imageRef.current || displayedSize.width === 0 || displayedSize.height === 0) return;
 
-    const scaleX = imgNaturalSize.width / displayedSize.width;
-    const scaleY = imgNaturalSize.height / displayedSize.height;
+    const scaleX = (isQuarterTurn ? imgNaturalSize.height : imgNaturalSize.width) / workspaceWidth;
+    const scaleY = (isQuarterTurn ? imgNaturalSize.width : imgNaturalSize.height) / workspaceHeight;
 
     const cropX = cropBox.x * scaleX;
     const cropY = cropBox.y * scaleY;
@@ -220,43 +238,52 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     const cropHeight = cropBox.height * scaleY;
 
     const canvas = document.createElement('canvas');
-    const isRotated90or270 = rotation === 90 || rotation === 270;
-    canvas.width = isRotated90or270 ? cropHeight : cropWidth;
-    canvas.height = isRotated90or270 ? cropWidth : cropHeight;
+    canvas.width = Math.max(1, Math.round(cropWidth));
+    canvas.height = Math.max(1, Math.round(cropHeight));
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // First render the transformed image at natural resolution, then cut the
+    // selected region. This keeps the crop rectangle aligned with the preview
+    // for rotations and flips as well as the default 0° case.
+    const transformed = document.createElement('canvas');
+    const transformedWidth = isQuarterTurn ? imgNaturalSize.height : imgNaturalSize.width;
+    const transformedHeight = isQuarterTurn ? imgNaturalSize.width : imgNaturalSize.height;
+    transformed.width = Math.max(1, transformedWidth);
+    transformed.height = Math.max(1, transformedHeight);
+    const transformedCtx = transformed.getContext('2d');
+    if (!transformedCtx) return;
+
     ctx.save();
-
-    // Handle rotation & flips
-    if (isRotated90or270) {
-      ctx.translate(cropHeight / 2, cropWidth / 2);
-    } else {
-      ctx.translate(cropWidth / 2, cropHeight / 2);
-    }
-
-    ctx.rotate((rotation * Math.PI) / 180);
-    ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
-
     const img = imageRef.current;
+    transformedCtx.save();
+    transformedCtx.translate(transformedWidth / 2, transformedHeight / 2);
+    transformedCtx.rotate((rotation * Math.PI) / 180);
+    transformedCtx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+    transformedCtx.drawImage(img, -imgNaturalSize.width / 2, -imgNaturalSize.height / 2, imgNaturalSize.width, imgNaturalSize.height);
+    transformedCtx.restore();
+
     ctx.drawImage(
-      img,
+      transformed,
       cropX,
       cropY,
       cropWidth,
       cropHeight,
-      -cropWidth / 2,
-      -cropHeight / 2,
-      cropWidth,
-      cropHeight
+      0,
+      0,
+      canvas.width,
+      canvas.height
     );
 
-    ctx.restore();
-
-    const croppedDataUrl = canvas.toDataURL('image/png', 0.95);
-    onSave(croppedDataUrl);
-    onClose();
+    try {
+      const croppedDataUrl = canvas.toDataURL('image/png', 0.95);
+      onSave(croppedDataUrl);
+      onClose();
+    } catch (error) {
+      console.error('Unable to export the cropped image:', error);
+      setCropError('This image cannot be exported by the canvas. Please re-insert it and try again.');
+    }
   };
 
   const handleReset = () => {
@@ -264,8 +291,8 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     setFlipH(false);
     setFlipV(false);
     setAspectRatio('free');
-    if (displayedSize.width > 0 && displayedSize.height > 0) {
-      initCropBox(displayedSize.width, displayedSize.height, 'free');
+    if (workspaceWidth > 0 && workspaceHeight > 0) {
+      initCropBox(workspaceWidth, workspaceHeight, 'free');
     }
   };
 
@@ -301,18 +328,35 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
         </div>
 
         {/* Workspace Canvas Area */}
+        {cropError && (
+          <div role="alert" className="px-5 py-2 text-xs text-amber-600 bg-amber-500/10 border-b border-amber-500/20">
+            {cropError}
+          </div>
+        )}
         <div className="flex-1 overflow-auto p-6 flex items-center justify-center bg-black/30 min-h-[380px] max-h-[60vh] relative">
-          <div ref={containerRef} className="relative inline-block select-none max-w-full max-h-full">
+          <div
+            ref={containerRef}
+            className="relative select-none max-w-full max-h-full"
+            style={{
+              width: workspaceWidth || undefined,
+              height: workspaceHeight || undefined,
+            }}
+          >
             {/* Base Image */}
             <img
               ref={imageRef}
               src={imageSrc}
               alt="Crop preview"
               onLoad={handleImageLoad}
+              onError={() => setCropError('The image could not be loaded for cropping.')}
+              crossOrigin="anonymous"
               style={{
-                transform: `rotate(${rotation}deg) scaleX(${flipH ? -1 : 1}) scaleY(${flipV ? -1 : 1})`,
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: `translate(-50%, -50%) rotate(${rotation}deg) scaleX(${flipH ? -1 : 1}) scaleY(${flipV ? -1 : 1})`,
+                maxWidth: 'none',
                 maxHeight: '52vh',
-                maxWidth: '100%',
               }}
               className="block object-contain rounded-lg pointer-events-none transition-transform duration-150"
             />
@@ -452,7 +496,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => setRotation((prev) => (prev - 90 + 360) % 360)}
+              onClick={() => handleRotationChange((rotation - 90 + 360) % 360)}
               title="Rotate Left 90°"
               className="p-1.5 rounded-lg border hover:bg-black/5 dark:hover:bg-white/5 opacity-80 hover:opacity-100 transition-all"
               style={{ borderColor: 'var(--color-border)' }}
@@ -461,7 +505,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setRotation((prev) => (prev + 90) % 360)}
+              onClick={() => handleRotationChange((rotation + 90) % 360)}
               title="Rotate Right 90°"
               className="p-1.5 rounded-lg border hover:bg-black/5 dark:hover:bg-white/5 opacity-80 hover:opacity-100 transition-all"
               style={{ borderColor: 'var(--color-border)' }}

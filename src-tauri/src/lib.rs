@@ -989,7 +989,7 @@ fn save_attachment(note_id: String, file_name: String, data_url: String) -> Resu
 
     write_atomic(&attachment_path, bytes)
         .map_err(|e| format!("Failed to save attachment: {}", e))?;
-    Ok(format!("amnote-asset://{}/{}", note_id, attachment_name))
+    Ok(format!("amnote-asset://localhost/{}/{}", note_id, attachment_name))
 }
 
 fn cleanup_unused_attachments(note: &NotePayload) -> Result<(), String> {
@@ -1024,6 +1024,23 @@ fn cleanup_unused_attachments(note: &NotePayload) -> Result<(), String> {
     Ok(())
 }
 
+fn parse_attachment_request(
+    uri: &tauri::http::Uri,
+) -> Result<(String, String), &'static str> {
+    // Current attachment URLs contain the note and filename in the path:
+    // amnote-asset://localhost/{note-id}/{file}.
+    let path = uri.path().trim_start_matches('/');
+    if let Some((note_id, file_name)) = path.split_once('/') {
+        return Ok((note_id.to_string(), file_name.to_string()));
+    }
+
+    // Earlier releases put the note ID in the URI authority:
+    // amnote-asset://{note-id}/{file}. Continue serving those URLs.
+    let note_id = uri.host().ok_or("Invalid attachment URL.")?;
+    let file_name = path;
+    Ok((note_id.to_string(), file_name.to_string()))
+}
+
 fn attachment_protocol_response(
     request: tauri::http::Request<Vec<u8>>,
 ) -> tauri::http::Response<Vec<u8>> {
@@ -1031,24 +1048,24 @@ fn attachment_protocol_response(
         tauri::http::Response::builder()
             .status(tauri::http::StatusCode::BAD_REQUEST)
             .header(tauri::http::header::CONTENT_TYPE, "text/plain")
+            .header("Access-Control-Allow-Origin", "*")
             .body(message.as_bytes().to_vec())
             .unwrap()
     };
 
-    let relative_path = request.uri().path().trim_start_matches('/');
-    let (note_id, file_name) = match relative_path.split_once('/') {
-        Some(value) => value,
-        None => return invalid("Invalid attachment URL."),
+    let (note_id, file_name) = match parse_attachment_request(request.uri()) {
+        Ok(value) => value,
+        Err(message) => return invalid(message),
     };
 
-    if !is_safe_note_id(note_id)
+    if !is_safe_note_id(&note_id)
         || !note_id
             .chars()
             .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
     {
         return invalid("Invalid attachment note id.");
     }
-    let safe_name = match sanitize_attachment_name(file_name) {
+    let safe_name = match sanitize_attachment_name(&file_name) {
         Ok(name) => name,
         Err(_) => return invalid("Invalid attachment filename."),
     };
@@ -1057,10 +1074,10 @@ fn attachment_protocol_response(
         Ok(path) => path,
         Err(_) => return invalid("Vault unavailable."),
     };
-    let path = vault.join(".assets").join(note_id).join(safe_name);
+    let path = vault.join(".assets").join(note_id).join(&safe_name);
     match fs::read(path) {
         Ok(bytes) => {
-            let content_type = match relative_path
+            let content_type = match safe_name
                 .rsplit_once('.')
                 .map(|(_, ext)| ext.to_ascii_lowercase())
             {
@@ -1073,6 +1090,7 @@ fn attachment_protocol_response(
             tauri::http::Response::builder()
                 .header(tauri::http::header::CONTENT_TYPE, content_type)
                 .header("Cache-Control", "private, max-age=31536000, immutable")
+                .header("Access-Control-Allow-Origin", "*")
                 .body(bytes)
                 .unwrap()
         }
@@ -1195,6 +1213,23 @@ mod tests {
         let png = decode_image_data_url("data:image/png;base64,iVBORw0KGgo=").unwrap();
         assert_eq!(png.0, "png");
         assert!(!png.1.is_empty());
+    }
+
+    #[test]
+    fn attachment_urls_include_the_note_in_the_request_path() {
+        let current = tauri::http::Uri::from_static(
+            "amnote-asset://localhost/note-test/image-png.png",
+        );
+        assert_eq!(
+            parse_attachment_request(&current).unwrap(),
+            ("note-test".to_string(), "image-png.png".to_string())
+        );
+
+        let legacy = tauri::http::Uri::from_static("amnote-asset://note-test/image-png.png");
+        assert_eq!(
+            parse_attachment_request(&legacy).unwrap(),
+            ("note-test".to_string(), "image-png.png".to_string())
+        );
     }
 
     #[test]
