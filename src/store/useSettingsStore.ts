@@ -38,6 +38,7 @@ interface SettingsState {
   tagIcons: Record<string, string>;
   tagColors: Record<string, string>;
   tagMetadata: TagMetadataMap;
+  tagsSectionExpanded: boolean; // Sidebar tags section collapsed/expanded (default false/minimized)
   
   setFontFamily: (font: FontFamily) => void;
   setFontSize: (size: number) => void;
@@ -55,6 +56,7 @@ interface SettingsState {
   setRevealMarkdownOnFocus: (reveal: boolean) => void;
   setSpellCheck: (enabled: boolean) => void;
   setShowWordCount: (show: boolean) => void;
+  setTagsSectionExpanded: (expanded: boolean) => void;
   setTagIcon: (tag: string, iconName: string | null) => void;
   setTagColor: (tag: string, color: string | null) => void;
   applyRemoteTagMetadata: (remoteTags: TagMetadataMap) => Promise<void>;
@@ -84,6 +86,7 @@ export const useSettingsStore = create<SettingsState>()(
       tagIcons: {},
       tagColors: {},
       tagMetadata: {},
+      tagsSectionExpanded: false,
 
       setFontFamily: (fontFamily) => set({ fontFamily }),
       setFontSize: (fontSize) => set({ fontSize }),
@@ -101,6 +104,7 @@ export const useSettingsStore = create<SettingsState>()(
       setRevealMarkdownOnFocus: (revealMarkdownOnFocus) => set({ revealMarkdownOnFocus }),
       setSpellCheck: (spellCheck) => set({ spellCheck }),
       setShowWordCount: (showWordCount) => set({ showWordCount }),
+      setTagsSectionExpanded: (tagsSectionExpanded) => set({ tagsSectionExpanded }),
       setTagIcon: (tag, iconName) => {
         let nextMetadata: TagMetadataMap = {};
         set((state) => {

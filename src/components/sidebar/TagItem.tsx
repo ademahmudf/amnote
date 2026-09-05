@@ -12,11 +12,18 @@ interface TagItemProps {
 }
 
 export const TagItem: React.FC<TagItemProps> = ({ node, depth = 0 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [isIconModalOpen, setIsIconModalOpen] = useState(false);
-
   const selectedTag = useNoteStore((state) => state.selectedTag);
   const setSelectedTag = useNoteStore((state) => state.setSelectedTag);
+
+  const isParentOfSelected = Boolean(selectedTag && selectedTag.startsWith(node.name + '/'));
+  const [isExpanded, setIsExpanded] = useState(isParentOfSelected);
+  const [isIconModalOpen, setIsIconModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (isParentOfSelected) {
+      setIsExpanded(true);
+    }
+  }, [isParentOfSelected]);
 
   const uiScale = useSettingsStore((state) => state.uiScale);
   const tagIcons = useSettingsStore((state) => state.tagIcons);

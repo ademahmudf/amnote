@@ -703,4 +703,14 @@ assert(useSettingsStore.getState().focusMode === false, 'Disables focus mode');
 assert(FocusModeExtension.name === 'focusMode', 'FocusModeExtension has correct name');
 assert(Boolean(focusModePluginKey), 'focusModePluginKey is properly exported');
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, and Focus Mode tests passed successfully!');
+// ============================================================================
+// Test 24: Sidebar Tags Collapsed State Tests
+// ============================================================================
+console.log('\n--- Test 24: Sidebar Tags Collapsed State Tests ---');
+assert(useSettingsStore.getState().tagsSectionExpanded === false, 'Tags section defaults to minimized/collapsed (false)');
+useSettingsStore.getState().setTagsSectionExpanded(true);
+assert(useSettingsStore.getState().tagsSectionExpanded === true, 'setTagsSectionExpanded expands the tags section');
+useSettingsStore.getState().setTagsSectionExpanded(false);
+assert(useSettingsStore.getState().tagsSectionExpanded === false, 'setTagsSectionExpanded collapses the tags section');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, Focus Mode tests, and Tags Collapsed tests passed successfully!');

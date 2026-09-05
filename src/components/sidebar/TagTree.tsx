@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { TagItem } from './TagItem';
-import { Tag as TagIcon, Plus, Hash, Check, X } from 'lucide-react';
+import { Tag as TagIcon, Plus, Hash, Check, X, ChevronRight, ChevronDown } from 'lucide-react';
 
 export const TagTree: React.FC = () => {
   const notes = useNoteStore((state) => state.notes);
@@ -9,15 +10,21 @@ export const TagTree: React.FC = () => {
   const createNote = useNoteStore((state) => state.createNote);
   const tagNodes = React.useMemo(() => getTagTree(), [notes, getTagTree]);
 
+  const tagsSectionExpanded = useSettingsStore((state) => state.tagsSectionExpanded);
+  const setTagsSectionExpanded = useSettingsStore((state) => state.setTagsSectionExpanded);
+
   const [isCreating, setIsCreating] = useState(false);
   const [tagName, setTagName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isCreating) {
+      if (!tagsSectionExpanded) {
+        setTagsSectionExpanded(true);
+      }
       inputRef.current?.focus();
     }
-  }, [isCreating]);
+  }, [isCreating, tagsSectionExpanded, setTagsSectionExpanded]);
 
   const handleCommit = () => {
     const clean = tagName.trim().toLowerCase().replace(/^#+/, '');
@@ -35,18 +42,31 @@ export const TagTree: React.FC = () => {
 
   return (
     <div className="space-y-0.5">
-      <div className="flex items-center justify-between px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider opacity-50 select-none">
+      <div
+        onClick={() => setTagsSectionExpanded(!tagsSectionExpanded)}
+        className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold uppercase tracking-wider opacity-60 hover:opacity-100 cursor-pointer select-none rounded-md transition-all hover:bg-black/5 dark:hover:bg-white/5"
+      >
         <div className="flex items-center gap-1.5">
-          <TagIcon size={11} />
+          {tagsSectionExpanded ? (
+            <ChevronDown size={11} className="shrink-0" />
+          ) : (
+            <ChevronRight size={11} className="shrink-0" />
+          )}
+          <TagIcon size={11} className="shrink-0" />
           <span>Tags</span>
+          {tagNodes.length > 0 && (
+            <span className="text-[9.5px] font-mono opacity-60">({tagNodes.length})</span>
+          )}
         </div>
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
+            setTagsSectionExpanded(true);
             setIsCreating(true);
           }}
           title="Create New Tag"
-          className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 opacity-70 hover:opacity-100 transition-opacity"
+          className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
         >
           <Plus size={11} />
         </button>
@@ -105,16 +125,20 @@ export const TagTree: React.FC = () => {
         </form>
       )}
 
-      {tagNodes.length === 0 ? (
-        <div className="px-2 py-1 text-[11px] opacity-40 italic select-none">
-          No tags yet. Type #tag in any note!
-        </div>
-      ) : (
-        <div className="flex flex-col space-y-0">
-          {tagNodes.map((node) => (
-            <TagItem key={node.name} node={node} />
-          ))}
-        </div>
+      {tagsSectionExpanded && (
+        <>
+          {tagNodes.length === 0 ? (
+            <div className="px-2 py-1 text-[11px] opacity-40 italic select-none">
+              No tags yet. Type #tag in any note!
+            </div>
+          ) : (
+            <div className="flex flex-col space-y-0 animate-in fade-in duration-100">
+              {tagNodes.map((node) => (
+                <TagItem key={node.name} node={node} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
