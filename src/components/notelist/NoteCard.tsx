@@ -121,6 +121,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
     }
   }, [isActive]);
 
+  const isMac =
+    typeof navigator !== 'undefined' &&
+    (/Mac|iPhone|iPod|iPad/i.test(navigator.platform || '') || /Mac/i.test(navigator.userAgent || ''));
+
+  // On macOS with CoreText rendering, flex items-center naturally centers icons;
+  // on Linux desktop, a slight negative translation aligns with font baselines.
+  const badgeIconClass = `shrink-0 ${isMac ? 'translate-y-0' : '-translate-y-[0.08em]'}`;
+
   return (
     <div
       ref={cardRef}
@@ -208,7 +216,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
                 }`}
                 title={`Tasks: ${doneTasks} of ${taskMatches.length} completed`}
               >
-                <CheckSquare size="0.95em" className="shrink-0 -translate-y-[0.08em]" />
+                <CheckSquare size="0.95em" className={badgeIconClass} />
                 <span className="leading-none">{isAllDone ? 'Done' : `${doneTasks}/${taskMatches.length}`}</span>
               </span>
             );
@@ -228,7 +236,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
                   color: customColor || 'var(--color-tag-text)',
                 }}
               >
-                <IconComp size="0.95em" className="shrink-0 -translate-y-[0.08em]" />
+                <IconComp size="0.95em" className={badgeIconClass} />
                 <span className="leading-none">{formatTagDisplay(tag)}</span>
               </span>
             );
