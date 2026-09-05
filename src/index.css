@@ -771,3 +771,88 @@ li[data-type="taskItem"] > div,
     color: #374151 !important;
   }
 }
+
+/* ==========================================================================
+   Hand-Drawn Text Annotations (OpenSource UI)
+   ========================================================================== */
+
+.am-annotation {
+  position: relative;
+  display: inline;
+}
+
+/* 1. Wavy Underline */
+.am-annotation-wavy,
+.ProseMirror .am-annotation-wavy {
+  text-decoration: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 14' fill='none'%3E%3Cpath d='M2,6 Q5.5,3 9,6 T17,6 T25,6 T33,6 T41,6 T49,6 T57,6 T65,6 T73,6 T81,6 T89,6 T97,6 T105,6 T113,6 T121,6 T129,6 T137,6' stroke='%23c084fc' stroke-width='2.4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: left bottom -2px;
+  background-size: auto 7px;
+  padding-bottom: 3px;
+}
+
+/* 2. Rough Highlight */
+.am-annotation-highlight,
+.ProseMirror .am-annotation-highlight {
+  position: relative;
+  background: linear-gradient(104deg, rgba(250, 204, 21, 0.22) 0.9%, rgba(250, 204, 21, 0.40) 2.4%, rgba(250, 204, 21, 0.32) 96%, rgba(250, 204, 21, 0.18) 99%);
+  border-radius: 4px 6px 3px 5px;
+  padding: 1px 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* 3. Hand-drawn Circle */
+.am-annotation-circle,
+.ProseMirror .am-annotation-circle {
+  position: relative;
+  border: 2px solid #22d3ee;
+  border-radius: 48% 52% 49% 51% / 46% 44% 56% 54%;
+  padding: 1px 6px;
+  margin: 0 2px;
+  display: inline-block;
+  transform: rotate(-0.5deg);
+}
+
+/* 4. Curved Underline */
+.am-annotation-underline,
+.ProseMirror .am-annotation-underline {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 10' fill='none'%3E%3Cpath d='M3,6 C40,3 100,3 137,5' stroke='%23fb7185' stroke-width='2.4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center bottom -1px;
+  background-size: 100% 6px;
+  padding-bottom: 4px;
+}
+
+/* 5. Sketched Box */
+.am-annotation-box,
+.ProseMirror .am-annotation-box {
+  position: relative;
+  border: 2px solid #fb923c;
+  border-radius: 3px 5px 4px 6px;
+  padding: 1px 6px;
+  margin: 0 2px;
+  display: inline-block;
+  transform: rotate(0.4deg);
+}
+
+/* 6. Double Underline */
+.am-annotation-double,
+.ProseMirror .am-annotation-double {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 16' fill='none'%3E%3Cpath d='M3,5 C40,2 100,2 137,4' stroke='%2334d399' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Cpath d='M5,12 C42,9 98,10 135,11' stroke='%2334d399' stroke-width='1.8' stroke-linecap='round' fill='none' opacity='0.75'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center bottom -2px;
+  background-size: 100% 8px;
+  padding-bottom: 5px;
+}
+
+/* 7. Hand-drawn Cross Out */
+.am-annotation-cross,
+.ProseMirror .am-annotation-cross {
+  text-decoration: line-through;
+  text-decoration-color: #f87171;
+  text-decoration-thickness: 2px;
+  text-decoration-style: wavy;
+}
+

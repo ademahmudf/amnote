@@ -22,6 +22,7 @@ import { CalloutNode } from './extensions/CalloutExtension';
 import { AutoCapitalizeTitle } from './extensions/AutoCapitalizeTitle';
 import { HybridHeadingExtension } from './extensions/HybridHeadingExtension';
 import { TypewriterMode } from './extensions/TypewriterMode';
+import { AnnotationExtension } from './extensions/AnnotationExtension';
 import { BubbleToolbar } from './components/BubbleToolbar';
 import { SlashCommandMenu } from './components/SlashCommandMenu';
 import { WikiLinkMenu } from './components/WikiLinkMenu';
@@ -202,6 +203,7 @@ export const AmEditor: React.FC = () => {
       AutoCapitalizeTitle,
       HybridHeadingExtension,
       TypewriterMode,
+      AnnotationExtension,
     ],
     editorProps: {
       attributes: {

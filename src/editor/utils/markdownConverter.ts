@@ -31,6 +31,7 @@ export function htmlToMarkdown(html: string): string {
     md = md.replace(/<mark[^>]*data-color="([^"]+)"[^>]*>(.*?)<\/mark>/gi, '=={color:$1}$2==');
     md = md.replace(/<mark[^>]*style="[^"]*background-color:\s*([^;"]+)[^"]*"[^>]*>(.*?)<\/mark>/gi, '=={color:$1}$2==');
     md = md.replace(/<mark>(.*?)<\/mark>/gi, '==$1==');
+    md = md.replace(/<span[^>]*data-annotation="([^"]+)"[^>]*>(.*?)<\/span>/gi, '~$1:$2~');
     // Images
     md = md.replace(/<img([^>]*)>/gi, (_match, attrs) => {
       const srcMatch = attrs.match(/src="([^"]+)"/i);
@@ -82,6 +83,13 @@ export function htmlToMarkdown(html: string): string {
     // Check wiki link
     if (el.getAttribute('data-wiki-target')) {
       return `[[${el.getAttribute('data-wiki-target')}]]`;
+    }
+
+    // Check hand-drawn annotation
+    if (el.getAttribute('data-annotation')) {
+      const variant = el.getAttribute('data-annotation') || 'wavy';
+      const inner = Array.from(el.childNodes).map(serializeNode).join('');
+      return `~${variant}:${inner}~`;
     }
 
     // Check Callout

@@ -79,6 +79,11 @@ function renderCustomText(value: string): string {
     (_match, target: string) =>
       `<span data-wiki-target="${escapeAttribute(target)}" class="am-wiki-link bear-wiki-link">[[ ${escapeHtml(target)} ]]</span>`
   );
+  out = out.replace(
+    /~(wavy|circle|highlight|underline|box|double|cross|arrow):([^~]+)~/g,
+    (_match, variant: string, text: string) =>
+      `<span data-annotation="${escapeAttribute(variant)}" class="am-annotation am-annotation-${escapeAttribute(variant)}">${text}</span>`
+  );
 
   return out;
 }
@@ -102,8 +107,16 @@ function renderInlineTokens(tokens?: Token[]): string {
         return `<strong>${renderInlineTokens((token as Tokens.Strong).tokens)}</strong>`;
       case 'em':
         return `<em>${renderInlineTokens((token as Tokens.Em).tokens)}</em>`;
-      case 'del':
-        return `<s>${renderInlineTokens((token as Tokens.Del).tokens)}</s>`;
+      case 'del': {
+        const delToken = token as Tokens.Del;
+        const match = delToken.text.match(/^(wavy|circle|highlight|underline|box|double|cross|arrow):([\s\S]+)$/);
+        if (match) {
+          const variant = match[1];
+          const innerText = match[2];
+          return `<span data-annotation="${escapeAttribute(variant)}" class="am-annotation am-annotation-${escapeAttribute(variant)}">${renderCustomText(innerText)}</span>`;
+        }
+        return `<s>${renderInlineTokens(delToken.tokens)}</s>`;
+      }
       case 'codespan':
         return `<code>${escapeHtml((token as Tokens.Codespan).text)}</code>`;
       case 'link': {

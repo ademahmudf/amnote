@@ -15,6 +15,7 @@ import { PasswordModal } from '../modals/PasswordModal';
 import { CheatsheetModal } from '../modals/CheatsheetModal';
 import { ConflictDiffModal } from '../modals/ConflictDiffModal';
 import { NotificationContainer } from '../ui/NotificationContainer';
+import { RoughFilters } from '../ui/AnnotatedText';
 
 export const AppLayout: React.FC = () => {
   const init = useNoteStore((state) => state.init);
@@ -258,6 +259,7 @@ export const AppLayout: React.FC = () => {
       <PasswordModal />
       <CheatsheetModal />
       <NotificationContainer />
+      <RoughFilters />
       {(() => {
         const activeConflict = vaultConflicts.find(
           (conflict) => conflict.noteId === activeConflictId

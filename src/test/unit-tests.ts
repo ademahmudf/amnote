@@ -176,6 +176,7 @@ const testSchema = new Schema({
     tag: { attrs: { tag: { default: '' } } },
     wikiLink: { attrs: { target: { default: '' } } },
     link: { attrs: { href: { default: '' } } },
+    annotation: { attrs: { variant: { default: 'wavy' } } },
   },
 });
 
@@ -238,6 +239,20 @@ const md4 = serializeProseMirrorToMarkdown(doc4);
 assert(md4.includes('=={color:#38bdf8}sky blue highlight=='), 'AST Serializer formats custom color highlight');
 assert(md4.includes('#[[Omarchy Core]]#'), 'AST Serializer formats spaced bracket tag');
 assert(md4.includes('[[Sprint Goals]]'), 'AST Serializer formats cross-note WikiLink');
+
+// AST Test 4b: Annotation Mark Serialization (~wavy:text~)
+const docAnnot = testSchema.nodes.doc.create({}, [
+  testSchema.nodes.paragraph.create({}, [
+    testSchema.text('Here is '),
+    testSchema.text('hand-drawn wave', [testSchema.marks.annotation.create({ variant: 'wavy' })]),
+    testSchema.text(' and '),
+    testSchema.text('circled point', [testSchema.marks.annotation.create({ variant: 'circle' })]),
+    testSchema.text('.'),
+  ]),
+]);
+const mdAnnot = serializeProseMirrorToMarkdown(docAnnot);
+assert(mdAnnot.includes('~wavy:hand-drawn wave~'), 'AST Serializer formats ~wavy:text~ annotation');
+assert(mdAnnot.includes('~circle:circled point~'), 'AST Serializer formats ~circle:text~ annotation');
 
 // AST Test 5: Table Grid Serialization
 const doc5 = testSchema.nodes.doc.create({}, [
@@ -445,4 +460,21 @@ assert(notifState?.type === 'success', 'Notification type matches');
 useNotificationStore.getState().dismissNotification();
 assert(useNotificationStore.getState().notification === null, 'Notification store clears on dismiss');
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, and Notification tests passed successfully!');
+// Test Hand-Drawn Annotation Markdown <-> HTML
+const mdAnnotationWavy = 'This has ~wavy:hand-drawn text~ in it.';
+const htmlAnnotationWavy = markdownToHtml(mdAnnotationWavy);
+assert(htmlAnnotationWavy.includes('data-annotation="wavy"'), 'Converts ~wavy:text~ to data-annotation="wavy"');
+assert(htmlAnnotationWavy.includes('am-annotation-wavy'), 'Includes am-annotation-wavy class');
+assert(htmlToMarkdown(htmlAnnotationWavy).trim() === mdAnnotationWavy, 'Round-trips ~wavy:text~ annotation');
+
+const mdAnnotationCircle = 'Look at this ~circle:key takeaway~ here.';
+const htmlAnnotationCircle = markdownToHtml(mdAnnotationCircle);
+assert(htmlAnnotationCircle.includes('data-annotation="circle"'), 'Converts ~circle:text~ to data-annotation="circle"');
+assert(htmlToMarkdown(htmlAnnotationCircle).trim() === mdAnnotationCircle, 'Round-trips ~circle:text~ annotation');
+
+const mdAnnotationBox = 'Pay ~box:attention~ to this!';
+const htmlAnnotationBox = markdownToHtml(mdAnnotationBox);
+assert(htmlAnnotationBox.includes('data-annotation="box"'), 'Converts ~box:text~ to data-annotation="box"');
+assert(htmlToMarkdown(htmlAnnotationBox).trim() === mdAnnotationBox, 'Round-trips ~box:text~ annotation');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, and Annotation tests passed successfully!');

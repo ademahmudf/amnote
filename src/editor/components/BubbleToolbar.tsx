@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Palette,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
@@ -67,6 +68,18 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor }) => {
   };
 
   const isHighlightActive = editor.isActive('highlight');
+  const [showAnnotationPicker, setShowAnnotationPicker] = useState(false);
+
+  const applyAnnotation = (variant: string) => {
+    if (variant === 'none') {
+      editor.chain().focus().unsetAnnotation().run();
+    } else {
+      editor.chain().focus().setAnnotation({ variant }).run();
+    }
+    setShowAnnotationPicker(false);
+  };
+
+  const isAnnotationActive = editor.isActive('annotation');
 
   const buttons = [
     {
@@ -224,6 +237,32 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor }) => {
           </button>
         </div>
 
+        {/* Hand-Drawn Annotation Dropdown Trigger */}
+        <div className="relative flex items-center">
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setShowAnnotationPicker(!showAnnotationPicker);
+              setShowColorPicker(false);
+            }}
+            title="Hand-Drawn Text Annotation (Wavy, Circle, Box, etc.)"
+            className={`px-2 py-1.5 rounded-lg text-xs flex items-center gap-1 transition-all ${
+              isAnnotationActive || showAnnotationPicker
+                ? 'bg-accent text-white font-bold shadow-sm'
+                : 'hover:bg-black/10 dark:hover:bg-white/10 opacity-80 hover:opacity-100'
+            }`}
+            style={{
+              backgroundColor: (isAnnotationActive || showAnnotationPicker) ? 'var(--color-accent)' : undefined,
+              color: (isAnnotationActive || showAnnotationPicker) ? 'var(--color-accent-text)' : undefined,
+            }}
+          >
+            <Sparkles size={13} />
+            <span className="text-[11px] font-semibold">Annotate</span>
+            <ChevronDown size={10} className={`transition-transform duration-150 ${showAnnotationPicker ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
         {buttons.map((btn, idx) => {
           if (btn.type === 'divider') {
             return (
@@ -318,6 +357,60 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor }) => {
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Floating Hand-Drawn Annotation Popover */}
+      {showAnnotationPicker && (
+        <div
+          className="absolute left-14 top-full mt-2 p-2 rounded-2xl shadow-2xl border backdrop-blur-xl z-50 flex flex-col gap-1 min-w-[190px] animate-in fade-in zoom-in-95 duration-100 select-none"
+          style={{
+            backgroundColor: 'var(--card-notelist-bg)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--text-editor)',
+          }}
+        >
+          <div className="text-[10px] font-bold uppercase tracking-wider opacity-60 px-2 py-0.5">
+            Hand-Drawn Styles
+          </div>
+
+          {[
+            { id: 'wavy', label: 'Wavy Underline', preview: '〰️', color: '#c084fc' },
+            { id: 'circle', label: 'Sketched Circle', preview: '⭕', color: '#22d3ee' },
+            { id: 'highlight', label: 'Rough Highlight', preview: '🖍️', color: '#facc15' },
+            { id: 'underline', label: 'Curved Underline', preview: '➖', color: '#fb7185' },
+            { id: 'box', label: 'Sketched Box', preview: '🔲', color: '#fb923c' },
+            { id: 'double', label: 'Double Underline', preview: '‗', color: '#34d399' },
+            { id: 'cross', label: 'Cross Out', preview: '✖️', color: '#f87171' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => applyAnnotation(item.id)}
+              className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs hover:bg-black/5 dark:hover:bg-white/5 transition-all text-left group"
+            >
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="font-medium text-[11.5px]">{item.label}</span>
+              </span>
+              <span className="text-[11px] opacity-60 group-hover:opacity-100">{item.preview}</span>
+            </button>
+          ))}
+
+          {isAnnotationActive && (
+            <div className="pt-1 mt-1 border-t flex justify-end" style={{ borderColor: 'var(--color-divider)' }}>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => applyAnnotation('none')}
+                className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-xs text-rose-400 hover:bg-rose-500/10 transition-all font-medium"
+              >
+                <X size={12} />
+                <span>Remove Annotation</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

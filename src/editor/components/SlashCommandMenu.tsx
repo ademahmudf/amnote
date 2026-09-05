@@ -22,6 +22,7 @@ import {
   FileText,
   Image as ImageIcon,
   Calendar,
+  Sparkles,
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { markdownToHtml } from '../utils/markdownConverter';
@@ -36,7 +37,7 @@ interface SlashCommandMenuProps {
 interface CommandItem {
   title: string;
   description: string;
-  category: 'Structure' | 'Lists & Tasks' | 'Formatting' | 'Cards & Blocks' | 'Templates';
+  category: 'Structure' | 'Lists & Tasks' | 'Formatting' | 'Cards & Blocks' | 'Templates' | 'Annotations';
   keywords?: string[];
   icon: React.ComponentType<{ size?: number; className?: string }>;
   colorIndicator?: string;
@@ -285,6 +286,63 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
       command: (ed) => {
         const md = `### Sprint Tasks\n\n#todo\n\n- [ ] Task 1\n- [ ] Task 2\n- [ ] Task 3\n`;
         ed.chain().focus().insertContent(markdownToHtml(md)).run();
+      },
+    },
+
+    // 6. Hand-Drawn Annotations
+    {
+      title: 'Wavy Underline',
+      description: 'Hand-drawn purple wave underline (~wavy:text~)',
+      category: 'Annotations',
+      keywords: ['wavy', 'annotate', 'annotation', 'underline', 'wave'],
+      icon: Sparkles,
+      colorIndicator: '#c084fc',
+      command: (ed) => {
+        ed.chain().focus().insertContent('~wavy:Important point~ ').run();
+      },
+    },
+    {
+      title: 'Circled Text',
+      description: 'Hand-sketched cyan circle around text (~circle:text~)',
+      category: 'Annotations',
+      keywords: ['circle', 'circled', 'annotate', 'ring', 'round'],
+      icon: Sparkles,
+      colorIndicator: '#22d3ee',
+      command: (ed) => {
+        ed.chain().focus().insertContent('~circle:Key concept~ ').run();
+      },
+    },
+    {
+      title: 'Rough Highlight',
+      description: 'Hand-drawn soft yellow highlighter (~highlight:text~)',
+      category: 'Annotations',
+      keywords: ['highlight', 'rough', 'annotate', 'yellow', 'mark'],
+      icon: Sparkles,
+      colorIndicator: '#facc15',
+      command: (ed) => {
+        ed.chain().focus().insertContent('~highlight:Highlighted text~ ').run();
+      },
+    },
+    {
+      title: 'Sketched Box',
+      description: 'Hand-drawn orange rectangular box (~box:text~)',
+      category: 'Annotations',
+      keywords: ['box', 'border', 'annotate', 'frame', 'rect'],
+      icon: Sparkles,
+      colorIndicator: '#fb923c',
+      command: (ed) => {
+        ed.chain().focus().insertContent('~box:Attention~ ').run();
+      },
+    },
+    {
+      title: 'Double Underline',
+      description: 'Hand-drawn double green underline (~double:text~)',
+      category: 'Annotations',
+      keywords: ['double', 'underline', 'annotate', 'green'],
+      icon: Sparkles,
+      colorIndicator: '#34d399',
+      command: (ed) => {
+        ed.chain().focus().insertContent('~double:Crucial detail~ ').run();
       },
     },
   ];

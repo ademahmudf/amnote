@@ -337,6 +337,13 @@ class SerializerState {
           }
         }
 
+        // 3b. Annotation Mark (~variant:text~)
+        const annotationMark = marks.find((m) => m.type.name === 'annotation');
+        if (annotationMark) {
+          const variant = annotationMark.attrs.variant || 'wavy';
+          text = `~${variant}:${text}~`;
+        }
+
         // 4. Code Mark
         if (marks.some((m) => m.type.name === 'code')) {
           text = `\`${text}\``;
