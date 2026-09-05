@@ -6,6 +6,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { wrappingInputRule } from '@tiptap/core';
+import { TextSelection } from '@tiptap/pm/state';
 import { Table } from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableHeader from '@tiptap/extension-table-header';
@@ -216,6 +217,42 @@ export const AmEditor: React.FC = () => {
       attributes: {
         class: 'focus:outline-none min-h-[500px] max-w-none text-editor',
       },
+      handleTripleClick: (view, pos) => {
+        const { doc } = view.state;
+        const $pos = doc.resolve(pos);
+        for (let d = $pos.depth; d >= 0; d--) {
+          const node = $pos.node(d);
+          if (node.isTextblock) {
+            const start = $pos.start(d);
+            const end = $pos.end(d);
+            if (start <= end) {
+              const tr = view.state.tr.setSelection(TextSelection.create(doc, start, end));
+              view.dispatch(tr);
+              return true;
+            }
+          }
+        }
+        return false;
+      },
+      handleDOMEvents: {
+        mouseup: (view) => {
+          const { state } = view;
+          const { selection } = state;
+          if (selection instanceof TextSelection && !selection.empty) {
+            const { $from, $to } = selection;
+            // If selection dragged past the end of a block, it captures parentOffset === 0 in the next block,
+            // which causes browsers to draw a full-width trailing highlight box to the right screen edge.
+            // Clamping back to the previous block end fixes this seamlessly.
+            if ($to.parentOffset === 0 && $to.pos > $from.pos) {
+              const clampedTo = $to.pos - 1;
+              if (clampedTo >= $from.pos) {
+                view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, $from.pos, clampedTo)));
+              }
+            }
+          }
+          return false;
+        },
+      },
       handleKeyDown: (_view, event) => {
         if (isSlashOpenRef.current || isWikiMenuOpenRef.current) {
           if (['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(event.key)) {
@@ -369,7 +406,7 @@ export const AmEditor: React.FC = () => {
         const coords = currentEditor.view.coordsAtPos(from);
         setBubblePosition({
           top: Math.max(10, coords.top - 48),
-          left: Math.max(20, coords.left),
+          left: Math.max(20, Math.min(window.innerWidth - 650, coords.left)),
         });
         setShowBubbleMenu(true);
       } else {
