@@ -499,19 +499,11 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   setActiveNoteId: (id) => set({ activeNoteId: id }),
   
   setActiveFilter: (filter) => {
-    set({ activeFilter: filter, selectedTag: null });
-    const filtered = get().getFilteredNotes();
-    if (filtered.length > 0) {
-      set({ activeNoteId: filtered[0].id });
-    }
+    set({ activeFilter: filter, selectedTag: null, activeNoteId: null });
   },
   
   setSelectedTag: (tag) => {
-    set({ selectedTag: tag, activeFilter: null });
-    const filtered = get().getFilteredNotes();
-    if (filtered.length > 0) {
-      set({ activeNoteId: filtered[0].id });
-    }
+    set({ selectedTag: tag, activeFilter: null, activeNoteId: null });
   },
   
   setSearchQuery: (query) => set({ searchQuery: query }),

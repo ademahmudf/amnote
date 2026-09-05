@@ -496,4 +496,28 @@ const htmlAnnotationBox = markdownToHtml(mdAnnotationBox);
 assert(htmlAnnotationBox.includes('data-annotation="box"'), 'Converts ~box:text~ to data-annotation="box"');
 assert(htmlToMarkdown(htmlAnnotationBox).trim() === mdAnnotationBox, 'Round-trips ~box:text~ annotation');
 
+// Test 20: Sidebar menu & tag selection does not auto-open note
+import { useNoteStore } from '../store/useNoteStore';
+useNoteStore.setState({
+  activeNoteId: 'note-sample',
+  notes: [
+    {
+      id: 'note-sample',
+      title: 'Sample',
+      content: 'hello',
+      createdAt: 1,
+      updatedAt: 1,
+      tags: ['work'],
+      isPinned: false,
+      isArchived: false,
+      isTrashed: false,
+    },
+  ],
+});
+useNoteStore.getState().setActiveFilter('trash');
+assert(useNoteStore.getState().activeNoteId === null, 'Changing activeFilter leaves note unselected until user chooses a note');
+useNoteStore.setState({ activeNoteId: 'note-sample' });
+useNoteStore.getState().setSelectedTag('work');
+assert(useNoteStore.getState().activeNoteId === null, 'Changing selectedTag leaves note unselected until user chooses a note');
+
 console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, and Annotation tests passed successfully!');
