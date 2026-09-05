@@ -16,10 +16,10 @@ Built with **Tauri v2, React 19, TipTap, Tailwind CSS, and Rust**.
 - ✍ **Typewriter Centering Mode (`Ctrl+Shift+T`)**: Keeps the active typing line vertically centered in the viewport for ergonomic writing sessions.
 - 🎯 **Session Word Goals**: Set target word count goals with live status bar progress tracking.
 - 🔤 **Hybrid Markdown Headings**: Clean, distraction-free typography by default; reveal `#`, `##`, `###` on cursor click or hover to cycle heading levels.
-- 🖋 **Typography & UI Scale**: Choose from **Clarika**, **Bear Sans**, **Inter**, **Editorial Serif**, **JetBrains Mono**, or **System Native**, with 4 configurable UI scales.
-- 🎨 **Rich Themes**: Red Graphite, Charcoal, Solarized, Dracula, Nord, Ayu, Sepia, and **Omarchy OS Auto-Sync**.
+- 🖋 **Typography & UI Scale**: Choose from **Clarika**, **Bear Sans**, **Inter Sans**, **Jost**, **Montserrat**, **Space Grotesk**, **Instrument Serif**, **Cormorant Garamond**, **EB Garamond**, **Editorial Serif**, **JetBrains Mono**, **IBM Plex Mono**, **Caveat**, or **System Native**, with 4 configurable UI scales.
+- 🎨 **Rich Themes (24)**: Red Graphite (Dark/Light), Charcoal, Dieci, Solarized (Dark/Light), Dracula, Nord, Sepia, Ayu (Light/Mirage), Catppuccin (Mocha/Latte), Tokyo Night, Rosé Pine (Dark/Dawn), Gruvbox (Dark/Light), Everforest (Dark/Light), GitHub (Dark/Light), Synthwave '84, and **Omarchy Desktop Sync**.
 - ⌨ **Cheatsheet HUD (`Ctrl+/` or `?`)**: Fast modal reference for Markdown syntax and keyboard shortcuts.
-- 🔒 **Password Protection**: Encrypt individual notes with SHA-256 session lock protection.
+- 🔒 **Note Lock**: Lock individual notes behind a SHA-256 password-verified session lock. Hides content in-app only — notes remain plaintext Markdown on disk (not end-to-end encryption).
 
 ---
 

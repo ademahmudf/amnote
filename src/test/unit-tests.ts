@@ -131,7 +131,7 @@ assert(resizedBackToMd.includes('![Graph|left|50%](https://example.com/graph.png
 assert(resizedBackToMd.includes('![Banner|75%](https://example.com/banner.png)'), 'Round-trips resized image markdown');
 
 // Test 12: Initial AmNote Seed verification
-assert(initialAmNoteSeed.length === 2, 'Initial seed has 2 notes');
+assert(initialAmNoteSeed.length === 3, 'Initial seed has 3 notes');
 assert(initialAmNoteSeed[0].title === 'Welcome to AmNote', 'First note is Welcome to AmNote');
 
 // ============================================================================

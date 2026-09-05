@@ -898,7 +898,7 @@ export const AmEditor: React.FC = () => {
               }`}
             >
               {isUnlocked ? <Unlock size={12} /> : <Lock size={12} />}
-              <span>{isUnlocked ? 'Unlocked' : 'Encrypted'}</span>
+              <span>{isUnlocked ? 'Unlocked' : 'Locked'}</span>
             </div>
           )}
           <span>Saved</span>

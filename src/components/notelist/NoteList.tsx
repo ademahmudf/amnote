@@ -3,6 +3,7 @@ import { Search, X, Plus, FileText, Pin, CheckSquare, Lock, Calendar, Trash2, Ca
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
+import { uiScaleValue, noteListPanelWidthClass, noteListSearchInputClass, noteListHeaderTitleClass } from '../../utils/uiScale';
 import { NoteCard } from './NoteCard';
 import { SortDropdown } from './SortDropdown';
 import { promptEmptyTrashConfirmation } from '../../utils/trashConfirmation';
@@ -109,26 +110,9 @@ export const NoteList: React.FC = () => {
   const customColor = selectedTag ? tagColors[selectedTag] : undefined;
   const TagIconComponent = selectedTag ? resolveTagIcon(selectedTag, customIcon) : FileText;
 
-  const panelWidthClass = {
-    compact: 'w-72',
-    standard: 'w-76',
-    comfortable: 'w-80',
-    spacious: 'w-88',
-  }[uiScale] || 'w-80';
-
-  const searchInputClass = {
-    compact: 'text-xs',
-    standard: 'text-[12.5px]',
-    comfortable: 'text-[13.5px]',
-    spacious: 'text-sm',
-  }[uiScale] || 'text-[13.5px]';
-
-  const headerTitleClass = {
-    compact: 'text-xs',
-    standard: 'text-[13px]',
-    comfortable: 'text-sm',
-    spacious: 'text-base',
-  }[uiScale] || 'text-sm';
+  const panelWidthClass = uiScaleValue(noteListPanelWidthClass, uiScale);
+  const searchInputClass = uiScaleValue(noteListSearchInputClass, uiScale);
+  const headerTitleClass = uiScaleValue(noteListHeaderTitleClass, uiScale);
 
   // Keyboard navigation handler across note cards
   const handleKeyDown = (e: React.KeyboardEvent) => {

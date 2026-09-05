@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { X, BookOpen, Keyboard, Sparkles, Hash, CheckSquare, Link, Quote, Code, Table, HelpCircle } from 'lucide-react';
+import { X, BookOpen, Keyboard, Sparkles, Hash, CheckSquare, Link, Quote, Code, Table, HelpCircle, Search } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { AnnotatedText } from '../ui/AnnotatedText';
+import { GLOBAL_SHORTCUTS } from '../../utils/shortcuts';
 
 export const CheatsheetModal: React.FC = () => {
   const isCheatsheetOpen = useNoteStore((state) => state.isCheatsheetOpen);
   const setCheatsheetOpen = useNoteStore((state) => state.setCheatsheetOpen);
 
   const [activeTab, setActiveTab] = useState<'markdown' | 'shortcuts'>('markdown');
+  const [shortcutQuery, setShortcutQuery] = useState('');
 
   if (!isCheatsheetOpen) return null;
 
@@ -92,21 +94,14 @@ export const CheatsheetModal: React.FC = () => {
     },
   ];
 
-  const shortcutItems = [
-    { key: 'Ctrl + N', desc: 'Create new note' },
-    { key: 'Ctrl + K', desc: 'Open Command Palette & Quick Search' },
-    { key: 'Ctrl + 1', desc: 'Toggle Sidebar navigation' },
-    { key: 'Ctrl + 2', desc: 'Toggle Note List panel' },
-    { key: 'Ctrl + 3', desc: 'Toggle Zen / Focus Mode' },
-    { key: 'Ctrl + Shift + I', desc: 'Toggle Note Inspector (TOC & Stats)' },
-    { key: 'Ctrl + ,', desc: 'Open Preferences & Settings' },
-    { key: 'Ctrl + /', desc: 'Open this Cheatsheet Guide' },
-    { key: 'Ctrl + B', desc: 'Format selection as Bold' },
-    { key: 'Ctrl + I', desc: 'Format selection as Italic' },
-    { key: 'Ctrl + U', desc: 'Format selection as Underline' },
-    { key: 'Ctrl + Shift + T', desc: 'Toggle Typewriter Centering Mode' },
-    { key: 'Esc', desc: 'Close dialogs / menus' },
-  ];
+  // Single source of truth lives in src/utils/shortcuts.ts (mirrors AppLayout).
+  const shortcutItems = GLOBAL_SHORTCUTS;
+  const filteredShortcuts = shortcutItems.filter(
+    (item) =>
+      !shortcutQuery.trim() ||
+      item.description.toLowerCase().includes(shortcutQuery.toLowerCase()) ||
+      item.keys.toLowerCase().includes(shortcutQuery.toLowerCase())
+  );
 
   return (
     <div
@@ -210,18 +205,39 @@ export const CheatsheetModal: React.FC = () => {
 
           {activeTab === 'shortcuts' && (
             <div className="space-y-2">
-              {shortcutItems.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-2.5 rounded-xl border text-xs"
-                  style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--bg-editor)' }}
-                >
-                  <span className="font-medium opacity-80">{item.desc}</span>
-                  <kbd className="font-mono text-xs px-2 py-1 rounded bg-black/10 dark:bg-white/10 border border-border/40 font-semibold shadow-2xs">
-                    {item.key}
-                  </kbd>
-                </div>
-              ))}
+              <div
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border"
+                style={{
+                  backgroundColor: 'var(--bg-editor)',
+                  borderColor: 'var(--color-border)',
+                }}
+              >
+                <Search size={13} className="opacity-50 shrink-0" aria-hidden="true" />
+                <input
+                  type="text"
+                  value={shortcutQuery}
+                  onChange={(e) => setShortcutQuery(e.target.value)}
+                  placeholder="Filter shortcuts..."
+                  aria-label="Filter shortcuts"
+                  className="bg-transparent border-none outline-none text-xs w-full placeholder:opacity-50"
+                />
+              </div>
+              {filteredShortcuts.length === 0 ? (
+                <div className="p-6 text-center text-xs opacity-50">No shortcuts match.</div>
+              ) : (
+                filteredShortcuts.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-2.5 rounded-xl border text-xs"
+                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--bg-editor)' }}
+                  >
+                    <span className="font-medium opacity-80">{item.description}</span>
+                    <kbd className="font-mono text-xs px-2 py-1 rounded bg-black/10 dark:bg-white/10 border border-border/40 font-semibold shadow-2xs">
+                      {item.keys}
+                    </kbd>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

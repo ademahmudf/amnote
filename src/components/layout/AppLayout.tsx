@@ -89,7 +89,10 @@ export const AppLayout: React.FC = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [syncIfVaultChanged]);
 
-  // Global Keyboard Shortcuts
+  // Global Keyboard Shortcuts (canonical reference: src/utils/shortcuts.ts).
+  // NOTE: Ctrl+Shift+F belongs to the Command Palette branch below — do not
+  // rebind it further down; the first matching branch wins and later ones
+  // become unreachable.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -148,14 +151,6 @@ export const AppLayout: React.FC = () => {
         e.preventDefault();
         const { typewriterMode, setTypewriterMode } = useSettingsStore.getState();
         setTypewriterMode(!typewriterMode);
-        return;
-      }
-
-      // Ctrl + Shift + F: Toggle Focus Mode
-      if (isCtrlOrCmd && e.shiftKey && e.key.toLowerCase() === 'f') {
-        e.preventDefault();
-        const { focusMode, setFocusMode } = useSettingsStore.getState();
-        setFocusMode(!focusMode);
         return;
       }
 

@@ -4,6 +4,7 @@ import type { TagNodeItem } from '../../types/note';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { resolveTagIcon, formatTagSegment } from '../../utils/tagIcons';
+import { uiScaleValue, sidebarItemTextClass, sidebarIconSize, sidebarCounterClass, tagIndentStep } from '../../utils/uiScale';
 import { TagIconModal } from '../modals/TagIconModal';
 
 interface TagItemProps {
@@ -29,26 +30,9 @@ export const TagItem: React.FC<TagItemProps> = ({ node, depth = 0 }) => {
   const tagIcons = useSettingsStore((state) => state.tagIcons);
   const tagColors = useSettingsStore((state) => state.tagColors);
 
-  const tagTextClass = {
-    compact: 'text-[12px] h-[25px] px-2',
-    standard: 'text-[13.5px] h-[28px] px-2.5',
-    comfortable: 'text-[15px] h-[32px] px-2.5',
-    spacious: 'text-[16.5px] h-[36px] px-3',
-  }[uiScale] || 'text-[13.5px] h-[28px] px-2.5';
-
-  const iconSize = {
-    compact: 13,
-    standard: 14,
-    comfortable: 15,
-    spacious: 16.5,
-  }[uiScale] || 14;
-
-  const counterSize = {
-    compact: 'text-[9.5px]',
-    standard: 'text-[10.5px]',
-    comfortable: 'text-[11.5px]',
-    spacious: 'text-[12.5px]',
-  }[uiScale] || 'text-[10.5px]';
+  const tagTextClass = uiScaleValue(sidebarItemTextClass, uiScale);
+  const iconSize = uiScaleValue(sidebarIconSize, uiScale);
+  const counterSize = uiScaleValue(sidebarCounterClass, uiScale);
 
   const hasChildren = Object.keys(node.children).length > 0;
   const isSelected = selectedTag === node.name;
@@ -57,7 +41,7 @@ export const TagItem: React.FC<TagItemProps> = ({ node, depth = 0 }) => {
   const customColor = tagColors[node.name] || tagColors[node.segment];
   const IconComponent = resolveTagIcon(node.name, customIcon);
 
-  const indentPadding = depth * (uiScale === 'spacious' ? 14 : uiScale === 'comfortable' ? 13 : 12);
+  const indentPadding = depth * uiScaleValue(tagIndentStep, uiScale);
 
   return (
     <div className="select-none">

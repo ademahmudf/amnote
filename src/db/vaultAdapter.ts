@@ -73,6 +73,49 @@ fn main() {
     createdAt: Date.now() - 3600000,
     updatedAt: Date.now() - 1800000,
   },
+  {
+    id: 'note-search-guide',
+    title: 'Searching, Daily Notes & Links',
+    content: `# Searching, Daily Notes & Links
+
+Find anything fast with the search bar at the top of the note list. These filters also work as quick-filter chips under the search box.
+
+### 🔎 Search syntax
+- \`@todo\` — notes with unchecked tasks
+- \`@due\` — notes with any task due date
+- \`@due:2026-09-10\` — tasks due on a specific date
+- \`@overdue\` — unchecked tasks past their due date
+- \`@date:2026-09-10\` — the daily note plus notes mentioning that date
+- \`@today\` — notes created or modified today
+- \`@pinned\` / \`@locked\` — pinned or password-protected notes
+- \`#tag\` — filter by tag, e.g. \`#guide/search\`
+
+Try it: type \`@todo\` in the search box right now.
+
+### 📅 Daily notes & due dates
+- Give any task a due date by appending \`@due(YYYY-MM-DD)\`, e.g. try it live:
+- [ ] Review this guide @due(2026-09-10)
+- Open a daily note from the calendar — its title is the date (\`2026-09-10\`), with links to the previous and next day at the top.
+- Search \`@date:2026-09-10\` to jump back to that day's note and mentions.
+
+### 🔗 Wiki-links
+- Link notes with \`[[Welcome to AmNote]]\` or \`[[Markdown Cheatsheet]]\`.
+- Type \`[[\` anywhere to get autocomplete suggestions, or create the note in one click.
+- Open the Note Inspector (\`Ctrl+Shift+I\`) to see backlinks and the document outline.
+
+### ⚡ Top shortcuts
+- \`Ctrl+N\`: new note · \`Ctrl+K\`: command palette & quick search
+- \`Ctrl+/\`: cheatsheet · \`Ctrl+Shift+T\`: typewriter mode · \`Ctrl+Shift+I\`: inspector
+
+#guide/search #amnote/getting-started`,
+    tags: ['guide/search', 'amnote/getting-started'],
+    isPinned: false,
+    isArchived: false,
+    isTrashed: false,
+    isLocked: false,
+    createdAt: Date.now() - 1800000,
+    updatedAt: Date.now() - 900000,
+  },
 ];
 
 // Check if running inside Tauri desktop environment

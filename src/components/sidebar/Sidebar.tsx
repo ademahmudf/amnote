@@ -20,6 +20,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { TagTree } from './TagTree';
 import { AmNoteLogo } from '../icons/AmNoteLogo';
 import { promptEmptyTrashConfirmation } from '../../utils/trashConfirmation';
+import { uiScaleValue, sidebarItemTextClass, sidebarIconSize, sidebarCounterClass } from '../../utils/uiScale';
 import type { SystemFilter } from '../../types/note';
 
 export const Sidebar: React.FC = () => {
@@ -38,26 +39,9 @@ export const Sidebar: React.FC = () => {
 
   const uiScale = useSettingsStore((state) => state.uiScale);
 
-  const itemTextClass = {
-    compact: 'text-[12px] h-[25px] px-2',
-    standard: 'text-[13.5px] h-[28px] px-2.5',
-    comfortable: 'text-[15px] h-[32px] px-2.5',
-    spacious: 'text-[16.5px] h-[36px] px-3',
-  }[uiScale] || 'text-[13.5px] h-[28px] px-2.5';
-
-  const iconSize = {
-    compact: 13,
-    standard: 14,
-    comfortable: 15,
-    spacious: 16.5,
-  }[uiScale] || 14;
-
-  const counterSize = {
-    compact: 'text-[9.5px]',
-    standard: 'text-[10.5px]',
-    comfortable: 'text-[11.5px]',
-    spacious: 'text-[12.5px]',
-  }[uiScale] || 'text-[10.5px]';
+  const itemTextClass = uiScaleValue(sidebarItemTextClass, uiScale);
+  const iconSize = uiScaleValue(sidebarIconSize, uiScale);
+  const counterSize = uiScaleValue(sidebarCounterClass, uiScale);
 
   const systemItems: { id: SystemFilter; label: string; icon: React.FC<{ size?: number; className?: string }>; count: number }[] = [
     { id: 'notes', label: 'Notes', icon: FileText, count: counts.notes },

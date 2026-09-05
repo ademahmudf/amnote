@@ -3,6 +3,7 @@ import type { Note } from '../../types/note';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
+import { uiScaleValue, noteCardTitleClass, noteCardSnippetClass, noteCardDateClass, noteCardBadgeClass } from '../../utils/uiScale';
 import { promptDeletePermanentlyConfirmation } from '../../utils/trashConfirmation';
 import {
   Pin,
@@ -88,33 +89,10 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
   const uiScale = useSettingsStore((state) => state.uiScale);
   const previewLines = useSettingsStore((state) => state.previewLines);
 
-  const titleSize = {
-    compact: 'text-[12.5px]',
-    standard: 'text-[13.5px]',
-    comfortable: 'text-[15px]',
-    spacious: 'text-[16.5px]',
-  }[uiScale] || 'text-[15px]';
-
-  const snippetSize = {
-    compact: 'text-[11px]',
-    standard: 'text-[12px]',
-    comfortable: 'text-[13px]',
-    spacious: 'text-[14px]',
-  }[uiScale] || 'text-[13px]';
-
-  const dateSize = {
-    compact: 'text-[10px]',
-    standard: 'text-[11px]',
-    comfortable: 'text-[11.5px]',
-    spacious: 'text-[12px]',
-  }[uiScale] || 'text-[11.5px]';
-
-  const badgeSize = {
-    compact: 'text-[9.5px]',
-    standard: 'text-[10.5px]',
-    comfortable: 'text-[11px]',
-    spacious: 'text-[12px]',
-  }[uiScale] || 'text-[10.5px]';
+  const titleSize = uiScaleValue(noteCardTitleClass, uiScale);
+  const snippetSize = uiScaleValue(noteCardSnippetClass, uiScale);
+  const dateSize = uiScaleValue(noteCardDateClass, uiScale);
+  const badgeSize = uiScaleValue(noteCardBadgeClass, uiScale);
 
   const cardRef = useRef<HTMLDivElement>(null);
 

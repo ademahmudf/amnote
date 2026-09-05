@@ -136,7 +136,7 @@ export const PasswordModal: React.FC = () => {
           )}
 
           <div className="text-[11px] opacity-60 leading-relaxed bg-black/5 dark:bg-white/5 p-3 rounded-xl">
-            🔒 Locked notes conceal snippet previews in the note list and require unlocking before viewing or editing.
+            🔒 Locked notes conceal snippet previews in the note list and require unlocking before viewing or editing. Notes stay readable as plaintext files on disk — locking is not encryption.
           </div>
 
           <div className="flex items-center justify-between pt-2">
