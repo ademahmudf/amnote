@@ -16,6 +16,7 @@ import html2canvas from 'html2canvas';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { markdownToHtml } from '../../editor/utils/markdownConverter';
+import { notify } from '../../store/useNotificationStore';
 
 export const ExportModal: React.FC = () => {
   const isExportModalOpen = useNoteStore((state) => state.isExportModalOpen);
@@ -47,6 +48,12 @@ export const ExportModal: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
     showToast('md');
+    notify({
+      title: 'AmNote Export',
+      sender: 'Markdown',
+      message: `Exported "${activeNote.title || 'Untitled'}" as .md`,
+      type: 'success',
+    });
   };
 
   const handleExportText = () => {
@@ -59,6 +66,12 @@ export const ExportModal: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
     showToast('txt');
+    notify({
+      title: 'AmNote Export',
+      sender: 'Plain Text',
+      message: `Exported "${activeNote.title || 'Untitled'}" as .txt`,
+      type: 'success',
+    });
   };
 
   const generateFullHtmlDoc = () => {
@@ -130,6 +143,12 @@ export const ExportModal: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
     showToast('html');
+    notify({
+      title: 'AmNote Export',
+      sender: 'HTML Document',
+      message: `Exported "${activeNote.title || 'Untitled'}" as .html`,
+      type: 'success',
+    });
   };
 
   const handleCopyRichText = async () => {
@@ -146,9 +165,21 @@ export const ExportModal: React.FC = () => {
         await navigator.clipboard.writeText(plain);
       }
       showToast('rich-copy');
+      notify({
+        title: 'AmNote Clipboard',
+        sender: 'Rich Text',
+        message: 'Formatted text copied to clipboard',
+        type: 'success',
+      });
     } catch {
       await navigator.clipboard.writeText(plain);
       showToast('rich-copy');
+      notify({
+        title: 'AmNote Clipboard',
+        sender: 'Plain Text',
+        message: 'Note copied to clipboard',
+        type: 'info',
+      });
     }
   };
 
@@ -307,8 +338,20 @@ export const ExportModal: React.FC = () => {
 
       pdf.save(`${getCleanSlug()}.pdf`);
       showToast('pdf');
+      notify({
+        title: 'AmNote Export',
+        sender: 'PDF Document',
+        message: `Exported "${activeNote.title || 'Untitled'}" as .pdf`,
+        type: 'success',
+      });
     } catch (err) {
       console.error('PDF export error:', err);
+      notify({
+        title: 'AmNote Export',
+        sender: 'PDF Document',
+        message: 'Failed to generate PDF export.',
+        type: 'error',
+      });
     } finally {
       setIsExportingPdf(false);
     }

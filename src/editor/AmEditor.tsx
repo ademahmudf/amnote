@@ -34,6 +34,8 @@ import { useEditorContentLifecycle } from './hooks/useEditorContentLifecycle';
 import { useEditorLockFocus } from './hooks/useEditorLockFocus';
 import { useEditorMenuState } from './hooks/useEditorMenuState';
 import { useImageAttachments } from './hooks/useImageAttachments';
+import { AnnotatedText } from '../components/ui/AnnotatedText';
+import { notify } from '../store/useNotificationStore';
 import {
   Trash2,
   RotateCcw,
@@ -439,10 +441,14 @@ export const AmEditor: React.FC = () => {
         </div>
 
         <h2 className="text-base font-bold mb-1" style={{ color: 'var(--text-editor)' }}>
-          No Note Selected
+          <AnnotatedText variant="highlight">No Note Selected</AnnotatedText>
         </h2>
         <p className="text-xs text-center max-w-xs opacity-60 mb-6">
-          Select a note from the sidebar or pick a template below to start writing.
+          Select a note from the sidebar or{' '}
+          <AnnotatedText variant="wavy" className="font-semibold" color="text-accent">
+            pick a template
+          </AnnotatedText>{' '}
+          below to start writing.
         </p>
 
         <div className="flex flex-col gap-3 w-full max-w-sm">
@@ -829,6 +835,12 @@ export const AmEditor: React.FC = () => {
                   navigator.clipboard.writeText(lightboxImage.src);
                   setCopiedImage(true);
                   setTimeout(() => setCopiedImage(false), 1500);
+                  notify({
+                    title: 'AmNote Media',
+                    sender: 'Clipboard',
+                    message: 'Image URL copied to clipboard',
+                    type: 'success',
+                  });
                 }}
                 title="Copy Image Data / URL"
                 className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95"

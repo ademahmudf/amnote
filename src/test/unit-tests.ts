@@ -421,4 +421,28 @@ assert(built.projects.icon === 'Rocket' && built.projects.color === '#ec4899', '
 const seeded = seedTagMetadataFromFlat({ travel: 'Plane' }, { travel: '#f59e0b' }, 1000);
 assert(seeded.travel.icon === 'Plane' && seeded.travel.color === '#f59e0b' && seeded.travel.updatedAt === 1000, 'seedTagMetadataFromFlat correctly seeds metadata map');
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, and Tag Sync tests passed successfully!');
+// Test Notification Store and cn utility
+import { useNotificationStore, notify } from '../store/useNotificationStore';
+import { cn } from '../utils/cn';
+
+assert(cn('px-2', 'py-1', { 'text-red-500': true, 'hidden': false }) === 'px-2 py-1 text-red-500', 'cn utility merges classes properly');
+assert(cn('px-2', 'px-4') === 'px-4', 'cn utility overrides conflicting tailwind classes');
+
+notify({
+  title: 'Test Notification',
+  sender: 'Jest/Tsx',
+  message: 'Testing apple notification banner store',
+  type: 'success',
+  durationMs: 0,
+});
+
+const notifState = useNotificationStore.getState().notification;
+assert(notifState !== null, 'Notification store records active notification');
+assert(notifState?.title === 'Test Notification', 'Notification title matches');
+assert(notifState?.sender === 'Jest/Tsx', 'Notification sender matches');
+assert(notifState?.type === 'success', 'Notification type matches');
+
+useNotificationStore.getState().dismissNotification();
+assert(useNotificationStore.getState().notification === null, 'Notification store clears on dismiss');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, and Notification tests passed successfully!');

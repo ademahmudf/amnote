@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, BookOpen, Keyboard, Sparkles, Hash, CheckSquare, Link, Quote, Code, Table, HelpCircle } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
+import { AnnotatedText } from '../ui/AnnotatedText';
 
 export const CheatsheetModal: React.FC = () => {
   const isCheatsheetOpen = useNoteStore((state) => state.isCheatsheetOpen);
@@ -128,7 +129,9 @@ export const CheatsheetModal: React.FC = () => {
         >
           <div className="flex items-center gap-2.5">
             <BookOpen size={18} className="text-accent" style={{ color: 'var(--color-accent)' }} />
-            <h2 className="font-bold text-sm">AmNote Cheatsheet & Guide</h2>
+            <h2 className="font-bold text-sm">
+              <AnnotatedText variant="underline">AmNote Cheatsheet & Guide</AnnotatedText>
+            </h2>
           </div>
           <button
             type="button"

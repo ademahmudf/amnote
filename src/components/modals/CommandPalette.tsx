@@ -16,6 +16,7 @@ import { useNoteStore } from '../../store/useNoteStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { THEMES } from '../../themes/themeDefinitions';
 import type { ThemeId } from '../../types/note';
+import { notify } from '../../store/useNotificationStore';
 
 export const CommandPalette: React.FC = () => {
   const isCommandPaletteOpen = useNoteStore((state) => state.isCommandPaletteOpen);
@@ -60,6 +61,12 @@ export const CommandPalette: React.FC = () => {
       run: () => {
         const body = `# Daily Journal — ${todayStr}\n\n#journal\n\n### Top Priorities\n- [ ] \n- [ ] \n- [ ] \n\n### Reflections & Notes\n\n`;
         void createNote('journal', `Daily Journal — ${todayStr}`, body);
+        notify({
+          title: 'AmNote Template',
+          sender: 'Daily Journal',
+          message: 'Created new daily journal note',
+          type: 'success',
+        });
       },
     },
     {
@@ -70,6 +77,12 @@ export const CommandPalette: React.FC = () => {
       run: () => {
         const body = `# Meeting Notes\n\n#work/meeting\n\n**Date:** ${todayStr}\n**Attendees:** \n\n### Agenda\n1. \n\n### Key Discussion Points\n\n### Action Items\n- [ ] \n`;
         void createNote('work/meeting', 'Meeting Notes', body);
+        notify({
+          title: 'AmNote Template',
+          sender: 'Meeting Notes',
+          message: 'Created new meeting notes template',
+          type: 'success',
+        });
       },
     },
     {
@@ -80,6 +93,12 @@ export const CommandPalette: React.FC = () => {
       run: () => {
         const body = `# Sprint Tasks\n\n#todo\n\n- [ ] Task 1\n- [ ] Task 2\n- [ ] Task 3\n`;
         void createNote('todo', 'Sprint Tasks', body);
+        notify({
+          title: 'AmNote Template',
+          sender: 'Sprint Tasks',
+          message: 'Created new sprint tasks checklist',
+          type: 'success',
+        });
       },
     },
     {
@@ -147,7 +166,15 @@ export const CommandPalette: React.FC = () => {
       category: 'Themes',
       title: `Theme: ${th.name}`,
       icon: Palette,
-      run: () => setTheme(th.id as ThemeId),
+      run: () => {
+        setTheme(th.id as ThemeId);
+        notify({
+          title: 'AmNote Appearance',
+          sender: 'Theme',
+          message: `Switched theme to ${th.name}`,
+          type: 'info',
+        });
+      },
     }));
 
   const allItems = [...matchedActions, ...matchedNotes, ...matchedTags, ...matchedThemes];
