@@ -141,6 +141,14 @@ export const AppLayout: React.FC = () => {
         return;
       }
 
+      // Ctrl + Shift + F: Toggle Focus Mode
+      if (isCtrlOrCmd && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        const { focusMode, setFocusMode } = useSettingsStore.getState();
+        setFocusMode(!focusMode);
+        return;
+      }
+
       // Ctrl + D: Duplicate Active Note
       if (isCtrlOrCmd && e.key.toLowerCase() === 'd' && !e.shiftKey) {
         if (activeNoteId) {

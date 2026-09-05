@@ -25,6 +25,8 @@ interface SettingsState {
   uiScale: UiScale; // Controls sidebar, note list, header font scale
   previewLines: number; // Snippet lines: 1, 2, 3, 4
   typewriterMode: boolean; // Keep cursor vertically centered
+  focusMode: boolean; // iA Writer style focus mode (dims inactive content)
+  focusModeType: 'sentence' | 'paragraph'; // Focus scope: sentence or paragraph
   wordGoal: number; // Daily / session word count goal (0 = disabled)
   defaultHighlightColor: string; // Custom default text highlight color
   revealMarkdownOnFocus: boolean;
@@ -46,6 +48,8 @@ interface SettingsState {
   setUiScale: (scale: UiScale) => void;
   setPreviewLines: (lines: number) => void;
   setTypewriterMode: (enabled: boolean) => void;
+  setFocusMode: (enabled: boolean) => void;
+  setFocusModeType: (type: 'sentence' | 'paragraph') => void;
   setWordGoal: (goal: number) => void;
   setDefaultHighlightColor: (color: string) => void;
   setRevealMarkdownOnFocus: (reveal: boolean) => void;
@@ -69,6 +73,8 @@ export const useSettingsStore = create<SettingsState>()(
       uiScale: 'comfortable',
       previewLines: 2,
       typewriterMode: false,
+      focusMode: false,
+      focusModeType: 'sentence',
       wordGoal: 0,
       defaultHighlightColor: '#fef08a',
       revealMarkdownOnFocus: true,
@@ -88,6 +94,8 @@ export const useSettingsStore = create<SettingsState>()(
       setUiScale: (uiScale) => set({ uiScale }),
       setPreviewLines: (previewLines) => set({ previewLines }),
       setTypewriterMode: (typewriterMode) => set({ typewriterMode }),
+      setFocusMode: (focusMode) => set({ focusMode }),
+      setFocusModeType: (focusModeType) => set({ focusModeType }),
       setWordGoal: (wordGoal) => set({ wordGoal }),
       setDefaultHighlightColor: (defaultHighlightColor) => set({ defaultHighlightColor }),
       setRevealMarkdownOnFocus: (revealMarkdownOnFocus) => set({ revealMarkdownOnFocus }),

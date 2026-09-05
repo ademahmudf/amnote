@@ -49,6 +49,8 @@ export const SettingsModal: React.FC = () => {
     uiScale,
     previewLines,
     typewriterMode,
+    focusMode,
+    focusModeType,
     wordGoal,
     defaultHighlightColor,
     setFontFamily,
@@ -60,6 +62,8 @@ export const SettingsModal: React.FC = () => {
     setUiScale,
     setPreviewLines,
     setTypewriterMode,
+    setFocusMode,
+    setFocusModeType,
     setWordGoal,
     setDefaultHighlightColor,
   } = useSettingsStore();
@@ -672,6 +676,62 @@ export const SettingsModal: React.FC = () => {
 
               {/* Typewriter Mode & Word Goals */}
               <div className="space-y-4 pt-2 border-t" style={{ borderColor: 'var(--color-divider)' }}>
+                {/* Focus Mode (iA Writer Style) Toggle */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-xs">Focus Mode (iA Writer Style)</h3>
+                      <p className="text-[11px] opacity-60">Dims surrounding sentences or paragraphs to keep you focused on what you're writing (Ctrl+Shift+F).</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFocusMode(!focusMode)}
+                      className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
+                        focusMode ? 'bg-accent' : 'bg-black/20 dark:bg-white/20'
+                      }`}
+                      style={{
+                        backgroundColor: focusMode ? 'var(--color-accent)' : undefined,
+                      }}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                          focusMode ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {focusMode && (
+                    <div className="flex items-center gap-2 pl-2 border-l-2 border-accent/40 mt-1">
+                      <span className="text-[11px] font-medium opacity-70">Focus Scope:</span>
+                      <div className="flex gap-1.5 p-0.5 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => setFocusModeType('sentence')}
+                          className={`px-2.5 py-1 rounded-md transition-all font-medium ${
+                            focusModeType === 'sentence'
+                              ? 'bg-white dark:bg-neutral-800 text-accent shadow-xs font-semibold'
+                              : 'opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          Sentence (iA Writer)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFocusModeType('paragraph')}
+                          className={`px-2.5 py-1 rounded-md transition-all font-medium ${
+                            focusModeType === 'paragraph'
+                              ? 'bg-white dark:bg-neutral-800 text-accent shadow-xs font-semibold'
+                              : 'opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          Paragraph
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Typewriter Mode Toggle */}
                 <div className="flex items-center justify-between">
                   <div>

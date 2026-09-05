@@ -22,6 +22,7 @@ import { CalloutNode } from './extensions/CalloutExtension';
 import { AutoCapitalizeTitle } from './extensions/AutoCapitalizeTitle';
 import { HybridHeadingExtension } from './extensions/HybridHeadingExtension';
 import { TypewriterMode } from './extensions/TypewriterMode';
+import { FocusModeExtension } from './extensions/FocusModeExtension';
 import { AnnotationExtension } from './extensions/AnnotationExtension';
 import { BubbleToolbar } from './components/BubbleToolbar';
 import { SlashCommandMenu } from './components/SlashCommandMenu';
@@ -101,6 +102,10 @@ export const AmEditor: React.FC = () => {
     tagColors,
     typewriterMode,
     setTypewriterMode,
+    focusMode,
+    setFocusMode,
+    focusModeType,
+    setFocusModeType,
     wordGoal,
   } = useSettingsStore();
 
@@ -204,6 +209,7 @@ export const AmEditor: React.FC = () => {
       AutoCapitalizeTitle,
       HybridHeadingExtension,
       TypewriterMode,
+      FocusModeExtension,
       AnnotationExtension,
     ],
     editorProps: {
@@ -730,6 +736,30 @@ export const AmEditor: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Focus Mode Button */}
+          <button
+            type="button"
+            onClick={() => setFocusMode(!focusMode)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setFocusModeType(focusModeType === 'sentence' ? 'paragraph' : 'sentence');
+            }}
+            title={`Toggle Focus Mode (Ctrl+Shift+F) • Right-click to switch to ${
+              focusModeType === 'sentence' ? 'Paragraph' : 'Sentence'
+            } focus`}
+            className={`px-1.5 py-0.5 rounded transition-all flex items-center gap-1 text-[10px] font-medium ${
+              focusMode
+                ? 'bg-accent text-white'
+                : 'opacity-50 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
+            }`}
+            style={{
+              backgroundColor: focusMode ? 'var(--color-accent)' : undefined,
+              color: focusMode ? 'var(--color-accent-text)' : undefined,
+            }}
+          >
+            <span>🎯 Focus{focusMode ? ` (${focusModeType === 'sentence' ? 'Sentence' : 'Paragraph'})` : ''}</span>
+          </button>
+
           {/* Typewriter Mode Button */}
           <button
             type="button"

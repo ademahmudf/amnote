@@ -856,3 +856,47 @@ li[data-type="taskItem"] > div,
   text-decoration-style: wavy;
 }
 
+/* ==========================================================================
+   Focus Mode (iA Writer Style: Sentence & Paragraph Focus)
+   ========================================================================== */
+
+/* 1. Paragraph Focus: Inactive blocks dimmed to 28% */
+.ProseMirror.am-focus-mode.am-focus-mode-paragraph > * {
+  opacity: 0.28;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity;
+}
+
+.ProseMirror.am-focus-mode.am-focus-mode-paragraph > .am-focus-active-root {
+  opacity: 1 !important;
+}
+
+.ProseMirror.am-focus-mode.am-focus-mode-paragraph > .am-focus-active-root li:not(.am-focus-active-node) {
+  opacity: 0.28;
+}
+
+.ProseMirror.am-focus-mode.am-focus-mode-paragraph > .am-focus-active-root li.am-focus-active-node {
+  opacity: 1 !important;
+}
+
+/* 2. Sentence Focus (iA Writer Default): Inactive blocks & non-active sentences dimmed */
+.ProseMirror.am-focus-mode.am-focus-mode-sentence > * {
+  opacity: 0.28;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity;
+}
+
+.ProseMirror.am-focus-mode.am-focus-mode-sentence > .am-focus-active-root {
+  opacity: 1 !important;
+}
+
+.ProseMirror.am-focus-mode.am-focus-mode-sentence .am-focus-dimmed {
+  opacity: 0.28;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ProseMirror.am-focus-mode.am-focus-mode-sentence .am-focus-active-sentence {
+  opacity: 1 !important;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+

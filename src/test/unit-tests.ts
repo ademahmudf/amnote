@@ -623,4 +623,46 @@ const crlfMerge = mergeVaultNotes({
 assert(crlfMerge.conflicts.length === 0, 'CRLF vs LF line endings do not trigger false conflicts');
 assert(crlfMerge.notes.find((n) => n.id === 'crlf-note')?.content === 'line one\nline two\nlocal add', 'Preserves local content across CRLF disk format');
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, and 3-Way Sync tests passed successfully!');
+// Focus Mode (iA Writer Style) Tests
+import { findSentenceRange, FocusModeExtension, focusModePluginKey } from '../editor/extensions/FocusModeExtension';
+
+// 1. findSentenceRange tests
+const paragraphText = 'Welcome to AmNote! Focus mode feels just like iA Writer. It supports version 2.0 smoothly. Are you ready? Yes...';
+
+const s1 = findSentenceRange(paragraphText, 5);
+assert(paragraphText.slice(s1.start, s1.end) === 'Welcome to AmNote!', 'Sentence 1 identified with exclamation point');
+
+const s2 = findSentenceRange(paragraphText, 25);
+assert(paragraphText.slice(s2.start, s2.end) === 'Focus mode feels just like iA Writer.', 'Sentence 2 identified with period');
+
+const s3 = findSentenceRange(paragraphText, 65);
+assert(paragraphText.slice(s3.start, s3.end) === 'It supports version 2.0 smoothly.', 'Sentence 3 preserves decimal numbers like 2.0 without splitting');
+
+const s4 = findSentenceRange(paragraphText, 95);
+assert(paragraphText.slice(s4.start, s4.end) === 'Are you ready?', 'Sentence 4 identified with question mark');
+
+const s5 = findSentenceRange(paragraphText, 108);
+assert(paragraphText.slice(s5.start, s5.end) === 'Yes...', 'Sentence 5 identified with ellipsis');
+
+const emptyRange = findSentenceRange('', 0);
+assert(emptyRange.start === 0 && emptyRange.end === 0, 'findSentenceRange handles empty text safely');
+
+// 2. Settings Store Focus Mode tests
+assert(useSettingsStore.getState().focusMode === false, 'Focus mode defaults to false');
+assert(useSettingsStore.getState().focusModeType === 'sentence', 'Focus mode type defaults to sentence');
+
+useSettingsStore.getState().setFocusMode(true);
+assert(useSettingsStore.getState().focusMode === true, 'Enables focus mode');
+
+useSettingsStore.getState().setFocusModeType('paragraph');
+assert(useSettingsStore.getState().focusModeType === 'paragraph', 'Switches focus mode type to paragraph');
+
+useSettingsStore.getState().setFocusMode(false);
+useSettingsStore.getState().setFocusModeType('sentence');
+assert(useSettingsStore.getState().focusMode === false, 'Disables focus mode');
+
+// 3. FocusModeExtension validation
+assert(FocusModeExtension.name === 'focusMode', 'FocusModeExtension has correct name');
+assert(Boolean(focusModePluginKey), 'focusModePluginKey is properly exported');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, and Focus Mode tests passed successfully!');
