@@ -3,6 +3,7 @@ import type { Note } from '../../types/note';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
+import { AnnotatedText } from '../ui/AnnotatedText';
 import {
   Pin,
   MoreVertical,
@@ -129,7 +130,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
       onClick={() => setActiveNoteId(note.id)}
       className={`group relative p-3 rounded-xl cursor-pointer select-none transition-all duration-150 border outline-none ${
         isActive
-          ? 'shadow-md ring-2 ring-accent/40 border-accent'
+          ? 'shadow-md border-accent'
           : 'hover:border-border/80 opacity-85 hover:opacity-100 focus-visible:ring-1 focus-visible:ring-accent/40'
       }`}
       style={{
@@ -156,7 +157,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
               className={`shrink-0 ${isUnlocked ? 'text-emerald-400' : 'text-amber-400'}`}
             />
           )}
-          <h3 className={`font-semibold ${titleSize} truncate leading-snug`}>{note.title || 'Untitled'}</h3>
+          <h3 className={`font-semibold ${titleSize} truncate leading-snug flex-1`}>
+            {isActive ? (
+              <AnnotatedText variant="wavy" color="text-accent" className="max-w-full">
+                {note.title || 'Untitled'}
+              </AnnotatedText>
+            ) : (
+              note.title || 'Untitled'
+            )}
+          </h3>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">

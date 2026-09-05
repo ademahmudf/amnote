@@ -309,10 +309,11 @@ export interface AnnotatedTextProps {
   variant?: AnnotationVariant;
   color?: string;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export const AnnotatedText = forwardRef<HTMLSpanElement, AnnotatedTextProps>(
-  ({ children, variant = 'wavy', color, className }, ref) => {
+  ({ children, variant = 'wavy', color, className, style: customStyle }, ref) => {
     const style = annotationStyles[variant];
     const Decoration = style.Decoration;
     const decorationClass = cn(style.decorationClassName, color ?? style.defaultColor);
@@ -324,7 +325,7 @@ export const AnnotatedText = forwardRef<HTMLSpanElement, AnnotatedTextProps>(
       return (
         <>
           <RoughFilters />
-          <span ref={ref} className={cn(style.wrapper, className)}>
+          <span ref={ref} className={cn(style.wrapper, className)} style={customStyle}>
             <span className="relative z-10">{children}</span>
             <Decoration className={cn(decorationClass, 'z-0')} />
           </span>
@@ -335,7 +336,7 @@ export const AnnotatedText = forwardRef<HTMLSpanElement, AnnotatedTextProps>(
     return (
       <>
         <RoughFilters />
-        <span ref={ref} className={cn(style.wrapper, className)}>
+        <span ref={ref} className={cn(style.wrapper, className)} style={customStyle}>
           <span className="relative z-10">{children}</span>
           <Decoration className={decorationClass} />
         </span>

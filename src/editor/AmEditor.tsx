@@ -443,7 +443,7 @@ export const AmEditor: React.FC = () => {
         </div>
 
         <h2 className="text-base font-bold mb-1" style={{ color: 'var(--text-editor)' }}>
-          <AnnotatedText variant="highlight">No Note Selected</AnnotatedText>
+          <AnnotatedText variant="wavy" color="text-accent">No Note Selected</AnnotatedText>
         </h2>
         <p className="text-xs text-center max-w-xs opacity-60 mb-6">
           Select a note from the sidebar or{' '}
