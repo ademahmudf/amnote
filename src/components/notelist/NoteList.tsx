@@ -28,6 +28,8 @@ export const NoteList: React.FC = () => {
   const tagIcons = useSettingsStore((state) => state.tagIcons);
   const tagColors = useSettingsStore((state) => state.tagColors);
   const uiScale = useSettingsStore((state) => state.uiScale);
+  const noteListDensity = useSettingsStore((state) => state.noteListDensity);
+  const setNoteListDensity = useSettingsStore((state) => state.setNoteListDensity);
 
   const [showSyntaxHelper, setShowSyntaxHelper] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -160,6 +162,7 @@ export const NoteList: React.FC = () => {
   return (
     <div
       ref={listContainerRef}
+      data-pane="notelist"
       tabIndex={0}
       role="listbox"
       aria-label="Notes"
@@ -314,6 +317,36 @@ export const NoteList: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1">
+            <div
+              role="group"
+              aria-label="Note card density"
+              className="flex items-center rounded-lg overflow-hidden border"
+              style={{ borderColor: 'var(--card-notelist-border)' }}
+            >
+              {(['comfortable', 'compact'] as const).map((density) => {
+                const isActive = noteListDensity === density;
+                return (
+                  <button
+                    key={density}
+                    type="button"
+                    onClick={() => setNoteListDensity(density)}
+                    title={density === 'compact' ? 'Compact: single-line cards' : 'Comfortable: cards with preview'}
+                    aria-label={density === 'compact' ? 'Compact card density' : 'Comfortable card density'}
+                    aria-pressed={isActive}
+                    className={`px-2 py-1 text-[10px] font-medium transition-all focus-ring ${
+                      isActive ? 'font-semibold' : 'opacity-55 hover:opacity-100'
+                    }`}
+                    style={
+                      isActive
+                        ? { backgroundColor: 'var(--color-accent)', color: 'var(--color-accent-text)' }
+                        : undefined
+                    }
+                  >
+                    {density === 'compact' ? 'Compact' : 'Cozy'}
+                  </button>
+                );
+              })}
+            </div>
             <SortDropdown />
             {activeFilter === 'trash' ? (
               filteredNotes.length > 0 && (
@@ -321,7 +354,7 @@ export const NoteList: React.FC = () => {
                   type="button"
                   onClick={() => promptEmptyTrashConfirmation()}
                   title="Empty Trash"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 transition-all cursor-pointer"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold btn-danger-ghost transition-all cursor-pointer"
                 >
                   <Trash2 size={12} />
                   <span>Empty</span>

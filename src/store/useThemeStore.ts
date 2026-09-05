@@ -99,6 +99,10 @@ export function applyThemeCssVariables(theme: ThemeColors) {
   root.style.setProperty('--color-accent-hover', theme.accentHover);
   root.style.setProperty('--color-accent-text', theme.accentText);
 
+  root.style.setProperty('--color-danger', theme.danger ?? '#f43f5e');
+  root.style.setProperty('--color-danger-hover', theme.dangerHover ?? '#fb7185');
+  root.style.setProperty('--color-focus-ring', theme.focusRing ?? theme.accent);
+
   root.style.setProperty('--color-border', theme.border);
   root.style.setProperty('--color-divider', theme.divider);
   root.style.setProperty('--color-code-bg', theme.codeBg);

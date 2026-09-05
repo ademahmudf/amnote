@@ -14,6 +14,7 @@ import type { FontFamily } from '../domain/fontFamilies';
 export type { FontFamily };
 export type EditorWidth = 'narrow' | 'comfort' | 'wide' | 'full';
 export type UiScale = 'compact' | 'standard' | 'comfortable' | 'spacious';
+export type NoteListDensity = 'comfortable' | 'compact';
 
 interface SettingsState {
   fontFamily: FontFamily;
@@ -24,6 +25,7 @@ interface SettingsState {
   paragraphIndent: number; // in px, default 0
   uiScale: UiScale; // Controls sidebar, note list, header font scale
   previewLines: number; // Snippet lines: 1, 2, 3, 4
+  noteListDensity: NoteListDensity; // Card density: comfortable (snippet) or compact (single-line)
   typewriterMode: boolean; // Keep cursor vertically centered
   focusMode: boolean; // iA Writer style focus mode (dims inactive content)
   focusModeType: 'sentence' | 'paragraph'; // Focus scope: sentence or paragraph
@@ -48,6 +50,7 @@ interface SettingsState {
   setParagraphIndent: (indent: number) => void;
   setUiScale: (scale: UiScale) => void;
   setPreviewLines: (lines: number) => void;
+  setNoteListDensity: (density: NoteListDensity) => void;
   setTypewriterMode: (enabled: boolean) => void;
   setFocusMode: (enabled: boolean) => void;
   setFocusModeType: (type: 'sentence' | 'paragraph') => void;
@@ -74,6 +77,7 @@ export const useSettingsStore = create<SettingsState>()(
       paragraphIndent: 0,
       uiScale: 'comfortable',
       previewLines: 2,
+      noteListDensity: 'comfortable',
       typewriterMode: false,
       focusMode: false,
       focusModeType: 'sentence',
@@ -96,6 +100,7 @@ export const useSettingsStore = create<SettingsState>()(
       setParagraphIndent: (paragraphIndent) => set({ paragraphIndent }),
       setUiScale: (uiScale) => set({ uiScale }),
       setPreviewLines: (previewLines) => set({ previewLines }),
+      setNoteListDensity: (noteListDensity) => set({ noteListDensity }),
       setTypewriterMode: (typewriterMode) => set({ typewriterMode }),
       setFocusMode: (focusMode) => set({ focusMode }),
       setFocusModeType: (focusModeType) => set({ focusModeType }),

@@ -25,6 +25,7 @@ import {
 } from '../domain/taskDueDates';
 import type { Note } from '../types/note';
 import { cleanSnippet } from '../components/notelist/NoteCard';
+import { THEMES } from '../themes/themeDefinitions';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -921,4 +922,35 @@ assert(useSettingsStore.getState().tagsSectionExpanded === true, 'setTagsSection
 useSettingsStore.getState().setTagsSectionExpanded(false);
 assert(useSettingsStore.getState().tagsSectionExpanded === false, 'setTagsSectionExpanded collapses the tags section');
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, Focus Mode tests, and Tags Collapsed tests passed successfully!');
+// ============================================================================
+// Test 25: Note List Density Tests
+// ============================================================================
+console.log('\n--- Test 25: Note List Density Tests ---');
+assert(useSettingsStore.getState().noteListDensity === 'comfortable', 'Note list density defaults to comfortable');
+useSettingsStore.getState().setNoteListDensity('compact');
+assert(useSettingsStore.getState().noteListDensity === 'compact', 'setNoteListDensity switches to compact');
+useSettingsStore.getState().setNoteListDensity('comfortable');
+assert(useSettingsStore.getState().noteListDensity === 'comfortable', 'setNoteListDensity switches back to comfortable');
+
+// ============================================================================
+// Test 26: Tag Color Contrast Tests (every theme's tag text on tag bg >= 4.5:1)
+// ============================================================================
+console.log('\n--- Test 26: Tag Color Contrast Tests ---');
+function channelLuminance(hex: string): number {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255);
+  const adjust = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  return 0.2126 * adjust(r) + 0.7152 * adjust(g) + 0.0722 * adjust(b);
+}
+function contrastRatio(a: string, b: string): number {
+  const la = channelLuminance(a);
+  const lb = channelLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+for (const theme of Object.values(THEMES)) {
+  const ratio = contrastRatio(theme.tagText, theme.tagBg);
+  assert(ratio >= 4.5, `Tag contrast >= 4.5:1 in ${theme.id} (${ratio.toFixed(2)}:1)`);
+}
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, Focus Mode tests, Tags Collapsed tests, Note List Density tests, and Tag Contrast tests passed successfully!');

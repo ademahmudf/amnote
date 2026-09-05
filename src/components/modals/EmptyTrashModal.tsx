@@ -69,7 +69,13 @@ export const EmptyTrashModal: React.FC = () => {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-rose-500/15 text-rose-500">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--color-danger) 15%, transparent)',
+                color: 'var(--color-danger)',
+              }}
+            >
               <Trash2 size={20} />
             </div>
             <div>
@@ -89,7 +95,14 @@ export const EmptyTrashModal: React.FC = () => {
           </button>
         </div>
 
-        <div className="flex items-start gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs mb-5">
+        <div
+          className="flex items-start gap-3 p-3 rounded-xl border text-xs mb-5"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--color-danger) 10%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--color-danger) 20%, transparent)',
+            color: 'var(--color-danger)',
+          }}
+        >
           <AlertTriangle size={16} className="shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p className="font-semibold">This action cannot be undone.</p>
@@ -115,7 +128,7 @@ export const EmptyTrashModal: React.FC = () => {
             autoFocus
             disabled={isDeleting || trashedCount === 0}
             onClick={handleConfirm}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold btn-danger shadow-sm transition-all disabled:opacity-50 cursor-pointer"
           >
             {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
             <span>{isDeleting ? 'Emptying...' : 'Empty Trash'}</span>

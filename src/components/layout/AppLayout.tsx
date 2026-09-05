@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useThemeStore, applyThemeCssVariables } from '../../store/useThemeStore';
@@ -18,6 +18,49 @@ import { CheatsheetModal } from '../modals/CheatsheetModal';
 import { ConflictDiffModal } from '../modals/ConflictDiffModal';
 import { NotificationContainer } from '../ui/NotificationContainer';
 import { RoughFilters } from '../ui/AnnotatedText';
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(query).matches
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = (event: MediaQueryListEvent) => setMatches(event.matches);
+    setMatches(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, [query]);
+
+  return matches;
+}
+
+const PaneOverlay: React.FC<{ label: string; onClose: () => void; children: React.ReactNode }> = ({
+  label,
+  onClose,
+  children,
+}) => (
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-label={label}
+    onKeyDown={(e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    }}
+    className="absolute inset-0 z-40"
+  >
+    <button
+      type="button"
+      aria-label={`Close ${label}`}
+      onClick={onClose}
+      className="absolute inset-0 bg-black/50 cursor-default"
+    />
+    <div className="absolute left-0 top-0 bottom-0 shadow-2xl">{children}</div>
+  </div>
+);
 
 export const AppLayout: React.FC = () => {
   const init = useNoteStore((state) => state.init);
@@ -88,6 +131,41 @@ export const AppLayout: React.FC = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [syncIfVaultChanged]);
+
+  // Responsive panes: below 1024px the sidebar auto-collapses (one-shot, the
+  // user can reopen it via Ctrl+1); below 768px open panes render as overlays.
+  const isNarrowSidebar = useMediaQuery('(max-width: 1023px)');
+  const isOverlayLayout = useMediaQuery('(max-width: 767px)');
+
+  const prevNarrowRef = useRef(isNarrowSidebar);
+  useEffect(() => {
+    const wasNarrow = prevNarrowRef.current;
+    prevNarrowRef.current = isNarrowSidebar;
+    if (!wasNarrow && isNarrowSidebar && !isFocusMode) {
+      const { isSidebarOpen: open } = useNoteStore.getState();
+      if (open) useNoteStore.getState().toggleSidebar();
+    }
+  }, [isNarrowSidebar, isFocusMode]);
+
+  // Move keyboard focus into a newly opened pane so shortcuts, Escape, and
+  // arrow-key navigation keep working from where the user is.
+  const prevPanesRef = useRef({ sidebar: isSidebarOpen, list: isNoteListOpen });
+  useEffect(() => {
+    const prev = prevPanesRef.current;
+    prevPanesRef.current = { sidebar: isSidebarOpen, list: isNoteListOpen };
+    if (isFocusMode) return;
+    const target =
+      !prev.sidebar && isSidebarOpen
+        ? 'sidebar'
+        : !prev.list && isNoteListOpen
+          ? 'notelist'
+          : null;
+    if (target) {
+      requestAnimationFrame(() => {
+        document.querySelector<HTMLElement>(`[data-pane="${target}"]`)?.focus({ preventScroll: true });
+      });
+    }
+  }, [isSidebarOpen, isNoteListOpen, isFocusMode]);
 
   // Global Keyboard Shortcuts (canonical reference: src/utils/shortcuts.ts).
   // NOTE: Ctrl+Shift+F belongs to the Command Palette branch below — do not
@@ -215,12 +293,24 @@ export const AppLayout: React.FC = () => {
       <HeaderBar />
 
       {/* Main 3-Pane Body */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Pane 1: Sidebar */}
-        {isSidebarOpen && !isFocusMode && <Sidebar />}
+        {isSidebarOpen && !isFocusMode && !isOverlayLayout && <Sidebar />}
 
         {/* Pane 2: Note List */}
-        {isNoteListOpen && !isFocusMode && <NoteList />}
+        {isNoteListOpen && !isFocusMode && !isOverlayLayout && <NoteList />}
+
+        {/* Narrow windows: open panes render as dismissible overlays */}
+        {isSidebarOpen && !isFocusMode && isOverlayLayout && (
+          <PaneOverlay label="Sidebar" onClose={toggleSidebar}>
+            <Sidebar />
+          </PaneOverlay>
+        )}
+        {isNoteListOpen && !isFocusMode && isOverlayLayout && (
+          <PaneOverlay label="Notes" onClose={toggleNoteList}>
+            <NoteList />
+          </PaneOverlay>
+        )}
 
         {/* Pane 3: Main Markdown Editor Canvas */}
         <AmEditor />

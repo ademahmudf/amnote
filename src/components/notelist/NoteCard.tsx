@@ -75,6 +75,13 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
   const isUnlocked = isNoteUnlocked(note.id);
   const snippet = note.isLocked && !isUnlocked ? '🔒 Locked note (content protected)' : cleanSnippet(note.content);
   const formattedDate = formatRelativeDate(note.updatedAt);
+  const absoluteDate = new Date(note.updatedAt).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -88,6 +95,8 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
 
   const uiScale = useSettingsStore((state) => state.uiScale);
   const previewLines = useSettingsStore((state) => state.previewLines);
+  const density = useSettingsStore((state) => state.noteListDensity);
+  const isCompact = density === 'compact';
 
   const titleSize = uiScaleValue(noteCardTitleClass, uiScale);
   const snippetSize = uiScaleValue(noteCardSnippetClass, uiScale);
@@ -119,7 +128,7 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
           setIsMenuOpen(false);
         }
       }}
-      className={`group relative p-3 rounded-xl cursor-pointer select-none transition-all duration-150 border outline-none ${
+      className={`group relative ${isCompact ? 'p-2' : 'p-3'} rounded-xl cursor-pointer select-none transition-all duration-150 border outline-none ${
         isActive
           ? 'shadow-md border-accent'
           : 'hover:border-border/80 opacity-85 hover:opacity-100 focus-visible:ring-1 focus-visible:ring-accent/40'
@@ -133,7 +142,7 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
       }}
     >
       {/* Top row: Title & Date & Pin */}
-      <div className="flex items-start justify-between gap-2 mb-1">
+      <div className={`flex items-start justify-between gap-2 ${isCompact ? 'mb-0' : 'mb-1'}`}>
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           {note.isPinned && (
             <Pin
@@ -152,7 +161,9 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          <span className={`${dateSize} opacity-50 font-mono`}>{formattedDate}</span>
+          <span className={`${dateSize} opacity-50 font-mono`} title={absoluteDate}>
+            {formattedDate}
+          </span>
           <button
             type="button"
             onClick={(e) => {
@@ -170,20 +181,22 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
         </div>
       </div>
 
-      {/* Snippet preview */}
-      <p
-        className={`${snippetSize} leading-relaxed mb-2 ${
-          note.isLocked && !isUnlocked ? 'opacity-40 italic' : 'opacity-70'
-        }`}
-        style={{
-          display: '-webkit-box',
-          WebkitLineClamp: previewLines,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}
-      >
-        {snippet}
-      </p>
+      {/* Snippet preview (hidden in compact density for single-line cards) */}
+      {!isCompact && (
+        <p
+          className={`${snippetSize} leading-relaxed mb-2 ${
+            note.isLocked && !isUnlocked ? 'opacity-40 italic' : 'opacity-70'
+          }`}
+          style={{
+            display: '-webkit-box',
+            WebkitLineClamp: previewLines,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {snippet}
+        </p>
+      )}
 
       {/* Bottom tags & Task badges */}
       {(note.tags.length > 0 || (note.content.match(/- \[[ x]\]/gi) || []).length > 0) && (
@@ -195,18 +208,25 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
             const doneTasks = (note.content.match(/- \[x\]/gi) || []).length;
             const isAllDone = doneTasks === taskMatches.length;
 
+            const pillLabel = isAllDone ? 'Done' : `${doneTasks}/${taskMatches.length}`;
             return (
-              <span
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ${badgeSize} font-mono font-medium leading-none shrink-0 ${
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveNoteId(note.id);
+                }}
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ${badgeSize} font-mono font-medium leading-none shrink-0 cursor-pointer focus-ring ${
                   isAllDone
                     ? 'bg-emerald-500/15 text-emerald-500 dark:text-emerald-400'
-                    : 'bg-black/10 dark:bg-white/10 opacity-70'
+                    : 'bg-black/10 dark:bg-white/10 opacity-70 hover:opacity-100'
                 }`}
-                title={`Tasks: ${doneTasks} of ${taskMatches.length} completed`}
+                title={`Tasks: ${doneTasks} of ${taskMatches.length} completed — open note`}
+                aria-label={`Open note tasks: ${pillLabel} done`}
               >
                 <CheckSquare size="0.95em" className="note-card-badge-icon" />
-                <span className="note-card-badge-label">{isAllDone ? 'Done' : `${doneTasks}/${taskMatches.length}`}</span>
-              </span>
+                <span className="note-card-badge-label">{pillLabel}</span>
+              </button>
             );
           })()}
 

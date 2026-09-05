@@ -122,6 +122,11 @@ export interface ThemeColors {
   accent: string;
   accentHover: string;
   accentText: string;
+  /** Destructive red. Optional: falls back to rose-500 when a theme omits it. */
+  danger?: string;
+  dangerHover?: string;
+  /** Keyboard focus ring. Optional: falls back to the theme accent. */
+  focusRing?: string;
   border: string;
   divider: string;
   codeBg: string;

@@ -55,7 +55,10 @@ export const Sidebar: React.FC = () => {
 
   return (
     <div
-      className="w-56 h-full flex flex-col justify-between border-r select-none shrink-0"
+      data-pane="sidebar"
+      tabIndex={-1}
+      aria-label="Sidebar"
+      className="w-56 h-full flex flex-col justify-between border-r select-none shrink-0 outline-none"
       style={{
         backgroundColor: 'var(--bg-sidebar)',
         color: 'var(--text-sidebar)',

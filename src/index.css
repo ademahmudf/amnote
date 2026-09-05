@@ -24,6 +24,10 @@
     --color-accent-hover: #ef5350;
     --color-accent-text: #ffffff;
 
+    --color-danger: #f43f5e;
+    --color-danger-hover: #fb7185;
+    --color-focus-ring: var(--color-accent);
+
     --color-border: #2c2e33;
     --color-divider: #26282c;
     --color-code-bg: #131416;
@@ -61,6 +65,27 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(128, 128, 128, 0.45);
   }
+}
+
+/* Semantic colors: destructive actions use --color-danger (never the accent),
+   keyboard focus uses --color-focus-ring (defaults to the accent). */
+.btn-danger {
+  background-color: var(--color-danger);
+  color: #ffffff;
+}
+.btn-danger:hover:not(:disabled) {
+  background-color: var(--color-danger-hover);
+}
+.btn-danger-ghost {
+  background-color: color-mix(in srgb, var(--color-danger) 15%, transparent);
+  color: var(--color-danger);
+}
+.btn-danger-ghost:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-danger) 25%, transparent);
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
 }
 
 /* TipTap ProseMirror Editor Styling with Bear-style Overscroll Space */
