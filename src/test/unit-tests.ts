@@ -496,6 +496,31 @@ const htmlAnnotationBox = markdownToHtml(mdAnnotationBox);
 assert(htmlAnnotationBox.includes('data-annotation="box"'), 'Converts ~box:text~ to data-annotation="box"');
 assert(htmlToMarkdown(htmlAnnotationBox).trim() === mdAnnotationBox, 'Round-trips ~box:text~ annotation');
 
+// Test Hand-Drawn Annotation Input Rules & Paste Rules
+import {
+  ANNOTATION_INPUT_REGEX,
+  ANNOTATION_PASTE_REGEX,
+  AnnotationExtension,
+} from '../editor/extensions/AnnotationExtension';
+
+const inputMatch = 'Check this ~wavy:Important point~'.match(ANNOTATION_INPUT_REGEX);
+assert(Boolean(inputMatch), 'ANNOTATION_INPUT_REGEX matches ~wavy:Important point~');
+assert(inputMatch?.[2]?.toLowerCase() === 'wavy', 'ANNOTATION_INPUT_REGEX extracts variant "wavy"');
+assert(inputMatch?.[3] === 'Important point', 'ANNOTATION_INPUT_REGEX extracts text "Important point"');
+
+const strikeMatch = 'This is ~~not an annotation~~'.match(ANNOTATION_INPUT_REGEX);
+assert(strikeMatch === null, 'ANNOTATION_INPUT_REGEX does not match ~~strikethrough~~');
+
+const pasteMatches = [...'Start ~circle:first~ and ~box:second~ end'.matchAll(ANNOTATION_PASTE_REGEX)];
+assert(pasteMatches.length === 2, 'ANNOTATION_PASTE_REGEX matches multiple annotation tokens');
+assert(pasteMatches[0][2].toLowerCase() === 'circle' && pasteMatches[0][3] === 'first', 'Extracts circle annotation');
+assert(pasteMatches[1][2].toLowerCase() === 'box' && pasteMatches[1][3] === 'second', 'Extracts box annotation');
+
+// Verify AnnotationExtension has input and paste rules registered
+const extensionInstance = AnnotationExtension;
+assert(typeof extensionInstance.config.addInputRules === 'function', 'AnnotationExtension defines addInputRules');
+assert(typeof extensionInstance.config.addPasteRules === 'function', 'AnnotationExtension defines addPasteRules');
+
 // Test 20: Sidebar menu & tag selection does not auto-open note
 import { useNoteStore } from '../store/useNoteStore';
 useNoteStore.setState({

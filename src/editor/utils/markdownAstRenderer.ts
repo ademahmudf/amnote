@@ -80,9 +80,9 @@ function renderCustomText(value: string): string {
       `<span data-wiki-target="${escapeAttribute(target)}" class="am-wiki-link bear-wiki-link">[[ ${escapeHtml(target)} ]]</span>`
   );
   out = out.replace(
-    /~(wavy|circle|highlight|underline|box|double|cross|arrow):([^~]+)~/g,
+    /~(wavy|circle|highlight|underline|box|double|cross|arrow|line|dottedUnderline|doubleUnderline|strikethrough|crossOut):([^~]+)~/gi,
     (_match, variant: string, text: string) =>
-      `<span data-annotation="${escapeAttribute(variant)}" class="am-annotation am-annotation-${escapeAttribute(variant)}">${text}</span>`
+      `<span data-annotation="${escapeAttribute(variant.toLowerCase())}" class="am-annotation am-annotation-${escapeAttribute(variant.toLowerCase())}">${text}</span>`
   );
 
   return out;
@@ -109,9 +109,9 @@ function renderInlineTokens(tokens?: Token[]): string {
         return `<em>${renderInlineTokens((token as Tokens.Em).tokens)}</em>`;
       case 'del': {
         const delToken = token as Tokens.Del;
-        const match = delToken.text.match(/^(wavy|circle|highlight|underline|box|double|cross|arrow):([\s\S]+)$/);
+        const match = delToken.text.match(/^(wavy|circle|highlight|underline|box|double|cross|arrow|line|dottedUnderline|doubleUnderline|strikethrough|crossOut):([\s\S]+)$/i);
         if (match) {
-          const variant = match[1];
+          const variant = match[1].toLowerCase();
           const innerText = match[2];
           return `<span data-annotation="${escapeAttribute(variant)}" class="am-annotation am-annotation-${escapeAttribute(variant)}">${renderCustomText(innerText)}</span>`;
         }
