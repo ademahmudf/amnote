@@ -25,12 +25,14 @@ import {
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { markdownToHtml } from '../utils/markdownConverter';
+import type { EditorDatePickerMode } from './EditorDatePicker';
 
 interface SlashCommandMenuProps {
   editor: Editor;
   isOpen: boolean;
   onClose: () => void;
   query: string;
+  onRequestDatePicker: (mode: EditorDatePickerMode) => void;
 }
 
 interface CommandItem {
@@ -40,7 +42,10 @@ interface CommandItem {
   keywords?: string[];
   icon: React.ComponentType<{ size?: number; className?: string }>;
   colorIndicator?: string;
-  command: (editor: Editor) => void;
+  command: (
+    editor: Editor,
+    requestDatePicker: (mode: EditorDatePickerMode) => void
+  ) => void;
 }
 
 export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
@@ -48,6 +53,7 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
   isOpen,
   onClose,
   query,
+  onRequestDatePicker,
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -89,6 +95,14 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
       keywords: ['todo', 'task', 'check', 'box', 'list', 'checklist'],
       icon: CheckSquare,
       command: (ed) => ed.chain().focus().toggleTaskList().run(),
+    },
+    {
+      title: 'Due Date',
+      description: 'Add @due(YYYY-MM-DD) to a task',
+      category: 'Lists & Tasks',
+      keywords: ['due', 'date', 'deadline', 'calendar', 'task'],
+      icon: Calendar,
+      command: (_ed, requestDatePicker) => requestDatePicker('task-due'),
     },
     {
       title: 'Bullet List',
@@ -243,6 +257,14 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 
     // 5. Templates
     {
+      title: 'Insert Date Link',
+      description: 'Choose a date and insert [[YYYY-MM-DD]]',
+      category: 'Templates',
+      keywords: ['insert', 'date', 'calendar', 'daily', 'link'],
+      icon: Calendar,
+      command: (_ed, requestDatePicker) => requestDatePicker('date-link'),
+    },
+    {
       title: 'Daily Journal Template',
       description: 'Insert daily journal with date & priorities',
       category: 'Templates',
@@ -313,7 +335,7 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
       editor.chain().focus().deleteRange({ from: fromPos, to: toPos }).run();
     }
 
-    item.command(editor);
+    item.command(editor, onRequestDatePicker);
     onClose();
   };
 
@@ -356,7 +378,7 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, filteredItems, selectedIndex, onClose]);
+  }, [editor, isOpen, filteredItems, selectedIndex, onClose, onRequestDatePicker]);
 
   if (!isOpen || filteredItems.length === 0) return null;
 

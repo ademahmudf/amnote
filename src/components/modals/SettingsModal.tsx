@@ -364,7 +364,7 @@ export const SettingsModal: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <h3 className="font-semibold text-xs">Editor Writing Typeface</h3>
-                    <p className="text-[11px] opacity-60">11 curated typefaces across Sans, Serif, Mono, and Handwritten.</p>
+                    <p className="text-[11px] opacity-60">14 curated typefaces across Sans, Serif, Mono, and Handwritten.</p>
                   </div>
 
                   {/* Category Filter Pills */}

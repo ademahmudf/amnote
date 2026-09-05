@@ -1,14 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, Plus, FileText, Pin, CheckSquare, Lock, Calendar, Trash2 } from 'lucide-react';
+import { Search, X, Plus, FileText, Pin, CheckSquare, Lock, Calendar, Trash2, CalendarClock, AlertCircle } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
 import { NoteCard } from './NoteCard';
 import { SortDropdown } from './SortDropdown';
 import { promptEmptyTrashConfirmation } from '../../utils/trashConfirmation';
+import { todayISO } from '../../domain/calendarDates';
 
 export const NoteList: React.FC = () => {
-  // Subscribe to notes array so NoteList re-renders on EVERY keystroke!
+  // Subscribing to the notes array re-renders this panel on every keystroke
+  // while editing. That is contained by memoized NoteCards (untouched notes
+  // keep their object identity), the debounced search draft below, and the
+  // incremental search-index sync in domain/searchIndex.ts.
   const notes = useNoteStore((state) => state.notes);
   const activeNoteId = useNoteStore((state) => state.activeNoteId);
   const setActiveNoteId = useNoteStore((state) => state.setActiveNoteId);
@@ -28,6 +32,48 @@ export const NoteList: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
+  // Local search draft so typing stays instant while store filtering
+  // (index sync + scoring over the whole vault) runs debounced.
+  const [searchDraft, setSearchDraft] = useState(searchQuery);
+  const searchDebounceRef = useRef<number | null>(null);
+  const pendingSearchRef = useRef(searchQuery);
+
+  // External query changes (chips, syntax helper, clear buttons) flow back
+  // into the draft so the input never shows a stale value.
+  useEffect(() => {
+    setSearchDraft(searchQuery);
+    pendingSearchRef.current = searchQuery;
+  }, [searchQuery]);
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current !== null) {
+        window.clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
+
+  const commitSearch = (value: string) => {
+    pendingSearchRef.current = value;
+    if (searchDebounceRef.current !== null) {
+      window.clearTimeout(searchDebounceRef.current);
+    }
+    searchDebounceRef.current = window.setTimeout(() => {
+      setSearchQuery(value);
+    }, 150);
+  };
+
+  const clearSearch = () => {
+    if (searchDebounceRef.current !== null) {
+      window.clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+    pendingSearchRef.current = '';
+    setSearchDraft('');
+    setSearchQuery('');
+    setShowSyntaxHelper(false);
+  };
+
   // Recalculate filtered notes using subscribed state
   const filteredNotes = React.useMemo(() => {
     return getFilteredNotes();
@@ -46,11 +92,11 @@ export const NoteList: React.FC = () => {
     return { pinnedNotes: pinned, regularNotes: regular };
   }, [filteredNotes]);
 
-  // Check if search query contains an open '@' query to show syntax helper
+  // Check if search draft contains an open '@' query to show syntax helper
   useEffect(() => {
-    const hasAtQuery = /(?:^|\s)@\w*$/.test(searchQuery);
+    const hasAtQuery = /(?:^|\s)@\w*$/.test(searchDraft);
     setShowSyntaxHelper(hasAtQuery);
-  }, [searchQuery]);
+  }, [searchDraft]);
 
   // Get active view title and icon
   const viewTitle = selectedTag
@@ -115,8 +161,14 @@ export const NoteList: React.FC = () => {
   };
 
   const applySyntaxToken = (token: string) => {
-    const updated = searchQuery.replace(/(?:^|\s)@\w*$/, (m) => (m.startsWith(' ') ? ` ${token} ` : `${token} `));
-    setSearchQuery(updated.trim() + ' ');
+    const updated = searchDraft.replace(/(?:^|\s)@\w*$/, (m) => (m.startsWith(' ') ? ` ${token} ` : `${token} `)).trim() + ' ';
+    if (searchDebounceRef.current !== null) {
+      window.clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+    pendingSearchRef.current = updated;
+    setSearchDraft(updated);
+    setSearchQuery(updated);
     setShowSyntaxHelper(false);
     searchInputRef.current?.focus();
   };
@@ -125,6 +177,8 @@ export const NoteList: React.FC = () => {
     <div
       ref={listContainerRef}
       tabIndex={0}
+      role="listbox"
+      aria-label="Notes"
       onKeyDown={handleKeyDown}
       className={`${panelWidthClass} h-full flex flex-col border-r select-none shrink-0 transition-all duration-150 outline-none`}
       style={{
@@ -142,29 +196,32 @@ export const NoteList: React.FC = () => {
             borderColor: 'var(--card-notelist-border)',
           }}
         >
-          <Search size={15} className="opacity-50 shrink-0" />
+          <Search size={15} className="opacity-50 shrink-0" aria-hidden="true" />
           <input
             ref={searchInputRef}
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchDraft}
+            onChange={(e) => {
+              setSearchDraft(e.target.value);
+              commitSearch(e.target.value);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown' && !showSyntaxHelper) {
                 e.preventDefault();
                 handleKeyDown(e);
               }
             }}
-            placeholder="Search notes, #tags, @todo..."
+            placeholder="Search notes, #tags, @todo, @due:2026-09-05..."
+            aria-label="Search notes"
             className={`bg-transparent border-none outline-none ${searchInputClass} w-full placeholder:opacity-50`}
             style={{ color: 'var(--text-notelist)' }}
           />
-          {searchQuery && (
+          {searchDraft && (
             <button
               type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setShowSyntaxHelper(false);
-              }}
+              onClick={clearSearch}
+              title="Clear search"
+              aria-label="Clear search"
               className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 opacity-60 hover:opacity-100 transition-opacity shrink-0"
             >
               <X size={12} />
@@ -177,12 +234,14 @@ export const NoteList: React.FC = () => {
           {[
             { id: 'all', label: 'All', icon: null, query: '' },
             { id: 'todo', label: 'Todo', icon: CheckSquare, query: '@todo' },
+            { id: 'due', label: 'Due', icon: CalendarClock, query: '@due' },
+            { id: 'overdue', label: 'Overdue', icon: AlertCircle, query: '@overdue' },
             { id: 'pinned', label: 'Pinned', icon: Pin, query: '@pinned' },
             { id: 'locked', label: 'Locked', icon: Lock, query: '@locked' },
           ].map((chip) => {
             const isSelected =
               chip.id === 'all'
-                ? !searchQuery.includes('@todo') && !searchQuery.includes('@pinned') && !searchQuery.includes('@locked')
+                ? !/(^|\s)@(?:todo|pinned|locked|due(?::\S+)?|overdue)(?=\s|$)/.test(searchQuery)
                 : searchQuery.includes(chip.query);
 
             return (
@@ -191,12 +250,12 @@ export const NoteList: React.FC = () => {
                 type="button"
                 onClick={() => {
                   if (chip.id === 'all') {
-                    setSearchQuery(searchQuery.replace(/@\w+/g, '').trim());
+                    setSearchQuery(searchQuery.replace(/(?:^|\s)@(?:todo|pinned|locked|due(?::\S+)?|overdue)(?=\s|$)/g, '').trim());
                   } else {
                     if (isSelected) {
-                      setSearchQuery(searchQuery.replace(chip.query, '').trim());
+                      setSearchQuery(searchQuery.replace(new RegExp(`(?:^|\\s)${chip.query}(?=\\s|$)`), '').trim());
                     } else {
-                      const base = searchQuery.replace(/@\w+/g, '').trim();
+                      const base = searchQuery.replace(/(?:^|\s)@(?:todo|pinned|locked|due(?::\S+)?|overdue)(?=\s|$)/g, '').trim();
                       setSearchQuery(base ? `${base} ${chip.query}` : chip.query);
                     }
                   }
@@ -232,9 +291,13 @@ export const NoteList: React.FC = () => {
             </div>
             {[
               { token: '@todo', label: 'Pending Tasks', desc: 'Notes with unchecked todo items', icon: CheckSquare },
+              { token: '@due', label: 'Due Tasks', desc: 'Notes with any task due date', icon: CalendarClock },
+              { token: `@due:${todayISO()}`, label: 'Due Date', desc: 'Tasks due on a specific date', icon: Calendar },
+              { token: '@overdue', label: 'Overdue', desc: 'Unchecked past-due tasks', icon: AlertCircle },
               { token: '@pinned', label: 'Pinned Notes', desc: 'Important pinned notes', icon: Pin },
               { token: '@locked', label: 'Locked Notes', desc: 'Password protected notes', icon: Lock },
               { token: '@today', label: 'Today', desc: 'Created or modified today', icon: Calendar },
+              { token: `@date:${todayISO()}`, label: 'Date', desc: 'Daily note and date mentions', icon: Calendar },
             ].map((item) => (
               <button
                 key={item.token}
@@ -341,7 +404,7 @@ export const NoteList: React.FC = () => {
                 {searchQuery && (
                   <button
                     type="button"
-                    onClick={() => setSearchQuery('')}
+                    onClick={clearSearch}
                     className="w-full py-1 text-[11px] opacity-60 hover:opacity-100 transition-opacity"
                   >
                     Clear search query

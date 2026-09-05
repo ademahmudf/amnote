@@ -1,4 +1,5 @@
 import { lexer, type Token, type Tokens } from 'marked';
+import { isValidISODate } from '../../domain/calendarDates';
 
 function escapeHtml(value: string): string {
   return value
@@ -76,8 +77,10 @@ function renderCustomText(value: string): string {
   );
   out = out.replace(
     /\[\[([^\]]+)\]\]/g,
-    (_match, target: string) =>
-      `<span data-wiki-target="${escapeAttribute(target)}" class="am-wiki-link bear-wiki-link">[[ ${escapeHtml(target)} ]]</span>`
+    (_match, target: string) => {
+      const dateClass = isValidISODate(target.trim()) ? ' am-date-link bear-date-link' : '';
+      return `<span data-wiki-target="${escapeAttribute(target)}" class="am-wiki-link bear-wiki-link${dateClass}">[[ ${escapeHtml(target)} ]]</span>`;
+    }
   );
   out = out.replace(
     /~(wavy|circle|highlight|underline|box|double|cross|arrow|line|dottedUnderline|doubleUnderline|strikethrough|crossOut):([^~]+)~/gi,

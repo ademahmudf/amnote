@@ -55,8 +55,8 @@ export function htmlToMarkdown(html: string): string {
       return `![${meta}](${src})`;
     });
     md = md.replace(/<code>(.*?)<\/code>/gi, '`$1`');
-    md = md.replace(/<span data-tag="(.*?)">.*?<\/span>/gi, '#$1');
-    md = md.replace(/<span data-wiki-target="(.*?)">.*?<\/span>/gi, '[[$1]]');
+    md = md.replace(/<span[^>]*data-tag="([^"]+)"[^>]*>.*?<\/span>/gi, '#$1');
+    md = md.replace(/<span[^>]*data-wiki-target="([^"]+)"[^>]*>.*?<\/span>/gi, '[[$1]]');
     return md.replace(/\n{3,}/g, '\n\n').trim();
   }
 

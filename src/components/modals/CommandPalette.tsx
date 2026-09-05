@@ -10,6 +10,7 @@ import {
   Download,
   Settings,
   Calendar,
+  CalendarDays,
   CheckSquare,
   Trash2,
 } from 'lucide-react';
@@ -19,6 +20,7 @@ import { THEMES } from '../../themes/themeDefinitions';
 import type { ThemeId } from '../../types/note';
 import { notify } from '../../store/useNotificationStore';
 import { promptEmptyTrashConfirmation } from '../../utils/trashConfirmation';
+import { todayISO } from '../../domain/calendarDates';
 
 export const CommandPalette: React.FC = () => {
   const isCommandPaletteOpen = useNoteStore((state) => state.isCommandPaletteOpen);
@@ -31,6 +33,8 @@ export const CommandPalette: React.FC = () => {
   const isFocusMode = useNoteStore((state) => state.isFocusMode);
   const setSettingsOpen = useNoteStore((state) => state.setSettingsOpen);
   const setExportModalOpen = useNoteStore((state) => state.setExportModalOpen);
+  const setCalendarModalOpen = useNoteStore((state) => state.setCalendarModalOpen);
+  const openDailyNote = useNoteStore((state) => state.openDailyNote);
 
   const { setTheme } = useThemeStore();
 
@@ -54,6 +58,20 @@ export const CommandPalette: React.FC = () => {
       title: 'Create New Note',
       icon: Plus,
       run: () => createNote(),
+    },
+    {
+      id: 'action-open-calendar',
+      category: 'Actions',
+      title: 'Open Calendar',
+      icon: CalendarDays,
+      run: () => setCalendarModalOpen(true),
+    },
+    {
+      id: 'action-open-today-note',
+      category: 'Actions',
+      title: "Open Today's Note",
+      icon: Calendar,
+      run: () => void openDailyNote(todayISO()),
     },
     {
       id: 'template-journal',

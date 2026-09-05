@@ -38,10 +38,19 @@ export const HeaderBar: React.FC = () => {
   const tagIcons = useSettingsStore((state) => state.tagIcons);
   const tagColors = useSettingsStore((state) => state.tagColors);
 
-  const primaryTag = selectedTag || activeNote?.tags?.[0];
-  const customTagIcon = primaryTag ? tagIcons[primaryTag] : undefined;
-  const customTagColor = primaryTag ? tagColors[primaryTag] : undefined;
-  const TagIconComp = primaryTag ? resolveTagIcon(primaryTag, customTagIcon) : FileText;
+  // Context crumb never blends filter and note state: when a note is open the
+  // crumb reflects that note; the selected-tag filter only shows with no note.
+  const contextTag = activeNote ? activeNote.tags?.[0] : selectedTag;
+  const contextLabel = activeNote
+    ? null
+    : selectedTag
+      ? formatTagDisplay(selectedTag)
+      : activeFilter
+        ? activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)
+        : 'Notes';
+  const customTagIcon = contextTag ? tagIcons[contextTag] : undefined;
+  const customTagColor = contextTag ? tagColors[contextTag] : undefined;
+  const TagIconComp = contextTag ? resolveTagIcon(contextTag, customTagIcon) : FileText;
 
   const { getThemeColors } = useThemeStore();
   const currentTheme = getThemeColors();
@@ -107,11 +116,13 @@ export const HeaderBar: React.FC = () => {
         )}
 
         {/* View toggles */}
-        <div className="flex items-center gap-0.5">
+        <div role="toolbar" aria-label="View layout" className="flex items-center gap-0.5">
           <button
             type="button"
             onClick={toggleSidebar}
             title="Toggle Sidebar (Ctrl+1)"
+            aria-label="Toggle sidebar"
+            aria-pressed={isSidebarOpen}
             className={`p-1.5 rounded-lg text-xs transition-all ${
               isSidebarOpen
                 ? 'bg-black/10 dark:bg-white/10 opacity-100'
@@ -125,6 +136,8 @@ export const HeaderBar: React.FC = () => {
             type="button"
             onClick={toggleNoteList}
             title="Toggle Note List (Ctrl+2)"
+            aria-label="Toggle note list"
+            aria-pressed={isNoteListOpen}
             className={`p-1.5 rounded-lg text-xs transition-all ${
               isNoteListOpen
                 ? 'bg-black/10 dark:bg-white/10 opacity-100'
@@ -139,6 +152,8 @@ export const HeaderBar: React.FC = () => {
             type="button"
             onClick={toggleFocusMode}
             title="Toggle Focus / Zen Mode (Ctrl+3 or F11)"
+            aria-label="Toggle focus mode"
+            aria-pressed={isFocusMode}
             className={`p-1.5 rounded-lg text-xs transition-all ${
               isFocusMode
                 ? 'bg-accent text-white'
@@ -172,15 +187,27 @@ export const HeaderBar: React.FC = () => {
               <TagIconComp
                 size={13}
                 className="shrink-0 transition-colors"
-                style={{ color: customTagColor || (primaryTag ? 'var(--color-accent)' : undefined) }}
+                style={{ color: customTagColor || (contextTag ? 'var(--color-accent)' : undefined) }}
               />
-              <span className="opacity-60 shrink-0 font-medium text-[11.5px]">
-                {primaryTag ? formatTagDisplay(primaryTag) : activeFilter ? activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1) : 'Notes'}
-              </span>
-              <span className="opacity-40 shrink-0">/</span>
-              <span className="font-semibold truncate text-[12px]" style={{ color: 'var(--text-sidebar-active)' }}>
-                {activeNote.title || 'Untitled'}
-              </span>
+              {activeNote ? (
+                <>
+                  {contextTag && (
+                    <>
+                      <span className="opacity-60 shrink-0 font-medium text-[11.5px]">
+                        {formatTagDisplay(contextTag)}
+                      </span>
+                      <span className="opacity-40 shrink-0">/</span>
+                    </>
+                  )}
+                  <span className="font-semibold truncate text-[12px]" style={{ color: 'var(--text-sidebar-active)' }}>
+                    {activeNote.title || 'Untitled'}
+                  </span>
+                </>
+              ) : (
+                <span className="font-semibold truncate text-[12px]" style={{ color: 'var(--text-sidebar-active)' }}>
+                  {contextLabel}
+                </span>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2">

@@ -9,6 +9,7 @@ import { NoteList } from '../notelist/NoteList';
 import { AmEditor } from '../../editor/AmEditor';
 import { InfoDrawer } from '../inspector/InfoDrawer';
 import { CommandPalette } from '../modals/CommandPalette';
+import { CalendarModal } from '../modals/CalendarModal';
 import { SettingsModal } from '../modals/SettingsModal';
 import { ExportModal } from '../modals/ExportModal';
 import { PasswordModal } from '../modals/PasswordModal';
@@ -30,6 +31,7 @@ export const AppLayout: React.FC = () => {
   const toggleFocusMode = useNoteStore((state) => state.toggleFocusMode);
   const toggleInfoDrawer = useNoteStore((state) => state.toggleInfoDrawer);
   const setCommandPaletteOpen = useNoteStore((state) => state.setCommandPaletteOpen);
+  const setCalendarModalOpen = useNoteStore((state) => state.setCalendarModalOpen);
   const setSettingsOpen = useNoteStore((state) => state.setSettingsOpen);
   const setCheatsheetOpen = useNoteStore((state) => state.setCheatsheetOpen);
   const createNote = useNoteStore((state) => state.createNote);
@@ -134,6 +136,13 @@ export const AppLayout: React.FC = () => {
         return;
       }
 
+      // Ctrl + Shift + C: Calendar
+      if (isCtrlOrCmd && e.shiftKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        setCalendarModalOpen(true);
+        return;
+      }
+
       // Ctrl + Shift + T: Toggle Typewriter Mode
       if (isCtrlOrCmd && e.shiftKey && e.key.toLowerCase() === 't') {
         e.preventDefault();
@@ -185,6 +194,7 @@ export const AppLayout: React.FC = () => {
     toggleFocusMode,
     toggleInfoDrawer,
     setCommandPaletteOpen,
+    setCalendarModalOpen,
     setSettingsOpen,
     setCheatsheetOpen,
   ]);
@@ -226,6 +236,7 @@ export const AppLayout: React.FC = () => {
 
       {/* Modals & Dialogs */}
       <CommandPalette />
+      <CalendarModal />
       <SettingsModal />
       <ExportModal />
       <PasswordModal />

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -25,9 +25,19 @@ import { HybridHeadingExtension } from './extensions/HybridHeadingExtension';
 import { TypewriterMode } from './extensions/TypewriterMode';
 import { FocusModeExtension } from './extensions/FocusModeExtension';
 import { AnnotationExtension } from './extensions/AnnotationExtension';
+import {
+  TaskDueExtension,
+  getEditorTaskDueTarget,
+  type TaskDueBadgeClickInfo,
+  type TaskDuePickerTarget,
+} from './extensions/TaskDueExtension';
 import { BubbleToolbar } from './components/BubbleToolbar';
 import { SlashCommandMenu } from './components/SlashCommandMenu';
 import { WikiLinkMenu } from './components/WikiLinkMenu';
+import {
+  EditorDatePicker,
+  type EditorDatePickerMode,
+} from './components/EditorDatePicker';
 import { markdownToHtml } from './utils/markdownConverter';
 import { serializeProseMirrorToMarkdown } from './utils/proseMirrorMarkdownSerializer';
 import { useNoteStore } from '../store/useNoteStore';
@@ -146,6 +156,15 @@ export const AmEditor: React.FC = () => {
   } = useImageAttachments({ editorRef });
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  interface EditorDatePickerState {
+    mode: EditorDatePickerMode;
+    position: { x: number; y: number };
+    target?: TaskDuePickerTarget;
+    canClear?: boolean;
+  }
+
+  const [editorDatePicker, setEditorDatePicker] = useState<EditorDatePickerState | null>(null);
+  const closeEditorDatePicker = useCallback(() => setEditorDatePicker(null), []);
 
   const isUnlocked = activeNote ? isNoteUnlocked(activeNote.id) : true;
   const {
@@ -186,6 +205,16 @@ export const AmEditor: React.FC = () => {
         nested: true,
         HTMLAttributes: {
           class: 'am-task-item bear-task-item',
+        },
+      }),
+      TaskDueExtension.configure({
+        onBadgeClick: (info: TaskDueBadgeClickInfo) => {
+          setEditorDatePicker({
+            mode: 'task-due',
+            position: { x: info.x, y: info.y },
+            target: info,
+            canClear: true,
+          });
         },
       }),
       Table.configure({
@@ -420,6 +449,10 @@ export const AmEditor: React.FC = () => {
   }, [editor]);
 
   useEffect(() => {
+    setEditorDatePicker(null);
+  }, [activeNote?.id, editorReloadToken]);
+
+  useEffect(() => {
     if (editor && !editor.isDestroyed) {
       clearTagIconSvgCache();
       editor.view.dispatch(editor.state.tr.setMeta('tagStylesChanged', true));
@@ -567,6 +600,7 @@ export const AmEditor: React.FC = () => {
   const fontStyle: React.CSSProperties = {
     fontFamily: getFontFamilyCss(fontFamily),
     fontSize: `${fontSize}px`,
+    ['--editor-font-size' as unknown as string]: `${fontSize}px`,
     lineHeight: numericLineHeight,
     ['--line-height' as unknown as string]: `${numericLineHeight}`,
     ['--paragraph-spacing' as unknown as string]: `${paragraphSpacing ?? 8}px`,
@@ -576,6 +610,24 @@ export const AmEditor: React.FC = () => {
   const words = activeNote.content.trim().match(/\S+/g)?.length || 0;
   const chars = activeNote.content.length;
   const readTime = Math.max(1, Math.ceil(words / 200));
+
+  const requestEditorDatePicker = (mode: EditorDatePickerMode) => {
+    if (!editor || editor.isDestroyed) return;
+
+    const coords = editor.view.coordsAtPos(editor.state.selection.from);
+    const position = { x: coords.left, y: coords.bottom + 6 };
+    setEditorDatePicker({
+      mode,
+      position,
+      target:
+        mode === 'task-due'
+          ? getEditorTaskDueTarget(editor, position.x, position.y)
+          : undefined,
+      canClear: false,
+    });
+    setIsSlashOpen(false);
+    setShowBubbleMenu(false);
+  };
 
   return (
     <div
@@ -711,7 +763,10 @@ export const AmEditor: React.FC = () => {
           className="fixed z-40"
           style={{ top: `${bubblePosition.top}px`, left: `${bubblePosition.left}px` }}
         >
-          <BubbleToolbar editor={editor} />
+          <BubbleToolbar
+            editor={editor}
+            onRequestTaskDue={() => requestEditorDatePicker('task-due')}
+          />
         </div>
       )}
 
@@ -726,8 +781,20 @@ export const AmEditor: React.FC = () => {
             isOpen={isSlashOpen}
             onClose={() => setIsSlashOpen(false)}
             query={slashQuery}
+            onRequestDatePicker={requestEditorDatePicker}
           />
         </div>
+      )}
+
+      {editor && isUnlocked && editorDatePicker && (
+        <EditorDatePicker
+          editor={editor}
+          mode={editorDatePicker.mode}
+          position={editorDatePicker.position}
+          taskDueTarget={editorDatePicker.target}
+          canClear={editorDatePicker.canClear}
+          onClose={closeEditorDatePicker}
+        />
       )}
 
       {/* Wiki Link Note Autocomplete Popover */}

@@ -22,6 +22,11 @@ import {
   getSystemCounts as selectSystemCounts,
   getTagTree as selectTagTree,
 } from '../domain/noteSelectors';
+import {
+  createDailyNoteContent,
+  isValidISODate,
+  todayISO,
+} from '../domain/calendarDates';
 import { vaultAdapter } from '../db/vaultAdapter';
 import { useSettingsStore } from './useSettingsStore';
 import { notify } from './useNotificationStore';
@@ -47,6 +52,8 @@ interface NoteState {
   isFocusMode: boolean;
   isInfoDrawerOpen: boolean;
   isCommandPaletteOpen: boolean;
+  isCalendarModalOpen: boolean;
+  calendarSelectedDate: string;
   isSettingsOpen: boolean;
   isExportModalOpen: boolean;
   isCheatsheetOpen: boolean;
@@ -88,13 +95,20 @@ interface NoteState {
   toggleFocusMode: () => void;
   toggleInfoDrawer: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
+  setCalendarModalOpen: (open: boolean, dateIso?: string) => void;
+  setCalendarSelectedDate: (dateIso: string) => void;
   setSettingsOpen: (open: boolean) => void;
   setExportModalOpen: (open: boolean) => void;
   setCheatsheetOpen: (open: boolean) => void;
   setPasswordModalOpen: (open: boolean, noteId?: string | null) => void;
   setEmptyTrashModalOpen: (open: boolean) => void;
   
-  createNote: (initialTag?: string, initialTitle?: string, initialBody?: string) => Promise<string>;
+  createNote: (
+    initialTag?: string | null,
+    initialTitle?: string,
+    initialBody?: string
+  ) => Promise<string>;
+  openDailyNote: (dateIso: string) => Promise<string | null>;
   updateNote: (id: string, updates: Partial<Note>) => Promise<void>;
   updateNoteContent: (id: string, content: string, contentJson?: string, persistToDisk?: boolean) => Promise<void>;
   togglePin: (id: string) => Promise<void>;
@@ -140,6 +154,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   isFocusMode: false,
   isInfoDrawerOpen: false,
   isCommandPaletteOpen: false,
+  isCalendarModalOpen: false,
+  calendarSelectedDate: todayISO(),
   isSettingsOpen: false,
   isExportModalOpen: false,
   isCheatsheetOpen: false,
@@ -520,6 +536,14 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     })),
   toggleInfoDrawer: () => set((state) => ({ isInfoDrawerOpen: !state.isInfoDrawerOpen })),
   setCommandPaletteOpen: (open) => set({ isCommandPaletteOpen: open }),
+  setCalendarModalOpen: (open, dateIso) =>
+    set((state) => ({
+      isCalendarModalOpen: open,
+      calendarSelectedDate: dateIso && isValidISODate(dateIso) ? dateIso : state.calendarSelectedDate,
+    })),
+  setCalendarSelectedDate: (dateIso) => {
+    if (isValidISODate(dateIso)) set({ calendarSelectedDate: dateIso });
+  },
   setSettingsOpen: (open) => set({ isSettingsOpen: open }),
   setExportModalOpen: (open) => set({ isExportModalOpen: open }),
   setCheatsheetOpen: (open) => set({ isCheatsheetOpen: open }),
@@ -527,8 +551,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     set({ isPasswordModalOpen: open, passwordModalNoteId: noteId }),
   setEmptyTrashModalOpen: (open) => set({ isEmptyTrashModalOpen: open }),
 
-  createNote: async (initialTag?: string, initialTitle?: string, initialBody?: string) => {
-    const defaultTag = initialTag || get().selectedTag || '';
+  createNote: async (initialTag?: string | null, initialTitle?: string, initialBody?: string) => {
+    const defaultTag = initialTag === undefined ? get().selectedTag || '' : initialTag;
     const title = initialTitle || 'New Note';
     const initialContent =
       initialBody !== undefined
@@ -567,6 +591,24 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     }));
 
     return newNote.id;
+  },
+
+  openDailyNote: async (dateIso) => {
+    if (!isValidISODate(dateIso)) return null;
+
+    const existingNote = get()
+      .notes.filter((note) => !note.isTrashed && !note.isArchived && note.title.trim() === dateIso)
+      .sort((a, b) => b.updatedAt - a.updatedAt)[0];
+
+    set({ isCalendarModalOpen: false });
+
+    if (existingNote) {
+      set({ activeNoteId: existingNote.id });
+      return existingNote.id;
+    }
+
+    const createdNoteId = await get().createNote('', dateIso, createDailyNoteContent(dateIso));
+    return createdNoteId || null;
   },
 
   updateNote: async (id, updates) => {

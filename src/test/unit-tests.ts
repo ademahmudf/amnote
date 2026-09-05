@@ -7,7 +7,24 @@ import { initialAmNoteSeed } from '../db/vaultAdapter';
 import { mergeVaultNotes } from '../domain/vaultSync';
 import { diffLines } from '../domain/textDiff';
 import { NoteSearchIndex } from '../domain/searchIndex';
+import {
+  addDaysISO,
+  createDailyNoteContent,
+  extractDateLinks,
+  getCalendarDayEntries,
+  getMonthGrid,
+  isValidISODate,
+  todayISO,
+} from '../domain/calendarDates';
+import {
+  getDueTasks,
+  getTasksDueOn,
+  isTaskOverdue,
+  parseTaskDueItems,
+  setTaskDueToken,
+} from '../domain/taskDueDates';
 import type { Note } from '../types/note';
+import { cleanSnippet } from '../components/notelist/NoteCard';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -381,6 +398,16 @@ assert(searchIndex.search([searchableNote, otherNote], '@pinned').length === 0, 
 searchIndex.add(makeConflictNote('searchable', 'Replaced note content', 3));
 assert(searchIndex.search([searchableNote, otherNote], 'quantum').length === 0, 'Search index replaces changed documents');
 
+// Incremental sync: a new array where only one note object changed (the
+// per-keystroke store update shape) must refresh that note without going stale.
+const incrementalIndex = new NoteSearchIndex();
+incrementalIndex.sync([searchableNote, otherNote]);
+const editedSearchable: Note = { ...searchableNote, content: 'Totally rewritten content here', updatedAt: 99 };
+incrementalIndex.sync([editedSearchable, otherNote]);
+assert(incrementalIndex.search([editedSearchable, otherNote], 'quantum').length === 0, 'Incremental sync drops stale terms of the edited note');
+assert(incrementalIndex.search([editedSearchable, otherNote], 'rewritten')[0]?.id === 'searchable', 'Incremental sync indexes new terms of the edited note');
+assert(incrementalIndex.search([editedSearchable, otherNote], 'grocery')[0]?.id === 'other', 'Incremental sync keeps the untouched note searchable');
+
 // ============================================================================
 // Test 16: Tag Icon & Color Sync and Conflict Reconciliation
 // ============================================================================
@@ -583,12 +610,21 @@ assert(Boolean(notif2?.cancelAction), 'Delete permanently notification has Cance
 useNotificationStore.getState().dismissNotification();
 
 
-// Test 21: Typography registry & 5 new typefaces
+// Test 21: Typography registry & 8 new typefaces
 import { FONT_OPTIONS, getFontFamilyCss } from '../domain/fontFamilies';
 import { useSettingsStore } from '../store/useSettingsStore';
 
-assert(FONT_OPTIONS.length === 11, 'Registry contains exactly 11 typefaces');
-const expectedNewFonts = ['instrument-serif', 'cormorant', 'space-grotesk', 'ibm-plex-mono', 'caveat'] as const;
+assert(FONT_OPTIONS.length === 14, 'Registry contains exactly 14 typefaces');
+const expectedNewFonts = [
+  'instrument-serif',
+  'cormorant',
+  'eb-garamond',
+  'jost',
+  'montserrat',
+  'space-grotesk',
+  'ibm-plex-mono',
+  'caveat',
+] as const;
 for (const fontId of expectedNewFonts) {
   const opt = FONT_OPTIONS.find((f) => f.id === fontId);
   assert(Boolean(opt), `Font option '${fontId}' is registered in FONT_OPTIONS`);
@@ -601,6 +637,178 @@ useSettingsStore.getState().setFontFamily('instrument-serif');
 assert(useSettingsStore.getState().fontFamily === 'instrument-serif', 'Updates settings store font family to instrument-serif');
 useSettingsStore.getState().setFontFamily('clarika');
 assert(useSettingsStore.getState().fontFamily === 'clarika', 'Restores settings store font family to clarika');
+
+// ============================================================================
+// Test 21b: Calendar dates, daily notes, and @date search
+// ============================================================================
+assert(isValidISODate('2026-09-05'), 'Accepts a valid ISO calendar date');
+assert(!isValidISODate('2026-09-31'), 'Rejects a nonexistent calendar date');
+assert(!isValidISODate('2025-02-29'), 'Rejects a leap day in a non-leap year');
+assert(isValidISODate('2024-02-29'), 'Accepts a leap day in a leap year');
+assert(addDaysISO('2026-01-01', -1) === '2025-12-31', 'Adds dates across year boundaries');
+assert(addDaysISO('2026-03-01', -1) === '2026-02-28', 'Adds dates across leap/non-leap month boundaries');
+
+const january2026 = getMonthGrid(2026, 0);
+assert(january2026.length === 6, 'Calendar grid always contains six weeks');
+assert(january2026[0][0].iso === '2025-12-29', 'Calendar grid starts on Monday');
+assert(january2026[0][0].day === 29 && !january2026[0][0].isCurrentMonth, 'Calendar leading days are outside the month');
+assert(january2026.flat().some((cell) => cell.iso === '2026-01-01' && cell.isCurrentMonth), 'Calendar grid includes January 2026');
+
+const dateLinkText = 'Meet [[2026-09-05]] then [[2026-09-05]] but not [[2026-02-30]] or [[Someday]].';
+const dateLinks = extractDateLinks(dateLinkText);
+assert(dateLinks.length === 1 && dateLinks[0] === '2026-09-05', 'Extracts unique valid date links only');
+
+const calendarNotes: Note[] = [
+  {
+    id: 'daily-note',
+    title: '2026-09-05',
+    content: createDailyNoteContent('2026-09-05'),
+    tags: [],
+    isPinned: false,
+    isArchived: false,
+    isTrashed: false,
+    createdAt: 1,
+    updatedAt: 10,
+  },
+  {
+    id: 'mention-note',
+    title: 'Weekly Review',
+    content: 'Review happens on [[2026-09-05]].',
+    tags: [],
+    isPinned: false,
+    isArchived: false,
+    isTrashed: false,
+    createdAt: 2,
+    updatedAt: 20,
+  },
+  {
+    id: 'archived-mention',
+    title: 'Archived Date',
+    content: '[[2026-09-05]]',
+    tags: [],
+    isPinned: false,
+    isArchived: true,
+    isTrashed: false,
+    createdAt: 3,
+    updatedAt: 30,
+  },
+  {
+    id: 'trashed-mention',
+    title: 'Trashed Date',
+    content: '[[2026-09-05]]',
+    tags: [],
+    isPinned: false,
+    isArchived: false,
+    isTrashed: true,
+    createdAt: 4,
+    updatedAt: 40,
+  },
+];
+const calendarEntries = getCalendarDayEntries(calendarNotes, '2026-09-05');
+assert(calendarEntries.dailyNotes.length === 1 && calendarEntries.dailyNotes[0].id === 'daily-note', 'Finds canonical daily note');
+assert(calendarEntries.mentions.length === 1 && calendarEntries.mentions[0].id === 'mention-note', 'Finds date mentions and excludes archived/trashed notes');
+
+const dateHtml = markdownToHtml('See [[2026-09-05]] and [[Someday]].');
+assert(dateHtml.includes('am-date-link'), 'Renders valid date links with date styling');
+assert(!dateHtml.includes('[[2026-09-05]]') && dateHtml.includes('data-wiki-target="2026-09-05"'), 'Renders date link as a wiki link target');
+assert(htmlToMarkdown(dateHtml).includes('[[2026-09-05]]'), 'Round-trips a date wiki link');
+
+const calendarSearchIndex = new NoteSearchIndex();
+calendarSearchIndex.sync(calendarNotes);
+const dateMatches = calendarSearchIndex.search(calendarNotes, '@date:2026-09-05');
+assert(dateMatches.map((note) => note.id).join(',') === 'mention-note,daily-note', 'Date search returns daily note and mentions, ranked by recency');
+assert(calendarSearchIndex.search(calendarNotes, '@date:2026-02-30').length === 0, 'Date search rejects an invalid date');
+
+// ============================================================================
+// Test 21c: Task due dates
+// ============================================================================
+const dueTaskNote: Note = {
+  id: 'due-task-note',
+  title: 'Due Task Plan',
+  content: [
+    '- [ ] Pay rent @due(2026-01-10)',
+    '  * [x] Confirm amount @due(2026-01-09)',
+    '- [ ] Ignore malformed date @due(2026-02-30)',
+    'Not a task @due(2026-01-10)',
+  ].join('\n'),
+  tags: [],
+  isPinned: false,
+  isArchived: false,
+  isTrashed: false,
+  createdAt: 10,
+  updatedAt: 20,
+};
+const parsedDueTasks = parseTaskDueItems(dueTaskNote);
+assert(parsedDueTasks.length === 2, 'Parses valid task due dates and ignores malformed/non-task dates');
+assert(parsedDueTasks[0].text === 'Pay rent', 'Removes due metadata from displayed task text');
+assert(parsedDueTasks[0].checked === false && parsedDueTasks[0].lineIndex === 0, 'Preserves unchecked task state and line position');
+assert(parsedDueTasks[1].checked === true && parsedDueTasks[1].dueDate === '2026-01-09', 'Parses nested completed due tasks');
+assert(cleanSnippet('Pay rent @due(2026-01-10)') === 'Pay rent', 'Strips due metadata from note previews');
+const dueTaskMarkdown = '- [ ] Ship release @due(2026-01-10)';
+assert(htmlToMarkdown(markdownToHtml(dueTaskMarkdown)) === dueTaskMarkdown, 'Round-trips Markdown with a task due token');
+assert(setTaskDueToken('Ship release @due(2026-01-01)', '2026-02-14') === 'Ship release @due(2026-02-14)', 'Replaces a task due token');
+assert(setTaskDueToken('Ship release @due(2026-01-01)', null) === 'Ship release', 'Clears a task due token');
+
+const dueTaskNotes: Note[] = [
+  dueTaskNote,
+  {
+    ...dueTaskNote,
+    id: 'archived-due-task',
+    content: '- [ ] Archived task @due(2026-01-10)',
+    isArchived: true,
+  },
+  {
+    ...dueTaskNote,
+    id: 'trashed-due-task',
+    content: '- [ ] Trashed task @due(2026-01-10)',
+    isTrashed: true,
+  },
+];
+const allDueTasks = getDueTasks(dueTaskNotes);
+assert(allDueTasks.length === 2, 'Due task views exclude archived and trashed notes');
+assert(getTasksDueOn(dueTaskNotes, '2026-01-10').length === 1, 'Finds tasks due on an exact date');
+const overdueTask = allDueTasks.find((task) => task.checked) ?? allDueTasks[0];
+assert(!isTaskOverdue(overdueTask), 'Never treats a completed due task as overdue');
+
+const dueSearchIndex = new NoteSearchIndex();
+dueSearchIndex.sync(dueTaskNotes);
+assert(dueSearchIndex.search(dueTaskNotes, '@due').map(({ id }) => id).join(',') === 'due-task-note', 'Searches notes with due tasks');
+assert(dueSearchIndex.search(dueTaskNotes, '@due:2026-01-10').map(({ id }) => id).join(',') === 'due-task-note', 'Searches tasks due on an exact date');
+assert(dueSearchIndex.search(dueTaskNotes, '@overdue').map(({ id }) => id).join(',') === 'due-task-note', 'Searches unchecked overdue tasks');
+
+// Calendar modal state and daily-note store behavior.
+import { vaultAdapter } from '../db/vaultAdapter';
+
+useNoteStore.setState({
+  notes: structuredClone(calendarNotes),
+  activeNoteId: null,
+  isCalendarModalOpen: true,
+  calendarSelectedDate: todayISO(),
+  persistenceError: null,
+});
+useNoteStore.getState().setCalendarSelectedDate('2026-09-05');
+assert(useNoteStore.getState().calendarSelectedDate === '2026-09-05', 'Updates selected calendar date');
+useNoteStore.getState().setCalendarSelectedDate('2026-02-30');
+assert(useNoteStore.getState().calendarSelectedDate === '2026-09-05', 'Rejects invalid selected calendar dates');
+
+const originalSaveNote = vaultAdapter.saveNote;
+vaultAdapter.saveNote = async () => 'calendar-test-revision';
+const existingDailyId = await useNoteStore.getState().openDailyNote('2026-09-05');
+assert(existingDailyId === 'daily-note', 'Opens an existing canonical daily note');
+assert(useNoteStore.getState().isCalendarModalOpen === false, 'Closes calendar when a daily note opens');
+assert(useNoteStore.getState().activeNoteId === 'daily-note', 'Selects the opened daily note');
+
+const dailyCountBefore = useNoteStore.getState().notes.length;
+const createdDailyId = await useNoteStore.getState().openDailyNote('2026-01-10');
+const createdDaily = useNoteStore.getState().notes.find((note) => note.id === createdDailyId);
+assert(createdDailyId !== null && useNoteStore.getState().notes.length === dailyCountBefore + 1, 'Creates a missing daily note');
+assert(createdDaily?.title === '2026-01-10', 'Daily note title is exactly the ISO date');
+const createdDailyContent = createdDaily?.content ?? '';
+assert(createdDailyContent.includes('[[2026-01-09]]') && createdDailyContent.includes('[[2026-01-11]]'), 'Daily note links adjacent dates');
+assert((createdDaily?.tags.length ?? -1) === 0, 'Daily note does not inherit the selected tag');
+
+vaultAdapter.saveNote = originalSaveNote;
+useNoteStore.setState({ notes: [], activeNoteId: null, isCalendarModalOpen: false, persistenceError: null });
 
 // ============================================================================
 // Test 22: 3-Way Vault Sync Merge & Conflict Prevention

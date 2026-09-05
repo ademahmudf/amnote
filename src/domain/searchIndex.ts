@@ -1,4 +1,6 @@
 import type { Note } from '../types/note';
+import { getCalendarDayEntries, isValidISODate } from './calendarDates';
+import { findNotesWithDueTasks, getOverdueTasks, getTasksDueOn } from './taskDueDates';
 
 interface IndexedNote {
   note: Note;
@@ -59,7 +61,12 @@ export class NoteSearchIndex {
     for (const id of this.documents.keys()) {
       if (!nextIds.has(id)) this.documents.delete(id);
     }
-    for (const note of notes) this.add(note);
+    // The store replaces only the edited note object on each keystroke and
+    // preserves every other note's identity, so skip re-tokenizing notes
+    // whose object identity has not changed since the last sync.
+    for (const note of notes) {
+      if (this.documents.get(note.id)?.note !== note) this.add(note);
+    }
     this.lastNotesReference = notes;
   }
 
@@ -97,6 +104,27 @@ export class NoteSearchIndex {
     const normalized = normalize(trimmed);
     const terms = tokenize(trimmed);
     const results: Array<{ note: Note; score: number }> = [];
+    const dateQuery = normalized.match(/^@date:(\d{4}-\d{2}-\d{2})$/);
+    let dateMatchIds: Set<string> | null = null;
+    if (dateQuery && isValidISODate(dateQuery[1])) {
+      const { dailyNotes, mentions } = getCalendarDayEntries(notes, dateQuery[1]);
+      dateMatchIds = new Set([...dailyNotes, ...mentions].map(({ id }) => id));
+    }
+
+    if (normalized === '@due') {
+      const dueNoteIds = new Set(findNotesWithDueTasks(notes).map(({ id }) => id));
+      dateMatchIds = dueNoteIds;
+    }
+
+    if (normalized === '@overdue') {
+      const overdueNoteIds = new Set(getOverdueTasks(notes).map(({ noteId }) => noteId));
+      dateMatchIds = overdueNoteIds;
+    }
+
+    const dueDateQuery = normalized.match(/^@due:(\d{4}-\d{2}-\d{2})$/);
+    if (dueDateQuery && isValidISODate(dueDateQuery[1])) {
+      dateMatchIds = new Set(getTasksDueOn(notes, dueDateQuery[1]).map(({ noteId }) => noteId));
+    }
 
     for (const note of notes) {
       const indexed = this.documents.get(note.id);
@@ -118,6 +146,21 @@ export class NoteSearchIndex {
 
       if (normalized === '@pinned') {
         if (note.isPinned) results.push({ note, score: 100 });
+        continue;
+      }
+
+      if (normalized === '@due' || normalized === '@overdue') {
+        if (dateMatchIds?.has(note.id)) results.push({ note, score: 120 });
+        continue;
+      }
+
+      if (dueDateQuery) {
+        if (dateMatchIds?.has(note.id)) results.push({ note, score: 120 });
+        continue;
+      }
+
+      if (dateQuery) {
+        if (dateMatchIds?.has(note.id)) results.push({ note, score: 120 });
         continue;
       }
 

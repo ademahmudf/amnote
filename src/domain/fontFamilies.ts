@@ -7,6 +7,9 @@ export type FontFamily =
   | 'system'
   | 'instrument-serif'
   | 'cormorant'
+  | 'eb-garamond'
+  | 'jost'
+  | 'montserrat'
   | 'space-grotesk'
   | 'ibm-plex-mono'
   | 'caveat';
@@ -48,6 +51,22 @@ export const FONT_OPTIONS: FontOption[] = [
     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   {
+    id: 'jost',
+    label: 'Jost',
+    category: 'Sans',
+    desc: 'Geometric Modernist & Bauhaus',
+    preview: 'The quick brown fox jumps over the lazy dog',
+    fontFamily: '"Jost", "Outfit", -apple-system, sans-serif',
+  },
+  {
+    id: 'montserrat',
+    label: 'Montserrat',
+    category: 'Sans',
+    desc: 'Urban Geometric & Contemporary',
+    preview: 'The quick brown fox jumps over the lazy dog',
+    fontFamily: '"Montserrat", "Plus Jakarta Sans", -apple-system, sans-serif',
+  },
+  {
     id: 'space-grotesk',
     label: 'Space Grotesk',
     category: 'Sans',
@@ -70,6 +89,14 @@ export const FONT_OPTIONS: FontOption[] = [
     desc: 'Renaissance Classic & Poetic Book',
     preview: 'The quick brown fox jumps over the lazy dog',
     fontFamily: '"Cormorant Garamond", "Garamond", "Baskerville", serif',
+  },
+  {
+    id: 'eb-garamond',
+    label: 'EB Garamond',
+    category: 'Serif',
+    desc: 'Classical Renaissance & Old-Style',
+    preview: 'The quick brown fox jumps over the lazy dog',
+    fontFamily: '"EB Garamond", "Cormorant Garamond", "Garamond", Georgia, serif',
   },
   {
     id: 'serif',

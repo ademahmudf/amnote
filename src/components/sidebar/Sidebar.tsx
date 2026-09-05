@@ -7,6 +7,7 @@ import {
   Archive,
   Trash2,
   Lock,
+  CalendarDays,
   Plus,
   Settings,
   Sun,
@@ -29,6 +30,7 @@ export const Sidebar: React.FC = () => {
   const getSystemCounts = useNoteStore((state) => state.getSystemCounts);
   const setSettingsOpen = useNoteStore((state) => state.setSettingsOpen);
   const setCommandPaletteOpen = useNoteStore((state) => state.setCommandPaletteOpen);
+  const setCalendarModalOpen = useNoteStore((state) => state.setCalendarModalOpen);
 
   const { toggleDarkLight, getThemeColors } = useThemeStore();
   const currentTheme = getThemeColors();
@@ -86,6 +88,14 @@ export const Sidebar: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setCalendarModalOpen(true)}
+            title="Calendar (Ctrl+Shift+C)"
+            className="p-1 rounded opacity-60 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-all text-xs"
+          >
+            <CalendarDays size={13} />
+          </button>
           <button
             type="button"
             onClick={() => setCommandPaletteOpen(true)}

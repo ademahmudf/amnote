@@ -397,6 +397,64 @@ li[data-type="taskItem"],
   background-color: rgba(128, 128, 128, 0.04);
 }
 
+/* Task due metadata: the Markdown token remains in the document, but is
+   presented as a compact date badge. */
+.ProseMirror .am-task-due {
+  --task-due-font-size: max(13px, calc(var(--editor-font-size, 16px) * 0.82));
+
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--task-due-font-size) * 0.36);
+  margin-left: 0.3em;
+  padding: calc(var(--task-due-font-size) * 0.08) calc(var(--task-due-font-size) * 0.45);
+  border-radius: 999px;
+  font-size: 0;
+  line-height: 1.2;
+  background: rgba(128, 128, 128, 0.1);
+  color: var(--text-editor);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ProseMirror .am-task-due::before {
+  content: '';
+  display: inline-block;
+  width: calc(var(--task-due-font-size) * 0.82);
+  height: calc(var(--task-due-font-size) * 0.82);
+  background-color: currentColor;
+  opacity: 0.65;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.ProseMirror .am-task-due::after {
+  content: attr(data-label);
+  font-size: var(--task-due-font-size);
+  font-weight: 600;
+}
+
+.ProseMirror .am-task-due-today {
+  background: rgba(229, 57, 53, 0.14);
+  color: var(--color-accent);
+}
+
+.ProseMirror .am-task-due-overdue {
+  background: rgba(239, 68, 68, 0.16);
+  color: #ef4444;
+}
+
+.ProseMirror .am-task-due-completed {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+/* Strict margin-top and margin-bottom resets on all inner blocks to guarantee vertical alignment */
 .ProseMirror li[data-type="taskItem"]::marker,
 .ProseMirror .am-task-item::marker,
 .ProseMirror .bear-task-item::marker {
@@ -617,7 +675,9 @@ li[data-type="taskItem"] > div,
   width: 0.85em;
   height: 0.85em;
   margin-right: 0.24em;
-  vertical-align: -0.06em;
+  /* Let the browser derive the optical midpoint from the active font's
+     x-height instead of hard-coding a platform or typeface-specific offset. */
+  vertical-align: middle;
   background-color: currentColor;
   -webkit-mask-image: var(--tag-icon);
   mask-image: var(--tag-icon);
@@ -629,6 +689,20 @@ li[data-type="taskItem"] > div,
   mask-position: center;
   flex-shrink: 0;
   pointer-events: none;
+}
+
+/* Deterministic geometry for note-card pills. Platform-specific transforms
+   drift as fonts and WebKit builds change; keep both children on the same
+   flex axis and let CSS center their layout boxes. */
+.note-card-badge-icon {
+  display: block;
+  flex: none;
+  transform: none;
+}
+
+.note-card-badge-label {
+  display: block;
+  line-height: 1;
 }
 
 .ProseMirror .am-tag-pill.am-tag-no-icon::before,
@@ -685,6 +759,37 @@ li[data-type="taskItem"] > div,
   text-decoration-color: var(--color-accent);
 }
 
+/* Calendar dates remain wiki links, but get an unmistakable date identity. */
+.am-date-link::before,
+.bear-date-link::before {
+  content: '';
+  display: inline-block;
+  width: 0.72em;
+  height: 0.72em;
+  margin-right: 0.25em;
+  vertical-align: -0.02em;
+  background-color: currentColor;
+  opacity: 0.7;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Calendar Modal */
+.calendar-weekday {
+  color: var(--text-notelist);
+}
+
+@media (max-width: 767px) {
+  .calendar-modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
 /* Horizontal Rule */
 .ProseMirror hr {
   border: none;
@@ -964,6 +1069,3 @@ li[data-type="taskItem"] > div,
   -webkit-text-fill-color: var(--text-editor) !important;
   text-shadow: none !important;
 }
-
-
-

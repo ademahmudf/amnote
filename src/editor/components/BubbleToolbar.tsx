@@ -21,11 +21,13 @@ import {
   Palette,
   X,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface BubbleToolbarProps {
   editor: Editor | null;
+  onRequestTaskDue: () => void;
 }
 
 const HIGHLIGHT_PRESETS = [
@@ -37,24 +39,56 @@ const HIGHLIGHT_PRESETS = [
   { name: 'Warm Amber', color: '#fed7aa' },
 ];
 
-export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor }) => {
+export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({
+  editor,
+  onRequestTaskDue,
+}) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showAnnotationPicker, setShowAnnotationPicker] = useState(false);
+  const [showLinkEditor, setShowLinkEditor] = useState(false);
+  const [linkDraft, setLinkDraft] = useState('');
+  const [linkError, setLinkError] = useState<string | null>(null);
   const colorInputRef = useRef<HTMLInputElement>(null);
+  const linkInputRef = useRef<HTMLInputElement>(null);
   const defaultHighlightColor = useSettingsStore((state) => state.defaultHighlightColor);
   const setDefaultHighlightColor = useSettingsStore((state) => state.setDefaultHighlightColor);
 
   if (!editor) return null;
 
-  const setLink = () => {
-    const previousUrl = editor.getAttributes('link').href;
-    const url = window.prompt('Enter URL:', previousUrl);
-    if (url === null) return;
-    if (url === '') {
+  const openLinkEditor = () => {
+    setLinkDraft(editor.getAttributes('link').href ?? '');
+    setLinkError(null);
+    setShowLinkEditor(true);
+    setShowColorPicker(false);
+    setShowAnnotationPicker(false);
+  };
+
+  const closeLinkEditor = () => {
+    setShowLinkEditor(false);
+    setLinkError(null);
+  };
+
+  const normalizeLinkUrl = (raw: string): string => {
+    const trimmed = raw.trim();
+    if (/^(https?:\/\/|mailto:|tel:|ftp:\/\/|#|\/)/i.test(trimmed)) return trimmed;
+    if (/^[^/\s]+\.[^/\s:]+/.test(trimmed)) return `https://${trimmed}`;
+    return trimmed;
+  };
+
+  const saveLink = () => {
+    const trimmed = linkDraft.trim();
+    if (trimmed === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      closeLinkEditor();
       return;
     }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    if (/\s/.test(trimmed)) {
+      setLinkError('URLs cannot contain spaces.');
+      linkInputRef.current?.focus();
+      return;
+    }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: normalizeLinkUrl(trimmed) }).run();
+    closeLinkEditor();
   };
 
   const applyHighlight = (color: string) => {
@@ -114,9 +148,9 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor }) => {
     },
     {
       icon: LinkIcon,
-      label: 'Link Web',
-      action: setLink,
-      isActive: editor.isActive('link'),
+      label: 'Edit link',
+      action: openLinkEditor,
+      isActive: editor.isActive('link') || showLinkEditor,
     },
     {
       icon: FileText,
@@ -168,6 +202,14 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor }) => {
       action: () => editor.chain().focus().toggleTaskList().run(),
       isActive: editor.isActive('taskList'),
     },
+    ...(editor.isActive('taskItem')
+      ? [{
+          icon: Calendar,
+          label: 'Task Due Date',
+          action: onRequestTaskDue,
+          isActive: false,
+        }]
+      : []),
     {
       icon: List,
       label: 'Bullet List',
@@ -282,6 +324,8 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor }) => {
               onMouseDown={(e) => e.preventDefault()}
               onClick={btn.action}
               title={btn.label}
+              aria-label={btn.label}
+              aria-pressed={btn.isActive}
               className={`p-1.5 rounded-lg text-xs flex items-center justify-center transition-all ${
                 btn.isActive
                   ? 'bg-accent text-white font-bold shadow-sm'
@@ -411,6 +455,89 @@ export const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor }) => {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Inline Link Editor Popover */}
+      {showLinkEditor && (
+        <div
+          role="dialog"
+          aria-label="Edit link"
+          className="absolute left-0 top-full mt-2 p-2.5 rounded-2xl shadow-2xl border backdrop-blur-xl z-50 flex flex-col gap-2 min-w-[260px] animate-in fade-in zoom-in-95 duration-100"
+          style={{
+            backgroundColor: 'var(--card-notelist-bg)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--text-editor)',
+          }}
+        >
+          <div className="text-[11px] font-bold uppercase tracking-wider opacity-60 px-1">
+            Link URL
+          </div>
+          <input
+            ref={linkInputRef}
+            autoFocus
+            type="text"
+            value={linkDraft}
+            onChange={(e) => {
+              setLinkDraft(e.target.value);
+              setLinkError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                saveLink();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeLinkEditor();
+              }
+            }}
+            placeholder="https://example.com"
+            aria-label="Link URL"
+            aria-invalid={linkError !== null}
+            className="w-full px-2.5 py-1.5 rounded-xl border text-xs bg-transparent outline-none focus:border-accent"
+            style={{ borderColor: linkError ? '#f87171' : 'var(--color-border)' }}
+          />
+          {linkError && (
+            <div role="alert" className="text-[11px] text-rose-400 px-1">
+              {linkError}
+            </div>
+          )}
+          <div className="text-[11px] opacity-50 px-1">
+            Empty the field to remove the link.
+          </div>
+          <div className="flex items-center justify-end gap-1.5">
+            {editor.isActive('link') && (
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  editor.chain().focus().extendMarkRange('link').unsetLink().run();
+                  closeLinkEditor();
+                }}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs text-rose-400 hover:bg-rose-500/10 transition-all font-medium"
+              >
+                <X size={12} />
+                <span>Remove</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={closeLinkEditor}
+              className="px-2.5 py-1.5 rounded-xl text-xs opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5 transition-all font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={saveLink}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-all"
+              style={{ backgroundColor: 'var(--color-accent)' }}
+            >
+              Apply
+            </button>
+          </div>
         </div>
       )}
     </div>

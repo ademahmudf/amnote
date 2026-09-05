@@ -42,6 +42,7 @@ export function formatRelativeDate(timestamp: number): string {
 export function cleanSnippet(content: string): string {
   let text = content.replace(/^#+\s+.*$/m, '');
   text = text
+    .replace(/@due\(\d{4}-\d{2}-\d{2}\)/gi, '')
     .replace(/[#*`_~[\]()]/g, '')
     .replace(/>\s*\[!.*?\]/g, '')
     .replace(/-\s+\[[ x]\]/g, '')
@@ -52,7 +53,9 @@ export function cleanSnippet(content: string): string {
   return text || 'No additional text';
 }
 
-export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
+// Memoized: the store replaces only the edited note object on each keystroke,
+// so untouched cards skip re-renders via the unchanged `note` identity.
+export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ note, isActive }) {
   const setActiveNoteId = useNoteStore((state) => state.setActiveNoteId);
   const togglePin = useNoteStore((state) => state.togglePin);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
@@ -121,20 +124,23 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
     }
   }, [isActive]);
 
-  const isMac =
-    typeof navigator !== 'undefined' &&
-    (/Mac|iPhone|iPod|iPad/i.test(navigator.platform || '') || /Mac/i.test(navigator.userAgent || ''));
-
-  // On macOS with CoreText rendering, flex items-center naturally centers icons;
-  // on Linux desktop, a slight negative translation aligns with font baselines.
-  const badgeIconClass = `shrink-0 ${isMac ? 'translate-y-0' : '-translate-y-[0.08em]'}`;
-
   return (
     <div
       ref={cardRef}
       data-note-id={note.id}
       tabIndex={isActive ? 0 : -1}
+      role="option"
+      aria-selected={isActive}
+      aria-label={note.title || 'Untitled'}
       onClick={() => setActiveNoteId(note.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setActiveNoteId(note.id);
+        } else if (e.key === 'Escape') {
+          setIsMenuOpen(false);
+        }
+      }}
       className={`group relative p-3 rounded-xl cursor-pointer select-none transition-all duration-150 border outline-none ${
         isActive
           ? 'shadow-md border-accent'
@@ -175,7 +181,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
               e.stopPropagation();
               setIsMenuOpen(!isMenuOpen);
             }}
-            className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-opacity"
+            title="Note actions"
+            aria-label={`Actions for ${note.title || 'Untitled'}`}
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+            className="p-0.5 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-opacity"
           >
             <MoreVertical size={12} />
           </button>
@@ -216,8 +226,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
                 }`}
                 title={`Tasks: ${doneTasks} of ${taskMatches.length} completed`}
               >
-                <CheckSquare size="0.95em" className={badgeIconClass} />
-                <span className="leading-none">{isAllDone ? 'Done' : `${doneTasks}/${taskMatches.length}`}</span>
+                <CheckSquare size="0.95em" className="note-card-badge-icon" />
+                <span className="note-card-badge-label">{isAllDone ? 'Done' : `${doneTasks}/${taskMatches.length}`}</span>
               </span>
             );
           })()}
@@ -236,8 +246,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
                   color: customColor || 'var(--color-tag-text)',
                 }}
               >
-                <IconComp size="0.95em" className={badgeIconClass} />
-                <span className="leading-none">{formatTagDisplay(tag)}</span>
+                <IconComp size="0.95em" className="note-card-badge-icon" />
+                <span className="note-card-badge-label">{formatTagDisplay(tag)}</span>
               </span>
             );
           })}
@@ -251,6 +261,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
       {isMenuOpen && (
         <div
           ref={menuRef}
+          role="menu"
+          aria-label={`Actions for ${note.title || 'Untitled'}`}
           className="absolute right-2 top-8 w-44 rounded-xl shadow-2xl border p-1 z-30 backdrop-blur-lg animate-in fade-in zoom-in-95 duration-100 text-xs"
           style={{
             backgroundColor: 'var(--card-notelist-bg)',
@@ -354,4 +366,4 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
       )}
     </div>
   );
-};
+});
