@@ -159,7 +159,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, isActive }) => {
           )}
           <h3 className={`font-semibold ${titleSize} truncate leading-snug flex-1`}>
             {isActive ? (
-              <AnnotatedText variant="wavy" color="text-accent" className="max-w-full">
+              <AnnotatedText variant="doubleUnderline" color="text-accent" className="max-w-full">
                 {note.title || 'Untitled'}
               </AnnotatedText>
             ) : (

@@ -180,7 +180,7 @@ export const HeaderBar: React.FC = () => {
               </span>
               <span className="opacity-40 shrink-0">/</span>
               <span className="font-semibold truncate text-[12px] min-w-0" style={{ color: 'var(--text-sidebar-active)' }}>
-                <AnnotatedText variant="wavy" color="text-accent" className="max-w-[200px] truncate inline-block">
+                <AnnotatedText variant="doubleUnderline" color="text-accent" className="max-w-[200px] truncate inline-block">
                   {activeNote.title || 'Untitled'}
                 </AnnotatedText>
               </span>

@@ -265,9 +265,15 @@ const annotationStyles = {
     defaultColor: 'text-neutral-400 dark:text-neutral-500',
   },
   doubleUnderline: {
-    wrapper: 'relative inline-block whitespace-nowrap',
+    wrapper: 'relative inline-block whitespace-nowrap pb-1',
     Decoration: DoubleUnderlineDecoration,
-    decorationClassName: 'pointer-events-none absolute bottom-[-0.5em] left-[-1%] h-[0.7em] w-[102%]',
+    decorationClassName: 'pointer-events-none absolute bottom-0 left-[-1%] h-[0.65em] w-[102%]',
+    defaultColor: 'text-emerald-500 dark:text-emerald-400',
+  },
+  double: {
+    wrapper: 'relative inline-block whitespace-nowrap pb-1',
+    Decoration: DoubleUnderlineDecoration,
+    decorationClassName: 'pointer-events-none absolute bottom-0 left-[-1%] h-[0.65em] w-[102%]',
     defaultColor: 'text-emerald-500 dark:text-emerald-400',
   },
   strikethrough: {
