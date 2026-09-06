@@ -32,3 +32,23 @@ _Avoid_: Background sync hook, store sync helper
 The application state slice dedicated strictly to ephemeral modal visibilities, drawer toggles, and layout presentation states.
 _Avoid_: Global modal state, component toggles
 
+**Editor Canvas**:
+The central content area hosting the rich text editor, note title, and formatting overlays.
+_Avoid_: Workspace pane, markdown view
+
+**Editor Lightbox**:
+The fullscreen preview overlay for inspecting, zooming, copying, and downloading note image attachments.
+_Avoid_: Image popup, media viewer modal
+
+**Editor Lock Screen**:
+The secure gatekeeper overlay blocking note viewing and editing until the correct decryption password is authenticated.
+_Avoid_: Password prompt, lock shield
+
+**Editor Status Bar**:
+The persistent bottom strip reporting document statistics (words, characters, reading time, goal completion) and canvas editing modes (focus, typewriter).
+_Avoid_: Footer, info row
+
+**Editor Suggestions**:
+The unified floating menu coordinator orchestrating slash commands (`/`), wiki link autocomplete (`[[`), selection bubble actions, and date pickers.
+_Avoid_: Menu state, popup controller
+

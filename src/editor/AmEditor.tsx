@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { Editor } from '@tiptap/react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -27,19 +27,15 @@ import { FocusModeExtension } from './extensions/FocusModeExtension';
 import { AnnotationExtension } from './extensions/AnnotationExtension';
 import {
   TaskDueExtension,
-  getEditorTaskDueTarget,
   type TaskDueBadgeClickInfo,
-  type TaskDuePickerTarget,
 } from './extensions/TaskDueExtension';
-import { BubbleToolbar } from './components/BubbleToolbar';
-import { SlashCommandMenu } from './components/SlashCommandMenu';
-import { WikiLinkMenu } from './components/WikiLinkMenu';
-import {
-  EditorDatePicker,
-  type EditorDatePickerMode,
-} from './components/EditorDatePicker';
+import { EditorLightbox } from './components/EditorLightbox';
+import { EditorLockScreen } from './components/EditorLockScreen';
+import { EditorStatusBar } from './components/EditorStatusBar';
+import { EditorSuggestions } from './components/EditorSuggestions';
 import { markdownToHtml } from './utils/markdownCodec';
 import { serializeProseMirrorToMarkdown } from './utils/proseMirrorMarkdownSerializer';
+import { calculateNoteMetrics } from './utils/editorTriggers';
 import { useNoteStore } from '../store/useNoteStore';
 import { useUIStore } from '../store/useUIStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -47,27 +43,15 @@ import { getFontFamilyCss } from '../domain/fontFamilies';
 import { clearTagIconSvgCache } from '../utils/tagIcons';
 import { useEditorContentLifecycle } from './hooks/useEditorContentLifecycle';
 import { useEditorLockFocus } from './hooks/useEditorLockFocus';
-import { useEditorMenuState } from './hooks/useEditorMenuState';
+import { useEditorSuggestions } from './hooks/useEditorSuggestions';
 import { useImageAttachments } from './hooks/useImageAttachments';
 import { AnnotatedText } from '../components/ui/AnnotatedText';
-import { notify } from '../store/useNotificationStore';
 import { promptDeletePermanentlyConfirmation } from '../utils/trashConfirmation';
 import {
   Trash2,
   RotateCcw,
   Clock,
   FileText,
-  Lock,
-  Unlock,
-  KeyRound,
-  ShieldCheck,
-  AlertCircle,
-  X,
-  ZoomIn,
-  ZoomOut,
-  Download,
-  Copy,
-  Check,
   Plus,
   Calendar,
   CheckSquare,
@@ -123,26 +107,11 @@ export const AmEditor: React.FC = () => {
   } = useSettingsStore();
 
   const editorRef = useRef<Editor | null>(null);
-  const {
-    isSlashOpen,
-    setIsSlashOpen,
-    slashQuery,
-    setSlashQuery,
-    menuPosition,
-    setMenuPosition,
-    isWikiMenuOpen,
-    setIsWikiMenuOpen,
-    wikiQuery,
-    setWikiQuery,
-    wikiPosition,
-    setWikiPosition,
-    showBubbleMenu,
-    setShowBubbleMenu,
-    bubblePosition,
-    setBubblePosition,
-    isSlashOpenRef,
-    isWikiMenuOpenRef,
-  } = useEditorMenuState();
+  const suggestions = useEditorSuggestions();
+  const suggestionsRef = useRef(suggestions);
+  useEffect(() => {
+    suggestionsRef.current = suggestions;
+  }, [suggestions]);
 
   const {
     lightboxImage,
@@ -158,15 +127,6 @@ export const AmEditor: React.FC = () => {
   } = useImageAttachments({ editorRef });
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  interface EditorDatePickerState {
-    mode: EditorDatePickerMode;
-    position: { x: number; y: number };
-    target?: TaskDuePickerTarget;
-    canClear?: boolean;
-  }
-
-  const [editorDatePicker, setEditorDatePicker] = useState<EditorDatePickerState | null>(null);
-  const closeEditorDatePicker = useCallback(() => setEditorDatePicker(null), []);
 
   const isUnlocked = activeNote ? isNoteUnlocked(activeNote.id) : true;
   const {
@@ -211,12 +171,7 @@ export const AmEditor: React.FC = () => {
       }),
       TaskDueExtension.configure({
         onBadgeClick: (info: TaskDueBadgeClickInfo) => {
-          setEditorDatePicker({
-            mode: 'task-due',
-            position: { x: info.x, y: info.y },
-            target: info,
-            canClear: true,
-          });
+          suggestionsRef.current.openTaskDueDatePicker(info);
         },
       }),
       Table.configure({
@@ -285,7 +240,7 @@ export const AmEditor: React.FC = () => {
         },
       },
       handleKeyDown: (_view, event) => {
-        if (isSlashOpenRef.current || isWikiMenuOpenRef.current) {
+        if (suggestionsRef.current.isNavigatingMenu()) {
           if (['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(event.key)) {
             // Tells ProseMirror this key is handled by the open dropdown menu
             return true;
@@ -398,51 +353,11 @@ export const AmEditor: React.FC = () => {
         }
       }, autoSaveDelayMs);
 
-      // Check slash commands
-      const { selection } = currentEditor.state;
-      const { $from } = selection;
-      const textBefore = $from.parent.textBetween(0, $from.parentOffset, undefined, '\ufffc');
-
-      // Check slash commands: /query
-      const lastSlashIdx = textBefore.lastIndexOf('/');
-      if (
-        lastSlashIdx !== -1 &&
-        (lastSlashIdx === 0 || /\s/.test(textBefore[lastSlashIdx - 1])) &&
-        !textBefore.slice(lastSlashIdx).includes(' ')
-      ) {
-        const queryText = textBefore.slice(lastSlashIdx + 1);
-        const coords = currentEditor.view.coordsAtPos(selection.from);
-        setMenuPosition({ top: coords.bottom + 8, left: coords.left });
-        setSlashQuery(queryText);
-        setIsSlashOpen(true);
-      } else {
-        setIsSlashOpen(false);
-      }
-
-      // Check wiki link autocomplete: [[query
-      const lastDoubleBracket = textBefore.lastIndexOf('[[');
-      if (lastDoubleBracket !== -1 && !textBefore.slice(lastDoubleBracket).includes(']]')) {
-        const queryText = textBefore.slice(lastDoubleBracket + 2);
-        const coords = currentEditor.view.coordsAtPos(selection.from);
-        setWikiPosition({ top: coords.bottom + 8, left: coords.left });
-        setWikiQuery(queryText);
-        setIsWikiMenuOpen(true);
-      } else {
-        setIsWikiMenuOpen(false);
-      }
+      // Check suggestions (slash commands and wiki links)
+      suggestionsRef.current.handleEditorUpdate(currentEditor);
     },
     onSelectionUpdate: ({ editor: currentEditor }) => {
-      const { from, to } = currentEditor.state.selection;
-      if (from !== to) {
-        const coords = currentEditor.view.coordsAtPos(from);
-        setBubblePosition({
-          top: Math.max(10, coords.top - 48),
-          left: Math.max(20, Math.min(window.innerWidth - 650, coords.left)),
-        });
-        setShowBubbleMenu(true);
-      } else {
-        setShowBubbleMenu(false);
-      }
+      suggestionsRef.current.handleSelectionUpdate(currentEditor);
     },
   });
 
@@ -451,8 +366,8 @@ export const AmEditor: React.FC = () => {
   }, [editor]);
 
   useEffect(() => {
-    setEditorDatePicker(null);
-  }, [activeNote?.id, editorReloadToken]);
+    suggestions.closeDatePicker();
+  }, [activeNote?.id, editorReloadToken, suggestions]);
 
   useEffect(() => {
     if (editor && !editor.isDestroyed) {
@@ -609,27 +524,7 @@ export const AmEditor: React.FC = () => {
     ['--paragraph-indent' as unknown as string]: `${paragraphIndent ?? 0}px`,
   };
 
-  const words = activeNote.content.trim().match(/\S+/g)?.length || 0;
-  const chars = activeNote.content.length;
-  const readTime = Math.max(1, Math.ceil(words / 200));
-
-  const requestEditorDatePicker = (mode: EditorDatePickerMode) => {
-    if (!editor || editor.isDestroyed) return;
-
-    const coords = editor.view.coordsAtPos(editor.state.selection.from);
-    const position = { x: coords.left, y: coords.bottom + 6 };
-    setEditorDatePicker({
-      mode,
-      position,
-      target:
-        mode === 'task-due'
-          ? getEditorTaskDueTarget(editor, position.x, position.y)
-          : undefined,
-      canClear: false,
-    });
-    setIsSlashOpen(false);
-    setShowBubbleMenu(false);
-  };
+  const metrics = calculateNoteMetrics(activeNote.content);
 
   return (
     <div
@@ -668,76 +563,18 @@ export const AmEditor: React.FC = () => {
 
       {/* Main Canvas Scroll Area OR Lock Overlay Screen */}
       {activeNote.isLocked && !isUnlocked ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 select-none animate-in fade-in duration-200">
-          <div
-            className="w-full max-w-sm rounded-3xl p-8 border shadow-2xl flex flex-col items-center text-center backdrop-blur-md"
-            style={{
-              backgroundColor: 'var(--card-notelist-bg)',
-              borderColor: 'var(--color-border)',
-            }}
-          >
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-amber-400 shadow-inner"
-              style={{ backgroundColor: 'rgba(251, 191, 36, 0.12)' }}
-            >
-              <Lock size={32} />
-            </div>
-
-            <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--text-editor)' }}>
-              Note is Locked
-            </h2>
-            <p className="text-xs opacity-60 mb-6 max-w-xs leading-relaxed">
-              This note is protected. Enter your password to view and edit its contents.
-            </p>
-
-            <form onSubmit={handleUnlockSubmit} className="w-full space-y-3">
-              {activeNote.lockHash && (
-                <div className="relative">
-                  <KeyRound
-                    size={16}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40"
-                  />
-                  <input
-                    ref={passwordInputRef}
-                    type="password"
-                    value={unlockPassword}
-                    onChange={(e) => {
-                      setUnlockPassword(e.target.value);
-                      setUnlockError(false);
-                    }}
-                    placeholder="Enter password..."
-                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border bg-black/10 dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-(--color-accent)"
-                    style={{ borderColor: 'var(--color-border)' }}
-                  />
-                </div>
-              )}
-
-              {unlockError && (
-                <div className="flex items-center justify-center gap-1.5 text-xs text-rose-400">
-                  <AlertCircle size={14} />
-                  <span>Incorrect password. Please try again.</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                style={{ backgroundColor: 'var(--color-accent)' }}
-              >
-                <ShieldCheck size={16} />
-                <span>Unlock Note</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPasswordModalOpen(true, activeNote.id)}
-                className="text-[11px] opacity-50 hover:opacity-100 transition-opacity pt-1 underline underline-offset-2"
-              >
-                Lock Settings
-              </button>
-            </form>
-          </div>
-        </div>
+        <EditorLockScreen
+          hasLockHash={Boolean(activeNote.lockHash)}
+          password={unlockPassword}
+          onPasswordChange={(pwd) => {
+            setUnlockPassword(pwd);
+            setUnlockError(false);
+          }}
+          onSubmit={handleUnlockSubmit}
+          error={unlockError}
+          passwordInputRef={passwordInputRef}
+          onOpenLockSettings={() => setPasswordModalOpen(true, activeNote.id)}
+        />
       ) : (
         <div
           className="flex-1 overflow-y-auto px-8 py-8 flex justify-center cursor-text scroll-smooth"
@@ -759,153 +596,36 @@ export const AmEditor: React.FC = () => {
         </div>
       )}
 
-      {/* Floating Bubble Toolbar on selection */}
-      {showBubbleMenu && isUnlocked && (
-        <div
-          className="fixed z-40"
-          style={{ top: `${bubblePosition.top}px`, left: `${bubblePosition.left}px` }}
-        >
-          <BubbleToolbar
-            editor={editor}
-            onRequestTaskDue={() => requestEditorDatePicker('task-due')}
-          />
-        </div>
-      )}
-
-      {/* Slash Command Popover */}
-      {editor && isUnlocked && (
-        <div
-          className="fixed z-50"
-          style={{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }}
-        >
-          <SlashCommandMenu
-            editor={editor}
-            isOpen={isSlashOpen}
-            onClose={() => setIsSlashOpen(false)}
-            query={slashQuery}
-            onRequestDatePicker={requestEditorDatePicker}
-          />
-        </div>
-      )}
-
-      {editor && isUnlocked && editorDatePicker && (
-        <EditorDatePicker
-          editor={editor}
-          mode={editorDatePicker.mode}
-          position={editorDatePicker.position}
-          taskDueTarget={editorDatePicker.target}
-          canClear={editorDatePicker.canClear}
-          onClose={closeEditorDatePicker}
-        />
-      )}
-
-      {/* Wiki Link Note Autocomplete Popover */}
-      {editor && isUnlocked && isWikiMenuOpen && (
-        <WikiLinkMenu
-          editor={editor}
-          isOpen={isWikiMenuOpen}
-          onClose={() => setIsWikiMenuOpen(false)}
-          query={wikiQuery}
-          position={wikiPosition}
-        />
-      )}
+      {/* Editor floating popovers and menus */}
+      <EditorSuggestions
+        editor={editor}
+        isUnlocked={isUnlocked}
+        suggestions={suggestions}
+      />
 
       {/* Bottom Status & Info Bar */}
-      <div
-        className="h-8 border-t flex items-center justify-between px-6 text-[11px] select-none shrink-0"
-        style={{
-          borderColor: 'var(--color-divider)',
-          color: 'var(--text-editor-muted)',
+      <EditorStatusBar
+        metrics={metrics}
+        wordGoal={wordGoal}
+        focusMode={focusMode}
+        focusModeType={focusModeType}
+        onCycleFocusMode={() => {
+          if (!focusMode) {
+            setFocusMode(true);
+            setFocusModeType('sentence');
+          } else if (focusModeType === 'sentence') {
+            setFocusModeType('paragraph');
+          } else {
+            setFocusMode(false);
+            setFocusModeType('sentence');
+          }
         }}
-      >
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={toggleInfoDrawer}
-            title="Open Note Stats & Details (Ctrl+Shift+I)"
-            className="flex items-center gap-1.5 hover:opacity-100 hover:text-foreground transition-colors cursor-pointer"
-          >
-            <FileText size={12} className="opacity-60" />
-            <span>{words} words</span>
-            <span className="opacity-40">•</span>
-            <span>{chars} chars</span>
-          </button>
-          <div className="flex items-center gap-1.5">
-            <Clock size={12} className="opacity-60" />
-            <span>{readTime} min</span>
-          </div>
-
-          {/* Word Goal Progress */}
-          {wordGoal > 0 && (
-            <div className="flex items-center gap-1.5 font-mono">
-              <span className="opacity-40">•</span>
-              <span className={words >= wordGoal ? 'text-emerald-500 font-bold' : ''}>
-                🎯 {words}/{wordGoal} ({Math.min(100, Math.round((words / wordGoal) * 100))}%)
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Focus Mode Button */}
-          <button
-            type="button"
-            onClick={() => {
-              if (!focusMode) {
-                setFocusMode(true);
-                setFocusModeType('sentence');
-              } else if (focusModeType === 'sentence') {
-                setFocusModeType('paragraph');
-              } else {
-                setFocusMode(false);
-                setFocusModeType('sentence');
-              }
-            }}
-            title="Click to cycle: Sentence Focus → Paragraph Focus → Off (Ctrl+Shift+F)"
-            className={`px-1.5 py-0.5 rounded transition-all flex items-center gap-1 text-[10px] font-medium ${
-              focusMode
-                ? 'bg-(--color-accent) text-white'
-                : 'opacity-50 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
-            }`}
-            style={{
-              backgroundColor: focusMode ? 'var(--color-accent)' : undefined,
-              color: focusMode ? 'var(--color-accent-text)' : undefined,
-            }}
-          >
-            <span>🎯 Focus{focusMode ? `: ${focusModeType === 'sentence' ? 'Sentence' : 'Paragraph'}` : ''}</span>
-          </button>
-
-          {/* Typewriter Mode Button */}
-          <button
-            type="button"
-            onClick={() => setTypewriterMode(!typewriterMode)}
-            title="Toggle Typewriter Centering Mode (Ctrl+Shift+T)"
-            className={`px-1.5 py-0.5 rounded transition-all flex items-center gap-1 text-[10px] font-medium ${
-              typewriterMode
-                ? 'bg-(--color-accent) text-white'
-                : 'opacity-50 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
-            }`}
-            style={{
-              backgroundColor: typewriterMode ? 'var(--color-accent)' : undefined,
-              color: typewriterMode ? 'var(--color-accent-text)' : undefined,
-            }}
-          >
-            <span>⌖ Typewriter</span>
-          </button>
-
-          {activeNote.isLocked && (
-            <div
-              className={`flex items-center gap-1 ${
-                isUnlocked ? 'text-emerald-400' : 'text-amber-400'
-              }`}
-            >
-              {isUnlocked ? <Unlock size={12} /> : <Lock size={12} />}
-              <span>{isUnlocked ? 'Unlocked' : 'Locked'}</span>
-            </div>
-          )}
-          <span>Saved</span>
-        </div>
-      </div>
+        typewriterMode={typewriterMode}
+        onToggleTypewriterMode={() => setTypewriterMode(!typewriterMode)}
+        isLocked={Boolean(activeNote.isLocked)}
+        isUnlocked={isUnlocked}
+        onToggleInfoDrawer={toggleInfoDrawer}
+      />
 
       {attachmentError && (
         <div role="alert" className="px-4 py-1.5 text-xs text-amber-600 bg-amber-500/10 border-t border-amber-500/20">
@@ -924,100 +644,14 @@ export const AmEditor: React.FC = () => {
       />
 
       {/* Fullscreen Image Lightbox Preview Modal */}
-      {lightboxImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none"
-          onClick={() => setLightboxImage(null)}
-        >
-          <div
-            className="relative max-w-5xl max-h-[90vh] flex flex-col items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Top Lightbox Controls */}
-            <div className="absolute -top-12 right-0 flex items-center gap-2">
-              {/* Zoom Out */}
-              <button
-                type="button"
-                onClick={() => setLightboxZoom((prev) => Math.max(0.5, prev - 0.25))}
-                title="Zoom Out"
-                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95"
-              >
-                <ZoomOut size={16} />
-              </button>
-
-              {/* Reset Zoom / Current Scale */}
-              <button
-                type="button"
-                onClick={() => setLightboxZoom(1)}
-                title="Reset Zoom"
-                className="px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md text-xs font-mono transition-all"
-              >
-                {Math.round(lightboxZoom * 100)}%
-              </button>
-
-              {/* Zoom In */}
-              <button
-                type="button"
-                onClick={() => setLightboxZoom((prev) => Math.min(3, prev + 0.25))}
-                title="Zoom In"
-                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95"
-              >
-                <ZoomIn size={16} />
-              </button>
-
-              {/* Copy Image / Link */}
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(lightboxImage.src);
-                  setCopiedImage(true);
-                  setTimeout(() => setCopiedImage(false), 1500);
-                  notify({
-                    title: 'AmNote Media',
-                    sender: 'Clipboard',
-                    message: 'Image URL copied to clipboard',
-                    type: 'success',
-                  });
-                }}
-                title="Copy Image Data / URL"
-                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95"
-              >
-                {copiedImage ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-              </button>
-
-              {/* Download Image */}
-              <a
-                href={lightboxImage.src}
-                download={lightboxImage.alt || 'amnote-image'}
-                title="Download Image"
-                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center"
-              >
-                <Download size={16} />
-              </a>
-
-              {/* Close Button */}
-              <button
-                type="button"
-                onClick={() => setLightboxImage(null)}
-                title="Close (Esc)"
-                className="p-2 rounded-xl bg-black/60 hover:bg-rose-600 text-white border border-white/10 backdrop-blur-md transition-all active:scale-95"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Lightbox Image Element */}
-            <div className="overflow-auto max-h-[85vh] max-w-[90vw] flex items-center justify-center p-2">
-              <img
-                src={lightboxImage.src}
-                alt={lightboxImage.alt}
-                style={{ transform: `scale(${lightboxZoom})`, transformOrigin: 'center' }}
-                className="rounded-2xl max-h-[80vh] max-w-full object-contain shadow-2xl transition-transform duration-150 border border-white/10"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <EditorLightbox
+        image={lightboxImage}
+        zoom={lightboxZoom}
+        onZoomChange={setLightboxZoom}
+        onClose={() => setLightboxImage(null)}
+        copied={copiedImage}
+        onSetCopied={setCopiedImage}
+      />
     </div>
   );
 };

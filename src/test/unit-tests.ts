@@ -29,6 +29,12 @@ import { cleanSnippet } from '../components/notelist/NoteCard';
 import { THEMES } from '../themes/themeDefinitions';
 import { useUIStore } from '../store/useUIStore';
 import { VaultSyncCoordinator, type VaultAdapterPort } from '../domain/vaultSyncCoordinator';
+import {
+  detectSlashCommand,
+  detectWikiLink,
+  clampZoom,
+  calculateNoteMetrics,
+} from '../editor/utils/editorTriggers';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -1079,5 +1085,34 @@ assert(syncResult.changed === true, 'Detects vault changed');
 assert(syncResult.newConflicts.length === 0, 'No conflict on non-colliding external addition');
 assert(coordinator.getState().notes.length === 2, 'Coordinator merged external note');
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, Focus Mode tests, Tags Collapsed tests, Note List Density tests, Tag Contrast tests, UI Store tests, and VaultSyncCoordinator tests passed successfully!');
+// ============================================================================
+// Test 29: Editor Canvas & Suggestion Trigger Tests
+// ============================================================================
+console.log('\n--- Test 29: Editor Canvas & Suggestion Trigger Tests ---');
+
+// Slash command trigger detection
+assert(detectSlashCommand('/heading')?.query === 'heading', 'Detects start-of-line slash command');
+assert(detectSlashCommand('text /task')?.query === 'task', 'Detects spaced slash command');
+assert(detectSlashCommand('https://amnote.app/test') === null, 'Ignores URL path slashes');
+assert(detectSlashCommand('text/test') === null, 'Ignores mid-word slashes');
+assert(detectSlashCommand('/heading item') === null, 'Ignores slash commands with spaces in query');
+
+// Wiki-link trigger detection
+assert(detectWikiLink('[[Note Title')?.query === 'Note Title', 'Detects wiki link autocomplete query');
+assert(detectWikiLink('[[Note Title]]') === null, 'Ignores completed wiki links');
+assert(detectWikiLink('Regular text without brackets') === null, 'Ignores text without wiki link trigger');
+
+// Lightbox zoom clamping
+assert(clampZoom(0.2) === 0.5, 'Clamps zoom to 0.5 minimum');
+assert(clampZoom(4.0) === 3.0, 'Clamps zoom to 3.0 maximum');
+assert(clampZoom(1.25) === 1.25, 'Preserves normal zoom scale');
+
+// Note reading metrics
+const sampleNote = 'This is a sample note with ten words in total.';
+const metrics = calculateNoteMetrics(sampleNote);
+assert(metrics.words === 10, 'Calculates word count correctly');
+assert(metrics.chars === sampleNote.length, 'Calculates character count correctly');
+assert(metrics.readTime === 1, 'Calculates minimum 1 minute reading time');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, Focus Mode tests, Tags Collapsed tests, Note List Density tests, Tag Contrast tests, UI Store tests, VaultSyncCoordinator tests, and Editor Canvas tests passed successfully!');
 
