@@ -992,12 +992,21 @@ fn save_attachment(note_id: String, file_name: String, data_url: String) -> Resu
     Ok(format!("amnote-asset://localhost/{}/{}", note_id, attachment_name))
 }
 
-fn cleanup_unused_attachments(note: &NotePayload) -> Result<(), String> {
+fn is_attachment_referenced(content: &str, note_id: &str, file_name: &str) -> bool {
+    let current = format!("amnote-asset://localhost/{}/{}", note_id, file_name);
+    let legacy = format!("amnote-asset://{}/{}", note_id, file_name);
+    let webview = format!("http://amnote-asset.localhost/{}/{}", note_id, file_name);
+    content.contains(&current)
+        || content.contains(&legacy)
+        || content.contains(&webview)
+        || (content.contains("amnote-asset") && content.contains(note_id) && content.contains(file_name))
+}
+
+fn cleanup_unused_attachments_in_vault(vault: &Path, note: &NotePayload) -> Result<(), String> {
     if note.is_trashed {
         return Ok(());
     }
 
-    let vault = ensure_vault_directories()?;
     let attachment_dir = vault.join(".assets").join(&note.id);
     if !attachment_dir.exists() {
         return Ok(());
@@ -1012,10 +1021,7 @@ fn cleanup_unused_attachments(note: &NotePayload) -> Result<(), String> {
             continue;
         }
         let name = entry.file_name().to_string_lossy().to_string();
-        if !note
-            .content
-            .contains(&format!("amnote-asset://{}/{}", note.id, name))
-        {
+        if !is_attachment_referenced(&note.content, &note.id, &name) {
             fs::remove_file(&path)
                 .map_err(|e| format!("Failed to remove unused attachment: {}", e))?;
         }
@@ -1023,6 +1029,12 @@ fn cleanup_unused_attachments(note: &NotePayload) -> Result<(), String> {
 
     Ok(())
 }
+
+fn cleanup_unused_attachments(note: &NotePayload) -> Result<(), String> {
+    let vault = ensure_vault_directories()?;
+    cleanup_unused_attachments_in_vault(&vault, note)
+}
+
 
 fn parse_attachment_request(
     uri: &tauri::http::Uri,
@@ -1231,6 +1243,33 @@ mod tests {
             ("note-test".to_string(), "image-png.png".to_string())
         );
     }
+
+    #[test]
+    fn cleanup_unused_attachments_preserves_current_and_legacy_urls() {
+        let vault = temp_vault("attachment-cleanup");
+        let asset_dir = vault.join(".assets").join("note-1");
+        fs::create_dir_all(&asset_dir).unwrap();
+
+        let current_file = asset_dir.join("current-image.png");
+        let legacy_file = asset_dir.join("legacy-image.png");
+        let unused_file = asset_dir.join("unused-image.png");
+
+        fs::write(&current_file, b"current").unwrap();
+        fs::write(&legacy_file, b"legacy").unwrap();
+        fs::write(&unused_file, b"unused").unwrap();
+
+        let content = "Here is an image: ![alt](amnote-asset://localhost/note-1/current-image.png)\nAnd legacy: ![alt](amnote-asset://note-1/legacy-image.png)";
+        let note = test_note("note-1", content);
+
+        cleanup_unused_attachments_in_vault(&vault, &note).unwrap();
+
+        assert!(current_file.exists(), "Current attachment URL format must not be deleted");
+        assert!(legacy_file.exists(), "Legacy attachment URL format must not be deleted");
+        assert!(!unused_file.exists(), "Unreferenced attachment should be cleaned up");
+
+        fs::remove_dir_all(&vault).ok();
+    }
+
 
     #[test]
     fn tag_metadata_persists_and_updates_revision() {
