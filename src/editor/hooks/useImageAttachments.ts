@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { vaultAdapter } from '../../db/vaultAdapter';
 import { useNoteStore } from '../../store/useNoteStore';
+import { notify } from '../../store/useNotificationStore';
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -39,7 +40,6 @@ export function useImageAttachments({ editorRef }: UseImageAttachmentsOptions) {
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
   const [lightboxZoom, setLightboxZoom] = useState(1);
   const [copiedImage, setCopiedImage] = useState(false);
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadAndInsert = useCallback(async (file: File, view?: Editor['view'], coordinates?: { left: number; top: number }) => {
@@ -47,7 +47,6 @@ export function useImageAttachments({ editorRef }: UseImageAttachmentsOptions) {
     const noteId = useNoteStore.getState().activeNoteId;
     if (!noteId) return false;
 
-    setAttachmentError(null);
     try {
       const dataUrl = await readFileAsDataUrl(file);
       let src = dataUrl;
@@ -55,7 +54,11 @@ export function useImageAttachments({ editorRef }: UseImageAttachmentsOptions) {
         src = await vaultAdapter.saveAttachment(noteId, file.name, dataUrl);
       } catch (error) {
         console.error('Falling back to an inline image because attachment storage failed:', error);
-        setAttachmentError(error instanceof Error ? error.message : 'Attachment storage failed; image was embedded instead.');
+        notify({
+          title: 'Attachment Storage',
+          message: 'Attachment storage failed; image was embedded instead.',
+          type: 'warning',
+        });
       }
 
       if (view) {
@@ -65,7 +68,11 @@ export function useImageAttachments({ editorRef }: UseImageAttachmentsOptions) {
       }
       return true;
     } catch (error) {
-      setAttachmentError(error instanceof Error ? error.message : 'Unable to import image.');
+      notify({
+        title: 'Image Import Failed',
+        message: error instanceof Error ? error.message : 'Unable to import image.',
+        type: 'error',
+      });
       return false;
     }
   }, [editorRef]);
@@ -99,8 +106,6 @@ export function useImageAttachments({ editorRef }: UseImageAttachmentsOptions) {
     setLightboxZoom,
     copiedImage,
     setCopiedImage,
-    attachmentError,
-    setAttachmentError,
     fileInputRef,
     uploadAndInsert,
     insertImageFromFile,

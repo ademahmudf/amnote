@@ -535,6 +535,17 @@ actionNotif?.action?.onClick();
 assert(Boolean(actionClicked), 'Notification action onClick triggers correctly');
 useNotificationStore.getState().dismissNotification();
 
+notify({
+  title: 'Attachment Storage',
+  message: 'Attachment storage failed; image was embedded instead.',
+  type: 'warning',
+});
+const attachNotif = useNotificationStore.getState().notification;
+assert(attachNotif?.title === 'Attachment Storage', 'Attachment storage notification title matches');
+assert(attachNotif?.message === 'Attachment storage failed; image was embedded instead.', 'Attachment storage notification message matches');
+assert(attachNotif?.type === 'warning', 'Attachment storage notification type is warning');
+useNotificationStore.getState().dismissNotification();
+
 // Test Hand-Drawn Annotation Markdown <-> HTML
 const mdAnnotationWavy = 'This has ~wavy:hand-drawn text~ in it.';
 const htmlAnnotationWavy = markdownToHtml(mdAnnotationWavy);

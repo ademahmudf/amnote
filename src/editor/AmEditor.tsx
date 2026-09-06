@@ -120,7 +120,6 @@ export const AmEditor: React.FC = () => {
     setLightboxZoom,
     copiedImage,
     setCopiedImage,
-    attachmentError,
     fileInputRef,
     uploadAndInsert,
     insertImageFromFile,
@@ -626,12 +625,6 @@ export const AmEditor: React.FC = () => {
         isUnlocked={isUnlocked}
         onToggleInfoDrawer={toggleInfoDrawer}
       />
-
-      {attachmentError && (
-        <div role="alert" className="px-4 py-1.5 text-xs text-amber-600 bg-amber-500/10 border-t border-amber-500/20">
-          {attachmentError}
-        </div>
-      )}
 
       {/* Hidden File Input for Native Image Uploads */}
       <input
