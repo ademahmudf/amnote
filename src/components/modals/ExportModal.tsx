@@ -14,13 +14,14 @@ import {
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { markdownToHtml } from '../../editor/utils/markdownCodec';
 import { notify } from '../../store/useNotificationStore';
 
 export const ExportModal: React.FC = () => {
-  const isExportModalOpen = useNoteStore((state) => state.isExportModalOpen);
-  const setExportModalOpen = useNoteStore((state) => state.setExportModalOpen);
+  const isExportModalOpen = useUIStore((state) => state.isExportModalOpen);
+  const setExportModalOpen = useUIStore((state) => state.setExportModalOpen);
   const activeNote = useNoteStore((state) => state.getActiveNote());
   const { getThemeColors } = useThemeStore();
   const theme = getThemeColors();

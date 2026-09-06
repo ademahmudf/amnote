@@ -10,16 +10,18 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 
 export const InfoDrawer: React.FC = () => {
-  const isInfoDrawerOpen = useNoteStore((state) => state.isInfoDrawerOpen);
-  const toggleInfoDrawer = useNoteStore((state) => state.toggleInfoDrawer);
+  const isInfoDrawerOpen = useUIStore((state) => state.isInfoDrawerOpen);
+  const toggleInfoDrawer = useUIStore((state) => state.toggleInfoDrawer);
+  const setExportModalOpen = useUIStore((state) => state.setExportModalOpen);
+
   const activeNote = useNoteStore((state) => state.getActiveNote());
   const getNoteStats = useNoteStore((state) => state.getNoteStats);
   const getHeadings = useNoteStore((state) => state.getHeadings);
   const getBacklinks = useNoteStore((state) => state.getBacklinks);
   const setActiveNoteId = useNoteStore((state) => state.setActiveNoteId);
-  const setExportModalOpen = useNoteStore((state) => state.setExportModalOpen);
 
   if (!isInfoDrawerOpen || !activeNote) return null;
 

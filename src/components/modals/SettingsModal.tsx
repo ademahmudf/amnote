@@ -17,6 +17,7 @@ import {
   GripHorizontal,
 } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useSettingsStore, type EditorWidth, type UiScale } from '../../store/useSettingsStore';
 import { FONT_OPTIONS, getFontFamilyCss, type FontCategory } from '../../domain/fontFamilies';
@@ -24,8 +25,8 @@ import { THEMES } from '../../themes/themeDefinitions';
 import { AmNoteLogo } from '../icons/AmNoteLogo';
 
 export const SettingsModal: React.FC = () => {
-  const isSettingsOpen = useNoteStore((state) => state.isSettingsOpen);
-  const setSettingsOpen = useNoteStore((state) => state.setSettingsOpen);
+  const isSettingsOpen = useUIStore((state) => state.isSettingsOpen);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const notes = useNoteStore((state) => state.notes);
   const vaultPath = useNoteStore((state) => state.vaultPath);
   const openVaultInFileManager = useNoteStore((state) => state.openVaultInFileManager);

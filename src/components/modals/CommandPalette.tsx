@@ -15,6 +15,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { THEMES } from '../../themes/themeDefinitions';
 import type { ThemeId } from '../../types/note';
@@ -23,17 +24,18 @@ import { promptEmptyTrashConfirmation } from '../../utils/trashConfirmation';
 import { todayISO } from '../../domain/calendarDates';
 
 export const CommandPalette: React.FC = () => {
-  const isCommandPaletteOpen = useNoteStore((state) => state.isCommandPaletteOpen);
-  const setCommandPaletteOpen = useNoteStore((state) => state.setCommandPaletteOpen);
+  const isCommandPaletteOpen = useUIStore((state) => state.isCommandPaletteOpen);
+  const setCommandPaletteOpen = useUIStore((state) => state.setCommandPaletteOpen);
+  const toggleFocusMode = useUIStore((state) => state.toggleFocusMode);
+  const isFocusMode = useUIStore((state) => state.isFocusMode);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
+  const setExportModalOpen = useUIStore((state) => state.setExportModalOpen);
+  const setCalendarModalOpen = useUIStore((state) => state.setCalendarModalOpen);
+
   const notes = useNoteStore((state) => state.notes);
   const setActiveNoteId = useNoteStore((state) => state.setActiveNoteId);
   const setSelectedTag = useNoteStore((state) => state.setSelectedTag);
   const createNote = useNoteStore((state) => state.createNote);
-  const toggleFocusMode = useNoteStore((state) => state.toggleFocusMode);
-  const isFocusMode = useNoteStore((state) => state.isFocusMode);
-  const setSettingsOpen = useNoteStore((state) => state.setSettingsOpen);
-  const setExportModalOpen = useNoteStore((state) => state.setExportModalOpen);
-  const setCalendarModalOpen = useNoteStore((state) => state.setCalendarModalOpen);
   const openDailyNote = useNoteStore((state) => state.openDailyNote);
 
   const { setTheme } = useThemeStore();

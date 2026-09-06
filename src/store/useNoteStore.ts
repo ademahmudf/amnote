@@ -3,7 +3,6 @@ import {
   extractTagsFromContent,
 } from '../domain/markdownMetadata';
 import {
-  mergeVaultNotes,
   type VaultConflict,
 } from '../domain/vaultSync';
 import {
@@ -25,13 +24,26 @@ import {
 import {
   createDailyNoteContent,
   isValidISODate,
-  todayISO,
 } from '../domain/calendarDates';
 import { vaultAdapter } from '../db/vaultAdapter';
 import { useSettingsStore } from './useSettingsStore';
 import { notify } from './useNotificationStore';
+import { useUIStore } from './useUIStore';
+import { VaultSyncCoordinator } from '../domain/vaultSyncCoordinator';
 import type { Note, SortOption, SystemFilter, TagNodeItem } from '../types/note';
 import type { BacklinkItem, HeadingItem, NoteStats } from '../types/note';
+
+export const vaultSyncCoordinator = new VaultSyncCoordinator(
+  vaultAdapter,
+  undefined,
+  async (remoteTags, isInitial) => {
+    if (isInitial) {
+      await useSettingsStore.getState().initTagSync(remoteTags);
+    } else {
+      await useSettingsStore.getState().applyRemoteTagMetadata(remoteTags);
+    }
+  }
+);
 
 interface NoteState {
   notes: Note[];
@@ -45,21 +57,6 @@ interface NoteState {
   vaultConflicts: VaultConflict[];
   dirtyNoteIds: Record<string, true>;
   diskContentByNoteId: Record<string, string>;
-  
-  // Layout toggles
-  isSidebarOpen: boolean;
-  isNoteListOpen: boolean;
-  isFocusMode: boolean;
-  isInfoDrawerOpen: boolean;
-  isCommandPaletteOpen: boolean;
-  isCalendarModalOpen: boolean;
-  calendarSelectedDate: string;
-  isSettingsOpen: boolean;
-  isExportModalOpen: boolean;
-  isCheatsheetOpen: boolean;
-  isPasswordModalOpen: boolean;
-  passwordModalNoteId: string | null;
-  isEmptyTrashModalOpen: boolean;
   
   // Session unlock tracking
   unlockedNotes: Record<string, boolean>;
@@ -89,19 +86,6 @@ interface NoteState {
   setSearchQuery: (query: string) => void;
   setSortOption: (option: SortOption) => void;
   clearPersistenceError: () => void;
-  
-  toggleSidebar: () => void;
-  toggleNoteList: () => void;
-  toggleFocusMode: () => void;
-  toggleInfoDrawer: () => void;
-  setCommandPaletteOpen: (open: boolean) => void;
-  setCalendarModalOpen: (open: boolean, dateIso?: string) => void;
-  setCalendarSelectedDate: (dateIso: string) => void;
-  setSettingsOpen: (open: boolean) => void;
-  setExportModalOpen: (open: boolean) => void;
-  setCheatsheetOpen: (open: boolean) => void;
-  setPasswordModalOpen: (open: boolean, noteId?: string | null) => void;
-  setEmptyTrashModalOpen: (open: boolean) => void;
   
   createNote: (
     initialTag?: string | null,
@@ -149,20 +133,6 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   vaultRevision: null,
   vaultConflicts: [],
   
-  isSidebarOpen: true,
-  isNoteListOpen: true,
-  isFocusMode: false,
-  isInfoDrawerOpen: false,
-  isCommandPaletteOpen: false,
-  isCalendarModalOpen: false,
-  calendarSelectedDate: todayISO(),
-  isSettingsOpen: false,
-  isExportModalOpen: false,
-  isCheatsheetOpen: false,
-  isPasswordModalOpen: false,
-  passwordModalNoteId: null,
-  isEmptyTrashModalOpen: false,
-  
   unlockedNotes: {},
   dirtyNoteIds: {},
   diskContentByNoteId: {},
@@ -174,23 +144,18 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   init: async () => {
     try {
       const vaultPath = await vaultAdapter.getVaultPath();
-      const [allNotes, remoteTags] = await Promise.all([
-        vaultAdapter.loadAllNotes(),
-        vaultAdapter.loadTagMetadata(),
-      ]);
-      allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
-      await useSettingsStore.getState().initTagSync(remoteTags);
+      const { notes, revision } = await vaultSyncCoordinator.loadInitial();
 
       set({
         vaultPath,
-        notes: allNotes,
-        activeNoteId: allNotes.length > 0 ? allNotes[0].id : null,
+        notes,
+        activeNoteId: notes.length > 0 ? notes[0].id : null,
         isLoading: false,
         persistenceError: null,
-        vaultRevision: await vaultAdapter.getVaultRevision(),
+        vaultRevision: revision,
         dirtyNoteIds: {},
         vaultConflicts: [],
-        diskContentByNoteId: Object.fromEntries(allNotes.map((note) => [note.id, note.content])),
+        diskContentByNoteId: Object.fromEntries(notes.map((note) => [note.id, note.content])),
       });
     } catch (err) {
       console.error('Failed to initialize vault:', err);
@@ -202,42 +167,37 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   },
 
   loadNotes: async () => {
-    const allNotes = await vaultAdapter.loadAllNotes();
-    allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
-    const merged = mergeVaultNotes({
-      localNotes: get().notes,
-      diskNotes: allNotes,
+    vaultSyncCoordinator.updateLocalState({
+      notes: get().notes,
       dirtyNoteIds: get().dirtyNoteIds,
-      baseContentByNoteId: get().diskContentByNoteId,
+      diskContentByNoteId: get().diskContentByNoteId,
+      vaultRevision: get().vaultRevision,
     });
-
+    const { notes } = await vaultSyncCoordinator.reloadFromDisk();
+    const syncState = vaultSyncCoordinator.getState();
     set({
-      notes: merged.notes,
-      vaultConflicts: merged.conflicts,
-      diskContentByNoteId: Object.fromEntries(allNotes.map((note) => [note.id, note.content])),
-      activeNoteId: allNotes.length > 0 && !get().activeNoteId ? allNotes[0].id : get().activeNoteId,
+      notes,
+      vaultConflicts: syncState.vaultConflicts,
+      diskContentByNoteId: syncState.diskContentByNoteId,
+      vaultRevision: syncState.vaultRevision,
+      activeNoteId: notes.length > 0 && !get().activeNoteId ? notes[0].id : get().activeNoteId,
     });
   },
 
   reloadFromDisk: async () => {
-    const [allNotes, remoteTags] = await Promise.all([
-      vaultAdapter.loadAllNotes(),
-      vaultAdapter.loadTagMetadata(),
-    ]);
-    allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
-    await useSettingsStore.getState().applyRemoteTagMetadata(remoteTags);
-    const merged = mergeVaultNotes({
-      localNotes: get().notes,
-      diskNotes: allNotes,
+    vaultSyncCoordinator.updateLocalState({
+      notes: get().notes,
       dirtyNoteIds: get().dirtyNoteIds,
-      baseContentByNoteId: get().diskContentByNoteId,
+      diskContentByNoteId: get().diskContentByNoteId,
+      vaultRevision: get().vaultRevision,
     });
-
+    const { notes, revision } = await vaultSyncCoordinator.reloadFromDisk();
+    const syncState = vaultSyncCoordinator.getState();
     set({
-      notes: merged.notes,
-      vaultConflicts: merged.conflicts,
-      diskContentByNoteId: Object.fromEntries(allNotes.map((note) => [note.id, note.content])),
-      vaultRevision: await vaultAdapter.getVaultRevision(),
+      notes,
+      vaultConflicts: syncState.vaultConflicts,
+      diskContentByNoteId: syncState.diskContentByNoteId,
+      vaultRevision: revision,
     });
 
     notify({
@@ -253,41 +213,28 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
     set({ isSyncingVault: true });
     try {
-      const revision = await vaultAdapter.getVaultRevision();
-      if (get().vaultRevision === revision) {
-        return false;
-      }
-
-      const [allNotes, remoteTags] = await Promise.all([
-        vaultAdapter.loadAllNotes(),
-        vaultAdapter.loadTagMetadata(),
-      ]);
-      allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
-      await useSettingsStore.getState().applyRemoteTagMetadata(remoteTags);
-
-      const merged = mergeVaultNotes({
-        localNotes: get().notes,
-        diskNotes: allNotes,
-        dirtyNoteIds: Object.fromEntries(
-          Object.keys(get().dirtyNoteIds).map((id) => [id, true as const])
-        ),
-        baseContentByNoteId: get().diskContentByNoteId,
+      vaultSyncCoordinator.updateLocalState({
+        notes: get().notes,
+        dirtyNoteIds: get().dirtyNoteIds,
+        diskContentByNoteId: get().diskContentByNoteId,
+        vaultRevision: get().vaultRevision,
       });
-      const activeNoteExists = merged.notes.some((note) => note.id === get().activeNoteId);
       const hadPriorRevision = get().vaultRevision !== null;
+      const { changed, newConflicts } = await vaultSyncCoordinator.syncIfChanged();
+      if (!changed) return false;
 
-      const existingConflictIds = new Set(get().vaultConflicts.map((c) => c.noteId));
-      const newConflicts = merged.conflicts.filter((c) => !existingConflictIds.has(c.noteId));
+      const syncState = vaultSyncCoordinator.getState();
+      const activeNoteExists = syncState.notes.some((note) => note.id === get().activeNoteId);
 
       set({
-        notes: merged.notes,
-        vaultConflicts: merged.conflicts,
-        diskContentByNoteId: Object.fromEntries(allNotes.map((note) => [note.id, note.content])),
-        vaultRevision: revision,
+        notes: syncState.notes,
+        vaultConflicts: syncState.vaultConflicts,
+        diskContentByNoteId: syncState.diskContentByNoteId,
+        vaultRevision: syncState.vaultRevision,
         activeNoteId: activeNoteExists
           ? get().activeNoteId
-          : allNotes.length > 0
-            ? allNotes[0].id
+          : syncState.notes.length > 0
+            ? syncState.notes[0].id
             : null,
       });
 
@@ -314,137 +261,42 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     const conflict = get().vaultConflicts.find((item) => item.noteId === noteId);
     if (!conflict) return;
     const { localNote } = conflict;
-    const diskNote = conflict.diskNote;
 
-    // A conflict resolution intentionally discards one representation, so both
-    // sides are preserved before any destructive action.
     try {
-      await vaultAdapter.backupNoteVersion(conflict.localNote, 'local');
-      if (diskNote) {
-      await vaultAdapter.backupNoteVersion(diskNote, 'disk');
-      }
-    } catch (err) {
-      console.error('Failed to back up conflicting note versions:', err);
-      set({
-        persistenceError: persistenceMessage(err, 'Unable to back up the conflicting versions.'),
+      vaultSyncCoordinator.updateLocalState({
+        notes: get().notes,
+        dirtyNoteIds: get().dirtyNoteIds,
+        diskContentByNoteId: get().diskContentByNoteId,
+        vaultRevision: get().vaultRevision,
+        vaultConflicts: get().vaultConflicts,
       });
-      return;
-    }
-
-    const clearConflict = (state: NoteState) => ({
-      dirtyNoteIds: Object.fromEntries(
-        Object.entries(state.dirtyNoteIds).filter(([dirtyId]) => dirtyId !== noteId)
-      ),
-      vaultConflicts: state.vaultConflicts.filter((item) => item.noteId !== noteId),
-    });
-
-    if (resolution === 'local') {
-      try {
-        await vaultAdapter.saveNote(
-          localNote,
-          diskNote?.content
-        );
-      } catch (err) {
-        console.error('Failed to resolve vault conflict with local version:', err);
-        set({
-          persistenceError: persistenceMessage(err, 'Unable to keep the local version.'),
-        });
-        return;
-      }
-
-      const vaultRevision = await vaultAdapter.getVaultRevision();
-      set((state) => ({
-        notes: state.notes.map((note) =>
-          note.id === noteId ? localNote : note
-        ),
-        ...clearConflict(get()),
-        diskContentByNoteId: {
-          ...state.diskContentByNoteId,
-          [noteId]: localNote.content,
-        },
-        vaultRevision,
-      }));
+      const result = await vaultSyncCoordinator.resolveConflict(noteId, resolution, newNoteId);
+      const syncState = vaultSyncCoordinator.getState();
+      set({
+        notes: syncState.notes,
+        vaultConflicts: syncState.vaultConflicts,
+        dirtyNoteIds: syncState.dirtyNoteIds,
+        diskContentByNoteId: syncState.diskContentByNoteId,
+        vaultRevision: syncState.vaultRevision,
+        ...(result.reloadNeeded ? { editorReloadToken: get().editorReloadToken + 1 } : {}),
+      });
 
       notify({
         title: 'Conflict Resolved',
         sender: localNote.title || 'Untitled',
-        message: 'Kept local version.',
+        message: resolution === 'local'
+          ? 'Kept local version.'
+          : resolution === 'disk'
+            ? 'Kept disk version.'
+            : 'Preserved both versions with a local copy.',
         type: 'success',
       });
-      return;
-    }
-
-    if (resolution === 'disk') {
-      if (!diskNote) return;
-
-      set((state) => ({
-        notes: state.notes.flatMap((note) =>
-          note.id === noteId ? [diskNote] : [note]
-        ),
-        ...clearConflict(get()),
-        diskContentByNoteId: {
-          ...state.diskContentByNoteId,
-          [noteId]: diskNote.content,
-        },
-        editorReloadToken: state.editorReloadToken + 1,
-      }));
-
-      notify({
-        title: 'Conflict Resolved',
-        sender: localNote.title || 'Untitled',
-        message: 'Kept disk version.',
-        type: 'success',
-      });
-      return;
-    }
-
-    if (!diskNote) {
-      await get().resolveVaultConflict(noteId, 'local');
-      return;
-    }
-
-    const localCopy: Note = {
-      ...localNote,
-      id: newNoteId(),
-      title: `${localNote.title} (local copy)`,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    try {
-      await vaultAdapter.saveNote(localCopy);
     } catch (err) {
-      console.error('Failed to save local conflict copy:', err);
+      console.error('Failed to resolve conflict:', err);
       set({
-        persistenceError: persistenceMessage(err, 'Unable to keep both versions.'),
+        persistenceError: persistenceMessage(err, 'Unable to resolve conflict.'),
       });
-      return;
     }
-
-    const vaultRevision = await vaultAdapter.getVaultRevision();
-
-    set((state) => ({
-      notes: [
-        diskNote,
-        localCopy,
-        ...state.notes.filter((note) => note.id !== noteId),
-      ],
-      ...clearConflict(get()),
-      diskContentByNoteId: {
-        ...state.diskContentByNoteId,
-        [noteId]: diskNote.content,
-        [localCopy.id]: localCopy.content,
-      },
-      editorReloadToken: state.editorReloadToken + 1,
-      vaultRevision,
-    }));
-
-    notify({
-      title: 'Conflict Resolved',
-      sender: localNote.title || 'Untitled',
-      message: 'Preserved both versions with a local copy.',
-      type: 'success',
-    });
   },
 
   openVaultInFileManager: async () => {
@@ -464,18 +316,16 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     set({ isLoading: true });
     try {
       const activePath = await vaultAdapter.setVaultPath(newPath);
-      const [allNotes, remoteTags] = await Promise.all([
-        vaultAdapter.loadAllNotes(),
-        vaultAdapter.loadTagMetadata(),
-      ]);
-      allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
-      await useSettingsStore.getState().initTagSync(remoteTags);
+      const { notes, revision } = await vaultSyncCoordinator.loadInitial();
       set({
         vaultPath: activePath,
-        notes: allNotes,
-        activeNoteId: allNotes.length > 0 ? allNotes[0].id : null,
+        notes,
+        activeNoteId: notes.length > 0 ? notes[0].id : null,
         isLoading: false,
-        vaultRevision: await vaultAdapter.getVaultRevision(),
+        vaultRevision: revision,
+        dirtyNoteIds: {},
+        vaultConflicts: [],
+        diskContentByNoteId: Object.fromEntries(notes.map((note) => [note.id, note.content])),
       });
     } catch (err) {
       console.error('Failed to change vault path:', err);
@@ -490,18 +340,16 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     set({ isLoading: true });
     try {
       const defaultPath = await vaultAdapter.resetVaultPath();
-      const [allNotes, remoteTags] = await Promise.all([
-        vaultAdapter.loadAllNotes(),
-        vaultAdapter.loadTagMetadata(),
-      ]);
-      allNotes.sort((a, b) => b.updatedAt - a.updatedAt);
-      await useSettingsStore.getState().initTagSync(remoteTags);
+      const { notes, revision } = await vaultSyncCoordinator.loadInitial();
       set({
         vaultPath: defaultPath,
-        notes: allNotes,
-        activeNoteId: allNotes.length > 0 ? allNotes[0].id : null,
+        notes,
+        activeNoteId: notes.length > 0 ? notes[0].id : null,
         isLoading: false,
-        vaultRevision: await vaultAdapter.getVaultRevision(),
+        vaultRevision: revision,
+        dirtyNoteIds: {},
+        vaultConflicts: [],
+        diskContentByNoteId: Object.fromEntries(notes.map((note) => [note.id, note.content])),
       });
     } catch (err) {
       console.error('Failed to reset vault path:', err);
@@ -525,31 +373,6 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSortOption: (option) => set({ sortOption: option }),
   clearPersistenceError: () => set({ persistenceError: null }),
-
-  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
-  toggleNoteList: () => set((state) => ({ isNoteListOpen: !state.isNoteListOpen })),
-  toggleFocusMode: () =>
-    set((state) => ({
-      isFocusMode: !state.isFocusMode,
-      isSidebarOpen: state.isFocusMode,
-      isNoteListOpen: state.isFocusMode,
-    })),
-  toggleInfoDrawer: () => set((state) => ({ isInfoDrawerOpen: !state.isInfoDrawerOpen })),
-  setCommandPaletteOpen: (open) => set({ isCommandPaletteOpen: open }),
-  setCalendarModalOpen: (open, dateIso) =>
-    set((state) => ({
-      isCalendarModalOpen: open,
-      calendarSelectedDate: dateIso && isValidISODate(dateIso) ? dateIso : state.calendarSelectedDate,
-    })),
-  setCalendarSelectedDate: (dateIso) => {
-    if (isValidISODate(dateIso)) set({ calendarSelectedDate: dateIso });
-  },
-  setSettingsOpen: (open) => set({ isSettingsOpen: open }),
-  setExportModalOpen: (open) => set({ isExportModalOpen: open }),
-  setCheatsheetOpen: (open) => set({ isCheatsheetOpen: open }),
-  setPasswordModalOpen: (open, noteId = null) =>
-    set({ isPasswordModalOpen: open, passwordModalNoteId: noteId }),
-  setEmptyTrashModalOpen: (open) => set({ isEmptyTrashModalOpen: open }),
 
   createNote: async (initialTag?: string | null, initialTitle?: string, initialBody?: string) => {
     const defaultTag = initialTag === undefined ? get().selectedTag || '' : initialTag;
@@ -600,7 +423,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       .notes.filter((note) => !note.isTrashed && !note.isArchived && note.title.trim() === dateIso)
       .sort((a, b) => b.updatedAt - a.updatedAt)[0];
 
-    set({ isCalendarModalOpen: false });
+    useUIStore.getState().setCalendarModalOpen(false);
 
     if (existingNote) {
       set({ activeNoteId: existingNote.id });

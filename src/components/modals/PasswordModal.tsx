@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import { Lock, KeyRound, X, Check, ShieldAlert } from 'lucide-react';
 
 export const PasswordModal: React.FC = () => {
-  const isPasswordModalOpen = useNoteStore((state) => state.isPasswordModalOpen);
-  const passwordModalNoteId = useNoteStore((state) => state.passwordModalNoteId);
-  const setPasswordModalOpen = useNoteStore((state) => state.setPasswordModalOpen);
+  const isPasswordModalOpen = useUIStore((state) => state.isPasswordModalOpen);
+  const passwordModalNoteId = useUIStore((state) => state.passwordModalNoteId);
+  const setPasswordModalOpen = useUIStore((state) => state.setPasswordModalOpen);
   const lockNote = useNoteStore((state) => state.lockNote);
   const removeLock = useNoteStore((state) => state.removeLock);
   const notes = useNoteStore((state) => state.notes);

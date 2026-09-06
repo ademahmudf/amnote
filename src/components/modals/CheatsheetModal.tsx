@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { X, BookOpen, Keyboard, Sparkles, Hash, CheckSquare, Link, Quote, Code, Table, HelpCircle, Search } from 'lucide-react';
-import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import { AnnotatedText } from '../ui/AnnotatedText';
 import { GLOBAL_SHORTCUTS } from '../../utils/shortcuts';
 
 export const CheatsheetModal: React.FC = () => {
-  const isCheatsheetOpen = useNoteStore((state) => state.isCheatsheetOpen);
-  const setCheatsheetOpen = useNoteStore((state) => state.setCheatsheetOpen);
+  const isCheatsheetOpen = useUIStore((state) => state.isCheatsheetOpen);
+  const setCheatsheetOpen = useUIStore((state) => state.setCheatsheetOpen);
 
   const [activeTab, setActiveTab] = useState<'markdown' | 'shortcuts'>('markdown');
   const [shortcutQuery, setShortcutQuery] = useState('');

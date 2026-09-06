@@ -15,22 +15,23 @@ import {
 } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
 
 export const HeaderBar: React.FC = () => {
-  const isSidebarOpen = useNoteStore((state) => state.isSidebarOpen);
-  const toggleSidebar = useNoteStore((state) => state.toggleSidebar);
-  const isNoteListOpen = useNoteStore((state) => state.isNoteListOpen);
-  const toggleNoteList = useNoteStore((state) => state.toggleNoteList);
-  const isFocusMode = useNoteStore((state) => state.isFocusMode);
-  const toggleFocusMode = useNoteStore((state) => state.toggleFocusMode);
-  const setCommandPaletteOpen = useNoteStore((state) => state.setCommandPaletteOpen);
-  const setSettingsOpen = useNoteStore((state) => state.setSettingsOpen);
-  const setCheatsheetOpen = useNoteStore((state) => state.setCheatsheetOpen);
-  const isInfoDrawerOpen = useNoteStore((state) => state.isInfoDrawerOpen);
-  const toggleInfoDrawer = useNoteStore((state) => state.toggleInfoDrawer);
+  const isSidebarOpen = useUIStore((state) => state.isSidebarOpen);
+  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const isNoteListOpen = useUIStore((state) => state.isNoteListOpen);
+  const toggleNoteList = useUIStore((state) => state.toggleNoteList);
+  const isFocusMode = useUIStore((state) => state.isFocusMode);
+  const toggleFocusMode = useUIStore((state) => state.toggleFocusMode);
+  const setCommandPaletteOpen = useUIStore((state) => state.setCommandPaletteOpen);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
+  const setCheatsheetOpen = useUIStore((state) => state.setCheatsheetOpen);
+  const isInfoDrawerOpen = useUIStore((state) => state.isInfoDrawerOpen);
+  const toggleInfoDrawer = useUIStore((state) => state.toggleInfoDrawer);
   const activeNote = useNoteStore((state) => state.getActiveNote());
   const selectedTag = useNoteStore((state) => state.selectedTag);
   const activeFilter = useNoteStore((state) => state.activeFilter);

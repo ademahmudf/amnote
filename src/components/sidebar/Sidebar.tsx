@@ -15,6 +15,7 @@ import {
   Command,
 } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { TagTree } from './TagTree';
@@ -29,9 +30,9 @@ export const Sidebar: React.FC = () => {
   const setActiveFilter = useNoteStore((state) => state.setActiveFilter);
   const createNote = useNoteStore((state) => state.createNote);
   const getSystemCounts = useNoteStore((state) => state.getSystemCounts);
-  const setSettingsOpen = useNoteStore((state) => state.setSettingsOpen);
-  const setCommandPaletteOpen = useNoteStore((state) => state.setCommandPaletteOpen);
-  const setCalendarModalOpen = useNoteStore((state) => state.setCalendarModalOpen);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
+  const setCommandPaletteOpen = useUIStore((state) => state.setCommandPaletteOpen);
+  const setCalendarModalOpen = useUIStore((state) => state.setCalendarModalOpen);
 
   const { toggleDarkLight, getThemeColors } = useThemeStore();
   const currentTheme = getThemeColors();

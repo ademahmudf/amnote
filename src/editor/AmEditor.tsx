@@ -41,6 +41,7 @@ import {
 import { markdownToHtml } from './utils/markdownCodec';
 import { serializeProseMirrorToMarkdown } from './utils/proseMirrorMarkdownSerializer';
 import { useNoteStore } from '../store/useNoteStore';
+import { useUIStore } from '../store/useUIStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { getFontFamilyCss } from '../domain/fontFamilies';
 import { clearTagIconSvgCache } from '../utils/tagIcons';
@@ -92,14 +93,15 @@ export const AmEditor: React.FC = () => {
   const activeNote = useNoteStore((state) => state.getActiveNote());
   const updateNoteContent = useNoteStore((state) => state.updateNoteContent);
   const restoreNote = useNoteStore((state) => state.restoreNote);
-  const setPasswordModalOpen = useNoteStore((state) => state.setPasswordModalOpen);
   const unlockNote = useNoteStore((state) => state.unlockNote);
   const isNoteUnlocked = useNoteStore((state) => state.isNoteUnlocked);
   const setSelectedTag = useNoteStore((state) => state.setSelectedTag);
   const setActiveNoteId = useNoteStore((state) => state.setActiveNoteId);
   const createNote = useNoteStore((state) => state.createNote);
   const editorReloadToken = useNoteStore((state) => state.editorReloadToken);
-  const toggleInfoDrawer = useNoteStore((state) => state.toggleInfoDrawer);
+
+  const setPasswordModalOpen = useUIStore((state) => state.setPasswordModalOpen);
+  const toggleInfoDrawer = useUIStore((state) => state.toggleInfoDrawer);
 
   const {
     fontFamily,

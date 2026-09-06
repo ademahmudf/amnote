@@ -27,6 +27,8 @@ import {
 import type { Note } from '../types/note';
 import { cleanSnippet } from '../components/notelist/NoteCard';
 import { THEMES } from '../themes/themeDefinitions';
+import { useUIStore } from '../store/useUIStore';
+import { VaultSyncCoordinator, type VaultAdapterPort } from '../domain/vaultSyncCoordinator';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -613,11 +615,11 @@ useNoteStore.setState({
   ],
 });
 
-assert(useNoteStore.getState().isEmptyTrashModalOpen === false, 'isEmptyTrashModalOpen defaults to false');
+assert(useUIStore.getState().isEmptyTrashModalOpen === false, 'isEmptyTrashModalOpen defaults to false');
 promptEmptyTrashConfirmation();
-assert(useNoteStore.getState().isEmptyTrashModalOpen === true, 'Empty trash opens center confirmation modal');
-useNoteStore.getState().setEmptyTrashModalOpen(false);
-assert(useNoteStore.getState().isEmptyTrashModalOpen === false, 'setEmptyTrashModalOpen closes modal');
+assert(useUIStore.getState().isEmptyTrashModalOpen === true, 'Empty trash opens center confirmation modal');
+useUIStore.getState().setEmptyTrashModalOpen(false);
+assert(useUIStore.getState().isEmptyTrashModalOpen === false, 'setEmptyTrashModalOpen closes modal');
 
 // Test single note delete permanently notification popup
 useNotificationStore.getState().dismissNotification();
@@ -803,20 +805,22 @@ import { vaultAdapter } from '../db/vaultAdapter';
 useNoteStore.setState({
   notes: structuredClone(calendarNotes),
   activeNoteId: null,
-  isCalendarModalOpen: true,
-  calendarSelectedDate: todayISO(),
   persistenceError: null,
 });
-useNoteStore.getState().setCalendarSelectedDate('2026-09-05');
-assert(useNoteStore.getState().calendarSelectedDate === '2026-09-05', 'Updates selected calendar date');
-useNoteStore.getState().setCalendarSelectedDate('2026-02-30');
-assert(useNoteStore.getState().calendarSelectedDate === '2026-09-05', 'Rejects invalid selected calendar dates');
+useUIStore.setState({
+  isCalendarModalOpen: true,
+  calendarSelectedDate: todayISO(),
+});
+useUIStore.getState().setCalendarSelectedDate('2026-09-05');
+assert(useUIStore.getState().calendarSelectedDate === '2026-09-05', 'Updates selected calendar date');
+useUIStore.getState().setCalendarSelectedDate('2026-02-30');
+assert(useUIStore.getState().calendarSelectedDate === '2026-09-05', 'Rejects invalid selected calendar dates');
 
 const originalSaveNote = vaultAdapter.saveNote;
 vaultAdapter.saveNote = async () => 'calendar-test-revision';
 const existingDailyId = await useNoteStore.getState().openDailyNote('2026-09-05');
 assert(existingDailyId === 'daily-note', 'Opens an existing canonical daily note');
-assert(useNoteStore.getState().isCalendarModalOpen === false, 'Closes calendar when a daily note opens');
+assert(useUIStore.getState().isCalendarModalOpen === false, 'Closes calendar when a daily note opens');
 assert(useNoteStore.getState().activeNoteId === 'daily-note', 'Selects the opened daily note');
 
 const dailyCountBefore = useNoteStore.getState().notes.length;
@@ -829,7 +833,8 @@ assert(createdDailyContent.includes('[[2026-01-09]]') && createdDailyContent.inc
 assert((createdDaily?.tags.length ?? -1) === 0, 'Daily note does not inherit the selected tag');
 
 vaultAdapter.saveNote = originalSaveNote;
-useNoteStore.setState({ notes: [], activeNoteId: null, isCalendarModalOpen: false, persistenceError: null });
+useNoteStore.setState({ notes: [], activeNoteId: null, persistenceError: null });
+useUIStore.setState({ isCalendarModalOpen: false });
 
 // ============================================================================
 // Test 22: 3-Way Vault Sync Merge & Conflict Prevention
@@ -973,4 +978,106 @@ for (const theme of Object.values(THEMES)) {
   assert(ratio >= 4.5, `Tag contrast >= 4.5:1 in ${theme.id} (${ratio.toFixed(2)}:1)`);
 }
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, Focus Mode tests, Tags Collapsed tests, Note List Density tests, and Tag Contrast tests passed successfully!');
+// ============================================================================
+// Test 27: UI Store Layout & Modal Seams
+// ============================================================================
+console.log('\n--- Test 27: UI Store Layout & Modal Tests ---');
+
+assert(useUIStore.getState().isSidebarOpen === true, 'Sidebar defaults to open');
+useUIStore.getState().toggleSidebar();
+assert(useUIStore.getState().isSidebarOpen === false, 'toggleSidebar closes sidebar');
+useUIStore.getState().toggleSidebar();
+assert(useUIStore.getState().isSidebarOpen === true, 'toggleSidebar re-opens sidebar');
+
+assert(useUIStore.getState().isNoteListOpen === true, 'Note list defaults to open');
+useUIStore.getState().toggleNoteList();
+assert(useUIStore.getState().isNoteListOpen === false, 'toggleNoteList closes note list');
+useUIStore.getState().toggleNoteList();
+
+assert(useUIStore.getState().isFocusMode === false, 'Focus mode defaults to false');
+useUIStore.getState().toggleFocusMode();
+assert(useUIStore.getState().isFocusMode === true, 'toggleFocusMode enables focus mode');
+assert(useUIStore.getState().isSidebarOpen === false, 'focus mode closes sidebar');
+assert(useUIStore.getState().isNoteListOpen === false, 'focus mode closes note list');
+useUIStore.getState().toggleFocusMode();
+assert(useUIStore.getState().isFocusMode === false, 'toggleFocusMode disables focus mode');
+assert(useUIStore.getState().isSidebarOpen === true, 'exiting focus mode restores sidebar');
+
+useUIStore.getState().setExportModalOpen(true);
+assert(useUIStore.getState().isExportModalOpen === true, 'setExportModalOpen opens export modal');
+useUIStore.getState().setExportModalOpen(false);
+assert(useUIStore.getState().isExportModalOpen === false, 'setExportModalOpen closes export modal');
+
+// ============================================================================
+// Test 28: Headless VaultSyncCoordinator Tests
+// ============================================================================
+console.log('\n--- Test 28: Headless VaultSyncCoordinator Tests ---');
+
+let mockDiskNotes: Note[] = [
+  {
+    id: 'n-1',
+    title: 'Note 1',
+    content: 'Initial content',
+    tags: [],
+    isPinned: false,
+    isArchived: false,
+    isTrashed: false,
+    isLocked: false,
+    createdAt: 1000,
+    updatedAt: 1000,
+  },
+];
+let mockRevision = 'rev-1';
+const backupsRecorded: { note: Note; tag: string }[] = [];
+
+const mockAdapter: VaultAdapterPort = {
+  getVaultPath: async () => '/mock/vault',
+  getVaultRevision: async () => mockRevision,
+  loadAllNotes: async () => JSON.parse(JSON.stringify(mockDiskNotes)),
+  loadTagMetadata: async () => ({}),
+  saveNote: async (note: Note) => {
+    const idx = mockDiskNotes.findIndex((n) => n.id === note.id);
+    if (idx >= 0) mockDiskNotes[idx] = note;
+    else mockDiskNotes.push(note);
+    mockRevision = `rev-${Date.now()}`;
+    return mockRevision;
+  },
+  backupNoteVersion: async (note: Note, tag: string) => {
+    backupsRecorded.push({ note, tag });
+  },
+};
+
+const coordinator = new VaultSyncCoordinator(mockAdapter);
+const initialResult = await coordinator.loadInitial();
+assert(initialResult.notes.length === 1, 'Coordinator loads initial notes');
+assert(coordinator.getState().vaultRevision === 'rev-1', 'Coordinator tracks revision');
+
+// Test dirty tracking
+coordinator.markDirty('n-1');
+assert(coordinator.getState().dirtyNoteIds['n-1'] === true, 'Coordinator marks note dirty');
+coordinator.markClean('n-1', 'Updated content');
+assert(!coordinator.getState().dirtyNoteIds['n-1'], 'Coordinator clears dirty flag on clean');
+assert(coordinator.getState().diskContentByNoteId['n-1'] === 'Updated content', 'Coordinator tracks disk base');
+
+// Test external sync without conflict
+mockDiskNotes.push({
+  id: 'n-2',
+  title: 'External Note',
+  content: 'Created externally',
+  tags: [],
+  isPinned: false,
+  isArchived: false,
+  isTrashed: false,
+  isLocked: false,
+  createdAt: 2000,
+  updatedAt: 2000,
+});
+mockRevision = 'rev-2';
+
+const syncResult = await coordinator.syncIfChanged();
+assert(syncResult.changed === true, 'Detects vault changed');
+assert(syncResult.newConflicts.length === 0, 'No conflict on non-colliding external addition');
+assert(coordinator.getState().notes.length === 2, 'Coordinator merged external note');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, Focus Mode tests, Tags Collapsed tests, Note List Density tests, Tag Contrast tests, UI Store tests, and VaultSyncCoordinator tests passed successfully!');
+

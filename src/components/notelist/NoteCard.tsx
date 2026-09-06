@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Note } from '../../types/note';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { resolveTagIcon, formatTagDisplay } from '../../utils/tagIcons';
 import { uiScaleValue, noteCardTitleClass, noteCardSnippetClass, noteCardDateClass, noteCardBadgeClass } from '../../utils/uiScale';
@@ -63,7 +64,7 @@ export const NoteCard: React.FC<NoteCardProps> = React.memo(function NoteCard({ 
   const toggleArchive = useNoteStore((state) => state.toggleArchive);
   const trashNote = useNoteStore((state) => state.trashNote);
   const restoreNote = useNoteStore((state) => state.restoreNote);
-  const setPasswordModalOpen = useNoteStore((state) => state.setPasswordModalOpen);
+  const setPasswordModalOpen = useUIStore((state) => state.setPasswordModalOpen);
   const isNoteUnlocked = useNoteStore((state) => state.isNoteUnlocked);
 
   const tagIcons = useSettingsStore((state) => state.tagIcons);

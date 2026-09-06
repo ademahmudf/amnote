@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import {
   extractDateLinks,
   formatLocalISODate,
@@ -24,11 +25,11 @@ import type { Note } from '../../types/note';
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const CalendarModal: React.FC = () => {
-  const isOpen = useNoteStore((state) => state.isCalendarModalOpen);
-  const selectedDate = useNoteStore((state) => state.calendarSelectedDate);
+  const isOpen = useUIStore((state) => state.isCalendarModalOpen);
+  const selectedDate = useUIStore((state) => state.calendarSelectedDate);
   const notes = useNoteStore((state) => state.notes);
-  const setCalendarModalOpen = useNoteStore((state) => state.setCalendarModalOpen);
-  const setCalendarSelectedDate = useNoteStore((state) => state.setCalendarSelectedDate);
+  const setCalendarModalOpen = useUIStore((state) => state.setCalendarModalOpen);
+  const setCalendarSelectedDate = useUIStore((state) => state.setCalendarSelectedDate);
   const setActiveNoteId = useNoteStore((state) => state.setActiveNoteId);
   const openDailyNote = useNoteStore((state) => state.openDailyNote);
 

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import { notify } from '../../store/useNotificationStore';
 import { Trash2, AlertTriangle, X, Loader2 } from 'lucide-react';
 
 export const EmptyTrashModal: React.FC = () => {
-  const isEmptyTrashModalOpen = useNoteStore((state) => state.isEmptyTrashModalOpen);
-  const setEmptyTrashModalOpen = useNoteStore((state) => state.setEmptyTrashModalOpen);
+  const isEmptyTrashModalOpen = useUIStore((state) => state.isEmptyTrashModalOpen);
+  const setEmptyTrashModalOpen = useUIStore((state) => state.setEmptyTrashModalOpen);
   const emptyTrash = useNoteStore((state) => state.emptyTrash);
   const notes = useNoteStore((state) => state.notes);
 

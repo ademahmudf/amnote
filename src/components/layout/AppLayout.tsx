@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNoteStore } from '../../store/useNoteStore';
+import { useUIStore } from '../../store/useUIStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useThemeStore, applyThemeCssVariables } from '../../store/useThemeStore';
 import { vaultAdapter } from '../../db/vaultAdapter';
@@ -66,23 +67,24 @@ export const AppLayout: React.FC = () => {
   const init = useNoteStore((state) => state.init);
   const syncIfVaultChanged = useNoteStore((state) => state.syncIfVaultChanged);
   const isLoading = useNoteStore((state) => state.isLoading);
-  const isSidebarOpen = useNoteStore((state) => state.isSidebarOpen);
-  const isNoteListOpen = useNoteStore((state) => state.isNoteListOpen);
-  const isFocusMode = useNoteStore((state) => state.isFocusMode);
-  const toggleSidebar = useNoteStore((state) => state.toggleSidebar);
-  const toggleNoteList = useNoteStore((state) => state.toggleNoteList);
-  const toggleFocusMode = useNoteStore((state) => state.toggleFocusMode);
-  const toggleInfoDrawer = useNoteStore((state) => state.toggleInfoDrawer);
-  const setCommandPaletteOpen = useNoteStore((state) => state.setCommandPaletteOpen);
-  const setCalendarModalOpen = useNoteStore((state) => state.setCalendarModalOpen);
-  const setSettingsOpen = useNoteStore((state) => state.setSettingsOpen);
-  const setCheatsheetOpen = useNoteStore((state) => state.setCheatsheetOpen);
   const createNote = useNoteStore((state) => state.createNote);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
   const activeNoteId = useNoteStore((state) => state.activeNoteId);
   const vaultConflicts = useNoteStore((state) => state.vaultConflicts);
   const resolveVaultConflict = useNoteStore((state) => state.resolveVaultConflict);
   const [activeConflictId, setActiveConflictId] = useState<string | null>(null);
+
+  const isSidebarOpen = useUIStore((state) => state.isSidebarOpen);
+  const isNoteListOpen = useUIStore((state) => state.isNoteListOpen);
+  const isFocusMode = useUIStore((state) => state.isFocusMode);
+  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const toggleNoteList = useUIStore((state) => state.toggleNoteList);
+  const toggleFocusMode = useUIStore((state) => state.toggleFocusMode);
+  const toggleInfoDrawer = useUIStore((state) => state.toggleInfoDrawer);
+  const setCommandPaletteOpen = useUIStore((state) => state.setCommandPaletteOpen);
+  const setCalendarModalOpen = useUIStore((state) => state.setCalendarModalOpen);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
+  const setCheatsheetOpen = useUIStore((state) => state.setCheatsheetOpen);
 
   const { getThemeColors } = useThemeStore();
 
@@ -142,8 +144,8 @@ export const AppLayout: React.FC = () => {
     const wasNarrow = prevNarrowRef.current;
     prevNarrowRef.current = isNarrowSidebar;
     if (!wasNarrow && isNarrowSidebar && !isFocusMode) {
-      const { isSidebarOpen: open } = useNoteStore.getState();
-      if (open) useNoteStore.getState().toggleSidebar();
+      const { isSidebarOpen: open } = useUIStore.getState();
+      if (open) useUIStore.getState().toggleSidebar();
     }
   }, [isNarrowSidebar, isFocusMode]);
 

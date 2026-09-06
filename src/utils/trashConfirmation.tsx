@@ -2,12 +2,13 @@ import * as React from 'react';
 import { Trash2 } from 'lucide-react';
 import { notify } from '../store/useNotificationStore';
 import { useNoteStore } from '../store/useNoteStore';
+import { useUIStore } from '../store/useUIStore';
 
 export const promptEmptyTrashConfirmation = () => {
-  const { notes, setEmptyTrashModalOpen } = useNoteStore.getState();
+  const { notes } = useNoteStore.getState();
   const trashedCount = notes.filter((n) => n.isTrashed).length;
   if (trashedCount === 0) return;
-  setEmptyTrashModalOpen(true);
+  useUIStore.getState().setEmptyTrashModalOpen(true);
 };
 
 export const promptDeletePermanentlyConfirmation = (note: { id: string; title: string }) => {
