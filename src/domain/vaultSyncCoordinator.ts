@@ -1,14 +1,9 @@
 import type { Note, TagMetadataMap } from '../types/note';
 import { mergeVaultNotes, type VaultConflict, type VaultSyncMergeResult } from './vaultSync';
+import type { VaultAdapter } from './vaultPort';
+import { seedVaultIfFresh } from './seedNotes';
 
-export interface VaultAdapterPort {
-  getVaultPath(): Promise<string>;
-  getVaultRevision(): Promise<string | null>;
-  loadAllNotes(): Promise<Note[]>;
-  loadTagMetadata(): Promise<TagMetadataMap>;
-  saveNote(note: Note, expectedDiskContent?: string): Promise<string | null>;
-  backupNoteVersion(note: Note, tag: string): Promise<string | void>;
-}
+export type VaultAdapterPort = VaultAdapter;
 
 export interface SyncCoordinatorState {
   notes: Note[];
@@ -46,6 +41,14 @@ export class VaultSyncCoordinator {
       vaultConflicts: initialState?.vaultConflicts || [],
       isSyncing: false,
     };
+  }
+
+  public getAdapter(): VaultAdapter {
+    return this.adapter;
+  }
+
+  public setAdapter(adapter: VaultAdapter): void {
+    this.adapter = adapter;
   }
 
   public getState(): SyncCoordinatorState {
@@ -103,6 +106,7 @@ export class VaultSyncCoordinator {
   }
 
   public async loadInitial(): Promise<{ notes: Note[]; revision: string | null }> {
+    await seedVaultIfFresh(this.adapter);
     const { allNotes, remoteTags } = await this.loadNotesAndTagsFromDisk();
     if (this.onRemoteTags) {
       await this.onRemoteTags(remoteTags, true);

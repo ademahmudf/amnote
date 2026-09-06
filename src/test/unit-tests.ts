@@ -4,7 +4,7 @@ import {
 } from '../domain/markdownMetadata';
 import { markdownToHtml, defaultMarkdownCodec } from '../editor/utils/markdownCodec';
 import { syntaxTokens } from '../domain/syntaxTokens';
-import { initialAmNoteSeed } from '../db/vaultAdapter';
+import { initialAmNoteSeed } from '../domain/seedNotes';
 import { mergeVaultNotes } from '../domain/vaultSync';
 import { diffLines } from '../domain/textDiff';
 import { NoteSearchIndex } from '../domain/searchIndex';
@@ -806,7 +806,10 @@ assert(dueSearchIndex.search(dueTaskNotes, '@due:2026-01-10').map(({ id }) => id
 assert(dueSearchIndex.search(dueTaskNotes, '@overdue').map(({ id }) => id).join(',') === 'due-task-note', 'Searches unchecked overdue tasks');
 
 // Calendar modal state and daily-note store behavior.
-import { vaultAdapter } from '../db/vaultAdapter';
+import { InMemoryVaultAdapter } from '../db/inMemoryVaultAdapter';
+
+const calendarTestAdapter = new InMemoryVaultAdapter(structuredClone(calendarNotes));
+useNoteStore.getState().setVaultAdapter(calendarTestAdapter);
 
 useNoteStore.setState({
   notes: structuredClone(calendarNotes),
@@ -822,8 +825,6 @@ assert(useUIStore.getState().calendarSelectedDate === '2026-09-05', 'Updates sel
 useUIStore.getState().setCalendarSelectedDate('2026-02-30');
 assert(useUIStore.getState().calendarSelectedDate === '2026-09-05', 'Rejects invalid selected calendar dates');
 
-const originalSaveNote = vaultAdapter.saveNote;
-vaultAdapter.saveNote = async () => 'calendar-test-revision';
 const existingDailyId = await useNoteStore.getState().openDailyNote('2026-09-05');
 assert(existingDailyId === 'daily-note', 'Opens an existing canonical daily note');
 assert(useUIStore.getState().isCalendarModalOpen === false, 'Closes calendar when a daily note opens');
@@ -838,7 +839,6 @@ const createdDailyContent = createdDaily?.content ?? '';
 assert(createdDailyContent.includes('[[2026-01-09]]') && createdDailyContent.includes('[[2026-01-11]]'), 'Daily note links adjacent dates');
 assert((createdDaily?.tags.length ?? -1) === 0, 'Daily note does not inherit the selected tag');
 
-vaultAdapter.saveNote = originalSaveNote;
 useNoteStore.setState({ notes: [], activeNoteId: null, persistenceError: null });
 useUIStore.setState({ isCalendarModalOpen: false });
 
@@ -1037,10 +1037,20 @@ let mockRevision = 'rev-1';
 const backupsRecorded: { note: Note; tag: string }[] = [];
 
 const mockAdapter: VaultAdapterPort = {
+  isInitialized: async () => true,
+  markInitialized: async () => {},
   getVaultPath: async () => '/mock/vault',
   getVaultRevision: async () => mockRevision,
   loadAllNotes: async () => JSON.parse(JSON.stringify(mockDiskNotes)),
   loadTagMetadata: async () => ({}),
+  saveTagMetadata: async () => {},
+  saveAttachment: async () => 'asset-url',
+  deleteNote: async () => 'rev-del',
+  pickVaultFolder: async () => null,
+  setVaultPath: async (p) => p,
+  resetVaultPath: async () => '/mock/vault',
+  openVaultInFileManager: async () => {},
+  onVaultChanged: async () => () => {},
   saveNote: async (note: Note) => {
     const idx = mockDiskNotes.findIndex((n) => n.id === note.id);
     if (idx >= 0) mockDiskNotes[idx] = note;
@@ -1114,5 +1124,89 @@ assert(metrics.words === 10, 'Calculates word count correctly');
 assert(metrics.chars === sampleNote.length, 'Calculates character count correctly');
 assert(metrics.readTime === 1, 'Calculates minimum 1 minute reading time');
 
-console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, Focus Mode tests, Tags Collapsed tests, Note List Density tests, Tag Contrast tests, UI Store tests, VaultSyncCoordinator tests, and Editor Canvas tests passed successfully!');
+// ============================================================================
+// Test 30: InMemoryVaultAdapter & Vault Seeding Policy Tests
+// ============================================================================
+console.log('\n--- Test 30: InMemoryVaultAdapter & Vault Seeding Policy Tests ---');
+import { seedVaultIfFresh } from '../domain/seedNotes';
+
+// 1. Vault Seeding Policy
+const freshVault = new InMemoryVaultAdapter([], false);
+assert((await freshVault.isInitialized()) === false, 'Fresh vault starts uninitialized');
+
+const didSeedFresh = await seedVaultIfFresh(freshVault);
+assert(didSeedFresh === true, 'seedVaultIfFresh returns true on uninitialized vault');
+assert((await freshVault.isInitialized()) === true, 'Vault is marked initialized after seeding');
+
+const seededNotes = await freshVault.loadAllNotes();
+assert(seededNotes.length >= 3, 'Seed notes were populated into vault');
+assert(seededNotes.some((n) => n.id === 'note-welcome-amnote'), 'Welcome note exists in seeded notes');
+
+const seededAgain = await seedVaultIfFresh(freshVault);
+assert(seededAgain === false, 'seedVaultIfFresh returns false on already initialized vault');
+const seededNotesCountAfter = (await freshVault.loadAllNotes()).length;
+assert(seededNotesCountAfter === seededNotes.length, 'Seed notes are not duplicated on subsequent runs');
+
+// 2. Note CRUD and Revision Tracking
+const testAdapter = new InMemoryVaultAdapter();
+const sampleTestNote: Note = {
+  id: 'adapter-test-note',
+  title: 'Adapter Test',
+  content: '# Adapter Test\nTesting in-memory vault.',
+  tags: ['test/adapter'],
+  isPinned: false,
+  isArchived: false,
+  isTrashed: false,
+  isLocked: false,
+  createdAt: 1000,
+  updatedAt: 2000,
+};
+
+const rev1 = await testAdapter.saveNote(sampleTestNote);
+assert(typeof rev1 === 'string' && rev1.startsWith('rev-'), 'saveNote generates a revision string');
+
+const loadedNotes = await testAdapter.loadAllNotes();
+assert(loadedNotes.length === 1 && loadedNotes[0].id === 'adapter-test-note', 'loadAllNotes retrieves saved note');
+
+// 3. Trash and Permanent Deletion
+await testAdapter.deleteNote('adapter-test-note', false);
+const trashedNotes = await testAdapter.loadAllNotes();
+assert(trashedNotes[0].isTrashed === true, 'deleteNote(id, false) marks note as trashed');
+
+await testAdapter.deleteNote('adapter-test-note', true);
+const emptyNotes = await testAdapter.loadAllNotes();
+assert(emptyNotes.length === 0, 'deleteNote(id, true) permanently deletes note');
+
+// 4. Metadata and Attachments
+await testAdapter.saveTagMetadata({ 'test/adapter': { color: '#ff0000', icon: 'star', updatedAt: 1000 } });
+const loadedTags = await testAdapter.loadTagMetadata();
+assert(loadedTags['test/adapter']?.color === '#ff0000', 'saveTagMetadata persists and loadTagMetadata returns tags');
+
+const assetUrl = await testAdapter.saveAttachment('note-1', 'photo.png', 'data:image/png;base64,AAA');
+assert(assetUrl.includes('note-1/photo.png'), 'saveAttachment returns internal asset URL');
+assert(testAdapter.getAttachment('note-1', 'photo.png') === 'data:image/png;base64,AAA', 'Attachment data is stored in memory');
+
+// 5. Backups and Path Management
+await testAdapter.backupNoteVersion(sampleTestNote, 'local');
+assert(testAdapter.getBackups().length === 1, 'backupNoteVersion stores note snapshot');
+
+assert(await testAdapter.getVaultPath() === '/virtual/AmNotes', 'Default virtual vault path returned');
+await testAdapter.setVaultPath('/custom/vault');
+assert(await testAdapter.getVaultPath() === '/custom/vault', 'setVaultPath updates virtual path');
+await testAdapter.resetVaultPath();
+assert(await testAdapter.getVaultPath() === '/virtual/AmNotes', 'resetVaultPath restores default path');
+
+// 6. Change Subscriptions & triggerVaultChanged
+let changeCount = 0;
+const unsubscribe = await testAdapter.onVaultChanged(() => {
+  changeCount++;
+});
+testAdapter.triggerVaultChanged();
+assert(changeCount === 1, 'triggerVaultChanged notifies registered listener');
+unsubscribe();
+testAdapter.triggerVaultChanged();
+assert(changeCount === 1, 'Unsubscribed listener is no longer called');
+
+console.log('\n🎉 All AmNote unit tests, AST Serializer tests, Tag Capitalization tests, Tag Sync tests, Notification tests, Annotation tests, Typography tests, 3-Way Sync tests, Focus Mode tests, Tags Collapsed tests, Note List Density tests, Tag Contrast tests, UI Store tests, VaultSyncCoordinator tests, Editor Canvas tests, and Vault Adapter tests passed successfully!');
+
 

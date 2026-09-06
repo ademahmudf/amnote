@@ -52,3 +52,12 @@ _Avoid_: Footer, info row
 The unified floating menu coordinator orchestrating slash commands (`/`), wiki link autocomplete (`[[`), selection bubble actions, and date pickers.
 _Avoid_: Menu state, popup controller
 
+**Vault Adapter**:
+The port interface (`VaultAdapter`) abstracting vault persistence operations across native desktop (`TauriVaultAdapter`) and in-memory test environments (`InMemoryVaultAdapter`).
+_Avoid_: Database driver, storage client
+
+**Vault Seeding Policy**:
+The onboarding rule and procedure (`seedVaultIfFresh`) that inspects vault initialization markers and populates default guide notes on first launch.
+_Avoid_: Database migration, initial state filler
+
+

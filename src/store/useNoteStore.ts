@@ -25,7 +25,7 @@ import {
   createDailyNoteContent,
   isValidISODate,
 } from '../domain/calendarDates';
-import { vaultAdapter } from '../db/vaultAdapter';
+import { vaultAdapter, type VaultAdapter } from '../db/vaultAdapter';
 import { useSettingsStore } from './useSettingsStore';
 import { notify } from './useNotificationStore';
 import { useUIStore } from './useUIStore';
@@ -109,6 +109,7 @@ interface NoteState {
   relockNote: (id: string) => void;
   removeLock: (id: string) => Promise<void>;
   isNoteUnlocked: (id: string) => boolean;
+  setVaultAdapter: (adapter: VaultAdapter) => void;
   
   // Computed helpers
   getActiveNote: () => Note | undefined;
@@ -121,6 +122,8 @@ interface NoteState {
 }
 
 // Note metadata helpers live in domain/noteUtils.ts.
+
+let activeVaultAdapter: VaultAdapter = vaultAdapter;
 
 export const useNoteStore = create<NoteState>((set, get) => ({
   notes: [],
@@ -141,9 +144,14 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   isSyncingVault: false,
   editorReloadToken: 0,
 
+  setVaultAdapter: (adapter: VaultAdapter) => {
+    activeVaultAdapter = adapter;
+    vaultSyncCoordinator.setAdapter(adapter);
+  },
+
   init: async () => {
     try {
-      const vaultPath = await vaultAdapter.getVaultPath();
+      const vaultPath = await activeVaultAdapter.getVaultPath();
       const { notes, revision } = await vaultSyncCoordinator.loadInitial();
 
       set({
@@ -300,11 +308,11 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   },
 
   openVaultInFileManager: async () => {
-    await vaultAdapter.openVaultInFileManager();
+    await activeVaultAdapter.openVaultInFileManager();
   },
 
   pickAndChangeVault: async () => {
-    const selected = await vaultAdapter.pickVaultFolder();
+    const selected = await activeVaultAdapter.pickVaultFolder();
     if (selected) {
       await get().setCustomVaultPath(selected);
       return true;
@@ -315,7 +323,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   setCustomVaultPath: async (newPath: string) => {
     set({ isLoading: true });
     try {
-      const activePath = await vaultAdapter.setVaultPath(newPath);
+      const activePath = await activeVaultAdapter.setVaultPath(newPath);
       const { notes, revision } = await vaultSyncCoordinator.loadInitial();
       set({
         vaultPath: activePath,
@@ -339,7 +347,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   resetVaultToDefault: async () => {
     set({ isLoading: true });
     try {
-      const defaultPath = await vaultAdapter.resetVaultPath();
+      const defaultPath = await activeVaultAdapter.resetVaultPath();
       const { notes, revision } = await vaultSyncCoordinator.loadInitial();
       set({
         vaultPath: defaultPath,
@@ -399,7 +407,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
     let newRevision: string | null = null;
     try {
-      newRevision = await vaultAdapter.saveNote(newNote);
+      newRevision = await activeVaultAdapter.saveNote(newNote);
     } catch (err) {
       console.error('Failed to create note:', err);
       set({ persistenceError: persistenceMessage(err, 'Unable to create the note on disk.') });
@@ -441,7 +449,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     const merged = { ...current, ...updates, updatedAt: updates.updatedAt || Date.now() };
     let newRevision: string | null = null;
     try {
-      newRevision = await vaultAdapter.saveNote(merged, get().diskContentByNoteId[id]);
+      newRevision = await activeVaultAdapter.saveNote(merged, get().diskContentByNoteId[id]);
     } catch (err) {
       console.error('Failed to update note:', err);
       set({ persistenceError: persistenceMessage(err, 'Unable to save your change.') });
@@ -494,7 +502,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     if (persistToDisk) {
       let newRevision: string | null = null;
       try {
-        newRevision = await vaultAdapter.saveNote(updatedNote, get().diskContentByNoteId[id]);
+        newRevision = await activeVaultAdapter.saveNote(updatedNote, get().diskContentByNoteId[id]);
       } catch (err) {
         console.error('Failed to persist note content:', err);
         set({ persistenceError: persistenceMessage(err, 'Unable to save your change.') });
@@ -552,7 +560,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   deletePermanently: async (id) => {
     let newRevision: string | null = null;
     try {
-      newRevision = await vaultAdapter.deleteNote(id, true);
+      newRevision = await activeVaultAdapter.deleteNote(id, true);
     } catch (err) {
       console.error('Failed to delete note permanently:', err);
       set({ persistenceError: persistenceMessage(err, 'Unable to delete the note permanently.') });
@@ -592,7 +600,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
     let newRevision: string | null = null;
     try {
-      newRevision = await vaultAdapter.saveNote(newNote);
+      newRevision = await activeVaultAdapter.saveNote(newNote);
     } catch (err) {
       console.error('Failed to duplicate note:', err);
       set({ persistenceError: persistenceMessage(err, 'Unable to duplicate the note.') });
@@ -616,7 +624,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     let latestRevision = get().vaultRevision;
     for (const note of trashedNotes) {
       try {
-        latestRevision = await vaultAdapter.deleteNote(note.id, true);
+        latestRevision = await activeVaultAdapter.deleteNote(note.id, true);
       } catch (err) {
         console.error('Failed to empty trash:', err);
         set({ persistenceError: persistenceMessage(err, 'Unable to empty the trash.') });
