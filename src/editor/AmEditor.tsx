@@ -38,7 +38,7 @@ import {
   EditorDatePicker,
   type EditorDatePickerMode,
 } from './components/EditorDatePicker';
-import { markdownToHtml } from './utils/markdownConverter';
+import { markdownToHtml } from './utils/markdownCodec';
 import { serializeProseMirrorToMarkdown } from './utils/proseMirrorMarkdownSerializer';
 import { useNoteStore } from '../store/useNoteStore';
 import { useSettingsStore } from '../store/useSettingsStore';

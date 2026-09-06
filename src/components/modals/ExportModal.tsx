@@ -15,7 +15,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useThemeStore } from '../../store/useThemeStore';
-import { markdownToHtml } from '../../editor/utils/markdownConverter';
+import { markdownToHtml } from '../../editor/utils/markdownCodec';
 import { notify } from '../../store/useNotificationStore';
 
 export const ExportModal: React.FC = () => {

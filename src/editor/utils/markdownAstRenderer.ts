@@ -1,5 +1,6 @@
 import { lexer, type Token, type Tokens } from 'marked';
 import { isValidISODate } from '../../domain/calendarDates';
+import { syntaxTokens, parseImageMeta } from '../../domain/syntaxTokens';
 
 function escapeHtml(value: string): string {
   return value
@@ -34,56 +35,44 @@ function safeHighlightColor(value: string): string {
 }
 
 function renderImage(text: string, href: string): string {
-  const parts = text.split('|').map((part) => part.trim());
-  const alt = parts.shift() || '';
-  let width = '';
-  let align = 'center';
-
-  for (const part of parts) {
-    if (['left', 'center', 'right'].includes(part.toLowerCase())) {
-      align = part.toLowerCase();
-    } else if (/^[0-9]+(%|px)?$/.test(part)) {
-      width = part.endsWith('%') || part.endsWith('px') ? part : `${part}px`;
-    }
-  }
-
-  const widthAttribute = width ? ` width="${escapeAttribute(width)}" style="width: ${width};"` : '';
-  const alignAttribute = ` data-align="${escapeAttribute(align)}"`;
-  return `<img src="${escapeAttribute(safeImageUrl(href))}" alt="${escapeAttribute(alt)}" class="am-editor-image"${widthAttribute}${alignAttribute} />`;
+  const meta = parseImageMeta(text);
+  const widthAttribute = meta.width ? ` width="${escapeAttribute(meta.width)}" style="width: ${meta.width};"` : '';
+  const alignAttribute = ` data-align="${escapeAttribute(meta.align)}"`;
+  return `<img src="${escapeAttribute(safeImageUrl(href))}" alt="${escapeAttribute(meta.alt)}" class="am-editor-image"${widthAttribute}${alignAttribute} />`;
 }
 
 function renderCustomText(value: string): string {
   let out = escapeHtml(value);
 
   out = out.replace(
-    /==\{color:([^}]+)\}([^=]+)==/g,
+    new RegExp(syntaxTokens.highlight.coloredPattern.source, 'g'),
     (_match, color: string, text: string) => {
       const safeColor = safeHighlightColor(color);
       return `<mark data-color="${escapeAttribute(safeColor)}" style="background-color: ${safeColor}">${text}</mark>`;
     }
   );
-  out = out.replace(/==([^=]+)==/g, '<mark>$1</mark>');
+  out = out.replace(new RegExp(syntaxTokens.highlight.standardPattern.source, 'g'), '<mark>$1</mark>');
   out = out.replace(
-    /#\[\[([^\]]+)\]\]#/g,
+    new RegExp(syntaxTokens.tag.spacedPattern.source, 'g'),
     (_match, tag: string) => {
       const normalized = tag.trim().toLowerCase().replace(/\s+/g, '-');
       return `<span data-tag="${escapeAttribute(normalized)}" class="am-tag-pill bear-tag-pill">#${escapeAttribute(tag.trim())}</span>`;
     }
   );
   out = out.replace(
-    /(^|\s)#([a-zA-Z0-9_/-]+)(?=\s|$|[.,!?;:])/g,
+    new RegExp(syntaxTokens.tag.standardPattern.source, 'g'),
     (_match, prefix: string, tag: string) =>
       `${prefix}<span data-tag="${escapeAttribute(tag)}" class="am-tag-pill bear-tag-pill">#${escapeAttribute(tag)}</span>`
   );
   out = out.replace(
-    /\[\[([^\]]+)\]\]/g,
+    new RegExp(syntaxTokens.wikiLink.pattern.source, 'g'),
     (_match, target: string) => {
       const dateClass = isValidISODate(target.trim()) ? ' am-date-link bear-date-link' : '';
       return `<span data-wiki-target="${escapeAttribute(target)}" class="am-wiki-link bear-wiki-link${dateClass}">[[ ${escapeHtml(target)} ]]</span>`;
     }
   );
   out = out.replace(
-    /~(wavy|circle|highlight|underline|box|double|cross|arrow|line|dottedUnderline|doubleUnderline|strikethrough|crossOut):([^~]+)~/gi,
+    new RegExp(syntaxTokens.annotation.pattern.source, 'gi'),
     (_match, variant: string, text: string) =>
       `<span data-annotation="${escapeAttribute(variant.toLowerCase())}" class="am-annotation am-annotation-${escapeAttribute(variant.toLowerCase())}">${text}</span>`
   );

@@ -1,4 +1,5 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { syntaxTokens } from '../../domain/syntaxTokens';
 
 export interface SerializerOptions {
   tightLists?: boolean;
@@ -310,11 +311,7 @@ class SerializerState {
         const tagMark = marks.find((m) => m.type.name === 'tag');
         if (tagMark) {
           const rawTag = tagMark.attrs.tag || text.replace(/^#/, '');
-          if (rawTag.includes(' ')) {
-            result += `#[[${rawTag}]]#`;
-            return;
-          }
-          result += `#${rawTag}`;
+          result += syntaxTokens.tag.format(rawTag);
           return;
         }
 
@@ -322,26 +319,20 @@ class SerializerState {
         const wikiMark = marks.find((m) => m.type.name === 'wikiLink');
         if (wikiMark) {
           const target = wikiMark.attrs.target || text.replace(/^\[\[|\]\]$/g, '').trim();
-          result += `[[${target}]]`;
+          result += syntaxTokens.wikiLink.format(target);
           return;
         }
 
         // 3. Highlight Mark
         const highlightMark = marks.find((m) => m.type.name === 'highlight');
         if (highlightMark) {
-          const color = highlightMark.attrs.color;
-          if (color) {
-            text = `=={color:${color}}${text}==`;
-          } else {
-            text = `==${text}==`;
-          }
+          text = syntaxTokens.highlight.format(text, highlightMark.attrs.color);
         }
 
         // 3b. Annotation Mark (~variant:text~)
         const annotationMark = marks.find((m) => m.type.name === 'annotation');
         if (annotationMark) {
-          const variant = annotationMark.attrs.variant || 'wavy';
-          text = `~${variant}:${text}~`;
+          text = syntaxTokens.annotation.format(text, annotationMark.attrs.variant || 'wavy');
         }
 
         // 4. Code Mark

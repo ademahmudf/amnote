@@ -6,7 +6,7 @@ import {
   setEditorTaskDueDate,
   type TaskDuePickerTarget,
 } from '../extensions/TaskDueExtension';
-import { markdownToHtml } from '../utils/markdownConverter';
+import { markdownToHtml } from '../utils/markdownCodec';
 
 export type EditorDatePickerMode = 'date-link' | 'task-due';
 

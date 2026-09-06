@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Editor } from '@tiptap/react';
 import type { Note } from '../../types/note';
-import { markdownToHtml } from '../utils/markdownConverter';
+import { markdownToHtml } from '../utils/markdownCodec';
 
 interface UseEditorContentLifecycleOptions {
   editor: Editor | null;

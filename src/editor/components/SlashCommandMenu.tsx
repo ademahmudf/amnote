@@ -24,7 +24,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { markdownToHtml } from '../utils/markdownConverter';
+import { markdownToHtml } from '../utils/markdownCodec';
 import type { EditorDatePickerMode } from './EditorDatePicker';
 
 interface SlashCommandMenuProps {

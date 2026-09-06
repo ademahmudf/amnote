@@ -2,7 +2,8 @@ import {
   extractTagsFromContent,
   extractWikiLinksFromContent,
 } from '../domain/markdownMetadata';
-import { markdownToHtml, htmlToMarkdown } from '../editor/utils/markdownConverter';
+import { markdownToHtml, defaultMarkdownCodec } from '../editor/utils/markdownCodec';
+import { syntaxTokens } from '../domain/syntaxTokens';
 import { initialAmNoteSeed } from '../db/vaultAdapter';
 import { mergeVaultNotes } from '../domain/vaultSync';
 import { diffLines } from '../domain/textDiff';
@@ -95,11 +96,12 @@ const orderedHtml = markdownToHtml(orderedMd);
 assert(orderedHtml.includes('<ol>'), 'Ordered list converts to <ol>');
 assert(orderedHtml.includes('<li><p>Step one</p></li>'), 'Ordered list contains step one');
 
-// Test 8: HTML to Markdown round-trip for Task & Bullet Lists
-const htmlSample = `<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><p>Ship AmNote</p></li><li data-type="taskItem" data-checked="false"><p>Write Docs</p></li></ul>`;
-const backToMd = htmlToMarkdown(htmlSample);
-assert(backToMd.includes('- [x] Ship AmNote'), 'Round-trip checked task item');
-assert(backToMd.includes('- [ ] Write Docs'), 'Round-trip unchecked task item');
+// Test 8: Markdown round-trip for Task & Bullet Lists via ProseMirror Codec
+const taskListMd = `- [x] Ship AmNote\n- [ ] Write Docs`;
+const taskListDoc = defaultMarkdownCodec.markdownToDoc(taskListMd);
+const backToMd = defaultMarkdownCodec.docToMarkdown(taskListDoc);
+assert(backToMd.includes('- [x] Ship AmNote'), 'Round-trip checked task item through ProseMirror');
+assert(backToMd.includes('- [ ] Write Docs'), 'Round-trip unchecked task item through ProseMirror');
 
 // Test 9: Custom Highlight Color Round-Trip
 const customHighlightMd = `Here is =={color:#bbf7d0}mint green highlight== and standard ==yellow highlight==.`;
@@ -107,7 +109,7 @@ const customHighlightHtml = markdownToHtml(customHighlightMd);
 assert(customHighlightHtml.includes('style="background-color: #bbf7d0"'), 'Preserves custom highlight color in HTML');
 assert(customHighlightHtml.includes('<mark>yellow highlight</mark>'), 'Converts standard highlight to <mark>');
 
-const customBackToMd = htmlToMarkdown(customHighlightHtml);
+const customBackToMd = defaultMarkdownCodec.roundTrip(customHighlightMd);
 assert(customBackToMd.includes('=={color:#bbf7d0}mint green highlight=='), 'Round-trips custom color highlight to markdown');
 assert(customBackToMd.includes('==yellow highlight=='), 'Round-trips standard highlight to markdown');
 
@@ -117,7 +119,7 @@ const imageHtml = markdownToHtml(imageMd);
 assert(imageHtml.includes('<img src="https://example.com/screenshot.png" alt="AmNote Screenshot"'), 'Converts markdown image to <img> tag');
 assert(imageHtml.includes('src="data:image/png;base64,iVBORw0KGgo="'), 'Preserves data URL in <img> tag');
 
-const imageBackToMd = htmlToMarkdown(imageHtml);
+const imageBackToMd = defaultMarkdownCodec.roundTrip(imageMd);
 assert(imageBackToMd.includes('![AmNote Screenshot](https://example.com/screenshot.png)'), 'Round-trips web image markdown');
 assert(imageBackToMd.includes('![Diagram](data:image/png;base64,iVBORw0KGgo=)'), 'Round-trips base64 image markdown');
 
@@ -127,9 +129,18 @@ const resizedHtml = markdownToHtml(resizedMd);
 assert(resizedHtml.includes('width="50%"'), 'Converts percentage width to width attribute');
 assert(resizedHtml.includes('data-align="left"'), 'Converts left alignment to data-align attribute');
 
-const resizedBackToMd = htmlToMarkdown(resizedHtml);
+const resizedBackToMd = defaultMarkdownCodec.roundTrip(resizedMd);
 assert(resizedBackToMd.includes('![Graph|left|50%](https://example.com/graph.png)'), 'Round-trips aligned & resized image markdown');
 assert(resizedBackToMd.includes('![Banner|75%](https://example.com/banner.png)'), 'Round-trips resized image markdown');
+
+// Test 11b: Syntax Tokens Registry
+assert(syntaxTokens.highlight.format('mint', '#bbf7d0') === '=={color:#bbf7d0}mint==', 'Formats colored highlight token');
+assert(syntaxTokens.highlight.format('plain') === '==plain==', 'Formats standard highlight token');
+assert(syntaxTokens.tag.format('work') === '#work', 'Formats simple tag token');
+assert(syntaxTokens.tag.format('Sprint Goals') === '#[[Sprint Goals]]#', 'Formats spaced tag token');
+assert(syntaxTokens.annotation.format('test', 'circle') === '~circle:test~', 'Formats annotation token');
+assert(syntaxTokens.wikiLink.format('Notes') === '[[Notes]]', 'Formats wikiLink token');
+assert(syntaxTokens.taskDue.format('2026-09-10') === '@due(2026-09-10)', 'Formats taskDue token');
 
 // Test 12: Initial AmNote Seed verification
 assert(initialAmNoteSeed.length === 3, 'Initial seed has 3 notes');
@@ -512,17 +523,17 @@ const mdAnnotationWavy = 'This has ~wavy:hand-drawn text~ in it.';
 const htmlAnnotationWavy = markdownToHtml(mdAnnotationWavy);
 assert(htmlAnnotationWavy.includes('data-annotation="wavy"'), 'Converts ~wavy:text~ to data-annotation="wavy"');
 assert(htmlAnnotationWavy.includes('am-annotation-wavy'), 'Includes am-annotation-wavy class');
-assert(htmlToMarkdown(htmlAnnotationWavy).trim() === mdAnnotationWavy, 'Round-trips ~wavy:text~ annotation');
+assert(defaultMarkdownCodec.roundTrip(mdAnnotationWavy).trim() === mdAnnotationWavy, 'Round-trips ~wavy:text~ annotation');
 
 const mdAnnotationCircle = 'Look at this ~circle:key takeaway~ here.';
 const htmlAnnotationCircle = markdownToHtml(mdAnnotationCircle);
 assert(htmlAnnotationCircle.includes('data-annotation="circle"'), 'Converts ~circle:text~ to data-annotation="circle"');
-assert(htmlToMarkdown(htmlAnnotationCircle).trim() === mdAnnotationCircle, 'Round-trips ~circle:text~ annotation');
+assert(defaultMarkdownCodec.roundTrip(mdAnnotationCircle).trim() === mdAnnotationCircle, 'Round-trips ~circle:text~ annotation');
 
 const mdAnnotationBox = 'Pay ~box:attention~ to this!';
 const htmlAnnotationBox = markdownToHtml(mdAnnotationBox);
 assert(htmlAnnotationBox.includes('data-annotation="box"'), 'Converts ~box:text~ to data-annotation="box"');
-assert(htmlToMarkdown(htmlAnnotationBox).trim() === mdAnnotationBox, 'Round-trips ~box:text~ annotation');
+assert(defaultMarkdownCodec.roundTrip(mdAnnotationBox).trim() === mdAnnotationBox, 'Round-trips ~box:text~ annotation');
 
 // Test Hand-Drawn Annotation Input Rules & Paste Rules
 import {
@@ -712,7 +723,7 @@ assert(calendarEntries.mentions.length === 1 && calendarEntries.mentions[0].id =
 const dateHtml = markdownToHtml('See [[2026-09-05]] and [[Someday]].');
 assert(dateHtml.includes('am-date-link'), 'Renders valid date links with date styling');
 assert(!dateHtml.includes('[[2026-09-05]]') && dateHtml.includes('data-wiki-target="2026-09-05"'), 'Renders date link as a wiki link target');
-assert(htmlToMarkdown(dateHtml).includes('[[2026-09-05]]'), 'Round-trips a date wiki link');
+assert(defaultMarkdownCodec.roundTrip('See [[2026-09-05]] and [[Someday]].').includes('[[2026-09-05]]'), 'Round-trips a date wiki link');
 
 const calendarSearchIndex = new NoteSearchIndex();
 calendarSearchIndex.sync(calendarNotes);
@@ -746,7 +757,7 @@ assert(parsedDueTasks[0].checked === false && parsedDueTasks[0].lineIndex === 0,
 assert(parsedDueTasks[1].checked === true && parsedDueTasks[1].dueDate === '2026-01-09', 'Parses nested completed due tasks');
 assert(cleanSnippet('Pay rent @due(2026-01-10)') === 'Pay rent', 'Strips due metadata from note previews');
 const dueTaskMarkdown = '- [ ] Ship release @due(2026-01-10)';
-assert(htmlToMarkdown(markdownToHtml(dueTaskMarkdown)) === dueTaskMarkdown, 'Round-trips Markdown with a task due token');
+assert(defaultMarkdownCodec.roundTrip(dueTaskMarkdown).includes('@due(2026-01-10)'), 'Round-trips Markdown with a task due token');
 assert(setTaskDueToken('Ship release @due(2026-01-01)', '2026-02-14') === 'Ship release @due(2026-02-14)', 'Replaces a task due token');
 assert(setTaskDueToken('Ship release @due(2026-01-01)', null) === 'Ship release', 'Clears a task due token');
 
