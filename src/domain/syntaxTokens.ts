@@ -59,7 +59,7 @@ export const syntaxTokens = {
   tag: {
     name: 'tag',
     spacedPattern: /#\[\[([^\]]+)\]\]#/g,
-    standardPattern: /(?:^|\s)#([a-zA-Z0-9_/-]+)(?=\s|$|[.,!?;:])/g,
+    standardPattern: /(^|\s)#([a-zA-Z0-9_/-]+)(?=\s|$|[.,!?;:])/g,
     format: (tag: string): string => {
       const clean = tag.trim().replace(/^#/, '');
       return clean.includes(' ') ? `#[[${clean}]]#` : `#${clean}`;

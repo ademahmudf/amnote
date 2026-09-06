@@ -142,9 +142,18 @@ assert(syntaxTokens.annotation.format('test', 'circle') === '~circle:test~', 'Fo
 assert(syntaxTokens.wikiLink.format('Notes') === '[[Notes]]', 'Formats wikiLink token');
 assert(syntaxTokens.taskDue.format('2026-09-10') === '@due(2026-09-10)', 'Formats taskDue token');
 
+// Test 11c: Tag HTML Rendering Regression Test
+const tagHtml = markdownToHtml('Check out #guide/welcome and #todo');
+assert(tagHtml.includes('data-tag="guide/welcome"'), 'Renders standard tag with data-tag attribute');
+assert(tagHtml.includes('class="am-tag-pill bear-tag-pill"'), 'Renders standard tag with tag pill class');
+
 // Test 12: Initial AmNote Seed verification
 assert(initialAmNoteSeed.length === 3, 'Initial seed has 3 notes');
 assert(initialAmNoteSeed[0].title === 'Welcome to AmNote', 'First note is Welcome to AmNote');
+for (const seedNote of initialAmNoteSeed) {
+  const renderedHtml = markdownToHtml(seedNote.content);
+  assert(Boolean(renderedHtml && renderedHtml.length > 0), `Seed note "${seedNote.title}" renders valid non-empty HTML`);
+}
 
 // ============================================================================
 // Test 13: Direct ProseMirror AST Serializer Tests
